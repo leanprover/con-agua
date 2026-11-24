@@ -276,10 +276,17 @@ end
 
 /-- **Header C's view after the solution's jobs** `mC`: the memory `mS` the solution's jobs left
 but in the stream index's arrays and words (`csA`, `csC`), which are the challenge's frozen memory
-`m9`'s again (restored from copies, or a header's images). -/
+`m9`'s again (restored from copies, or a header's images): the stream index's arrays exactly, the
+records and the declaration pool in their used words (the jobs may write past them). -/
 structure CsViewC (m9 mS mC : Mem) : Prop where
   frame : MemFrame csA csC mS mC
-  arr : ∀ b ∈ csA, mC.arr64 b = m9.arr64 b
+  idx : ∀ b, IdxArr b = true → mC.arr64 b = m9.arr64 b
+  decl : ∀ j, j < 1 + 8 * (rdW (m9.arr64 L.Front.DECL) 0).toNat →
+    (mC.arr64 L.Front.DECL)[j]? = (m9.arr64 L.Front.DECL)[j]?
+  dlp : ∀ j, j < 1 + (rdW (m9.arr64 L.Front.DLP) 0).toNat →
+    (mC.arr64 L.Front.DLP)[j]? = (m9.arr64 L.Front.DLP)[j]?
+  dsz : (mC.arr64 L.Front.DECL).size = (m9.arr64 L.Front.DECL).size
+  psz : (mC.arr64 L.Front.DLP).size = (m9.arr64 L.Front.DLP).size
   ctl : ∀ x ∈ csC, rdW (mC.arr64 CTL) x = rdW (m9.arr64 CTL) x
 
 /-- **What the solution's jobs keep of the challenge's frozen memory** `m9`: the solution's rows
@@ -308,7 +315,7 @@ theorem _root_.L.Arena.JobM.csBack {J : ISolution} {IS IC : IStreamIndex} {dsS d
       (hf.ctl 129 (by decide)) (hf.ctl 130 (by decide))
   have hx : ArrExt (erecP m9) (erecP mC) := by rw [hEC]; exact hK.grow
   have hI : IndexR mC IC :=
-    hC.idx.grow (fun b h0 h1 => hV.arr b (csA_of_idx h0 h1)) (hV.ctl 128 (by decide)) hx
+    hC.idx.grow (fun b h0 h1 => hV.idx b (by simp only [IdxArr, h0]; grind)) (hV.ctl 128 (by decide)) hx
   have hsol : SolR mC J := hC.jsol.sol.2.keepX
     (fun b hb => by
       rw [hf.arr b (fun hm => by have := csA_arr hm; have := solArrs_arr hb; omega)
@@ -322,7 +329,13 @@ theorem _root_.L.Arena.JobM.csBack {J : ISolution} {IS IC : IStreamIndex} {dsS d
       · rw [hf.ctl _ (by decide)]; exact hK.scnt) hx
   have h224 : ctlW mC SOLC = 1 := by
     simp only [ctlW]; rw [hV.ctl _ (by decide)]; exact hC.jsol.sol.1
-  refine hS.csSwapJ (hf.mono (fun _ h => csA_sub_csAS h) (fun _ h => h)) hI (by rw [hV.arr _ (by decide), hV.arr _ (by decide)]; exact hC.decls)
+  have hd := hC.decls
+  have e0 : ∀ P : Array Word, P[0]?.getD 0 = rdW P 0 := fun P => by simp [rdW]
+  have hD : DeclsF (mC.arr64 L.Front.DECL) (mC.arr64 L.Front.DLP) dsC :=
+    DeclsF.agree hd (fun j hj => hV.decl j (by rw [← e0, hd.count]; exact hj))
+      (fun j hj => hV.dlp j (by rw [← e0]; exact hj)) (by rw [hV.dsz]; exact hd.dsize)
+      (by rw [hV.psz]; exact hd.psize) (by rw [hV.dsz]; exact hd.room) (by rw [hV.psz]; exact hd.ptop)
+  refine hS.csSwapJ (hf.mono (fun _ h => csA_sub_csAS h) (fun _ h => h)) hI hD
     (hC.frozen.congr fun x hx' => hV.ctl x (by
       simp only [frozenCtl, csC, List.mem_cons, List.not_mem_nil, or_false] at hx' ⊢
       rcases hx' with h | h | h | h | h | h | h | h | h | h | h | h <;> simp [h]))
