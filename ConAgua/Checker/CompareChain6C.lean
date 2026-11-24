@@ -87,7 +87,6 @@ theorem checkC3_of_stages {p : Prog} (hp : p.lookup "check_c3" = some checkC3L)
       UInt64.toNat_zero] at *)
     all_goals clear h0 h1 h2 h3 h4 h5 h6 hfz hp hpc hhs hfs
     all_goals (try simp only [SOLC] at *)
-    all_goals trace_state
-    all_goals sorry
+    all_goals grind (gen := 30) (ematch := 40) [lang_grind, Locals.init_cons_zero, PostC3, PostPC, cntAt_self]
 
 end L.Checker

@@ -344,3 +344,7 @@ order, `checkStreamJ`), `TwinCompareVerdict`, `TwinCompareVerdictPooled`.
   buffer's word 5 is nonzero), 7.70 TB. With a 47-bit user address space (128 TiB = 140.7 TB)
   and the driver region unmapped after entry 1 except `OUT`, that allows about 36 flat threads
   and about 18 compared threads before `mmap` fails (a startup failure, exit 3, never a verdict).
+* Integrated tree (H2d, compare2 1fcad087f, builds; named stand-ins left): `diff-e2e --only cmp` at
+  `--jobs=1` and `--jobs=4`: 18/18 agree, UNSOUND/INCOMPLETE/CRASH/TIMEOUT 0. First Init
+  self-compare (one run each, machine busy): sequential 29.6 s, 1 043 MB; `--jobs=16` 5.2 s,
+  1 206 MB; flat Init 15.2 s, 641 MB (old sequential compare: 29.4 s, 1 259 MB).
