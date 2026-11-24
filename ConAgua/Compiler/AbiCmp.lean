@@ -111,7 +111,9 @@ def cmpSeqTail (tab : Tab) : Program :=
    i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz abiCmpDoneL,
    movRI .rcx 71757147230292, i64 (.cmp (.reg (rr .rax)) (oR .rcx)), jccL .nz abiCmpDoneL] ++
   cmpSaveRax tab ++
-  [movRM .rdx (mb .rax 56), movRI .r10 9, movRI .rsi 0, movRR .r8 .r15, callL abiCheckSGL,
+  [movRM .rdx (mb .rax 56), movRI .r10 9, movRI .rsi 0, movRR .r8 .r15,
+   movRI .rax (abiSlot + abiStack).toUInt64, i64 (.add (.reg (rr .rax)) (oR .r15)),
+   movMR (mb .r15 Tab.stackTop) .rax, callL abiCheckSGL,
    jmpL abiCmpDoneL]
 
 /-- The threaded run's entry 1 after the front: mode `7`, `2^63 + kS + kC`. -/

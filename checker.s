@@ -247498,6 +247498,9 @@ movq 56(%rax), %rdx
 movq $9, %r10
 movq $0, %rsi
 movq %r15, %r8
+movq $35433480192, %rax
+addq %r15, %rax
+movq %rax, (%r15)
 call ca_check_seq_g
 jmp ca_cmp_done
 ca_cmp_thr:

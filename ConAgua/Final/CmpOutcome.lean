@@ -184,6 +184,9 @@ def cmpStubL (tab : Tab) (mode : GVar) : Program :=
    movRI .r10 9,
    movRI .rsi 0,
    movRR .r8 .r15,
+   movRI .rax (abiSlot + abiStack).toUInt64,
+   i64 (.add (.reg (rr .rax)) (oR .r15)),
+   movMR (mb .r15 Tab.stackTop) .rax,
    callL abiCheckSGL,
    jmpL abiCmpDoneL,
    .label abiCmpThrL,
@@ -241,26 +244,26 @@ theorem cmp_exit {Kc : Nat} (hC : Code (cmpStubL tab mode) Kc) (dm : MachineData
     (hacc : s.regs.rdx = 0 → s.regs.rax = ACCEPT → Acc) (herr : s.regs.rdx = 2 → Err s.regs.rax)
     (hhi : s.regs.rdx = 0 → 2 ^ 63 ≤ s.regs.rax.toNat → ∀ v, Hi s.regs.rax (wrW s.dmem (A rsp0) v)) :
     Ev (CmpPostH dm ra Acc Err Hi) s (label abiCmpDoneL) := by
-  rw [Code.label (i := 140) hC rfl]
-  refine ev_label (hC.get (i := 140) rfl) ?_
-  refine ev_movRR (hC.get (i := 141) rfl) ?_
-  refine ev_movRI (hC.get (i := 142) rfl) ?_
-  refine ev_binO (op := .add) (o := oR .r15) rfl (hC.get (i := 143) rfl)
+  rw [Code.label (i := 143) hC rfl]
+  refine ev_label (hC.get (i := 143) rfl) ?_
+  refine ev_movRR (hC.get (i := 144) rfl) ?_
+  refine ev_movRI (hC.get (i := 145) rfl) ?_
+  refine ev_binO (op := .add) (o := oR .r15) rfl (hC.get (i := 146) rfl)
     (Or.inr (Or.inr ⟨.r15, rfl, rfl⟩)) fun st => ?_
   have hsa : (BinOp.add.eval (cmpSave tab).toUInt64 s.regs.r15).toNat = base + abiNeed tab := by
     simp only [BinOp.eval, UInt64.toNat_add, cmpSave, hf.r15, Nat.toUInt64]
     rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
     omega
-  refine ev_movRM (hC.get (i := 144) rfl) ⟨by decide, by decide⟩ (v := ra) ?_ ?_
+  refine ev_movRM (hC.get (i := 147) rfl) ⟨by decide, by decide⟩ (v := ra) ?_ ?_
   · rsimp; rw [hsa]; exact hf.sv1
-  refine ev_movRM (hC.get (i := 145) rfl) ⟨by decide, by decide⟩ (v := dm.regs.r15) ?_ ?_
+  refine ev_movRM (hC.get (i := 148) rfl) ⟨by decide, by decide⟩ (v := dm.regs.r15) ?_ ?_
   · rsimp; rw [hsa]; exact hf.sv0
-  refine ev_movRR (hC.get (i := 146) rfl) ?_
+  refine ev_movRR (hC.get (i := 149) rfl) ?_
   have e1 : s.regs.rsp.toBitVec - 8 = A rsp0 := by
     rw [toBitVec_eq_A, hf.rsp, A_sub8 _ (by omega) (by omega)]; rfl
-  refine ev_push (hC.get (i := 147) rfl) ?_ ?_
+  refine ev_push (hC.get (i := 150) rfl) ?_ ?_
   · rsimp; rw [e1]; exact isSome_rdW fun j hj => by rw [A_add]; exact hf.win _ (by omega) (by omega)
-  refine ev_ret (hC.get (i := 148) rfl) (ra := ra) ?_ ?_
+  refine ev_ret (hC.get (i := 151) rfl) (ra := ra) ?_ ?_
   · rsimp; rw [rdW_wrW_same]
   refine Eventually.done _ ⟨⟨rfl, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_, ?_⟩, ?_⟩
   · rsimp; rw [BitVec.sub_add_cancel]; show s.regs.rsp.toNat = _; rw [hf.rsp, hrsp0]
