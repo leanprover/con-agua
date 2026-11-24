@@ -124,10 +124,10 @@ def cmpThrTail (tab : Tab) : Program :=
   [.label abiCmpThrL] ++
   cmpArgsS tab ++ [callL abiStartA7L] ++ cmpOkGe ++
   [i64 (.sub (.reg (rr .rax)) (oR .rcx)), movRR .rdx .rax] ++ cmpSaveRax tab ++
-  [movRM .r11 (mb .rax 48), i64 (.add (.reg (rr .rdx)) (oR .r11)),
-   i64 (.cmp (.reg (rr .rdx)) (oR .rcx)), jccL .c abiCmpKokL, movRI .rdx 1, jmpL abiCmpDoneL,
+  [movRM .rax (mb .rax 48), i64 (.add (.reg (rr .rax)) (oR .rdx)),
+   i64 (.cmp (.reg (rr .rax)) (oR .rcx)), jccL .c abiCmpKokL, movRI .rdx 1, jmpL abiCmpDoneL,
    .label abiCmpKokL,
-   movRI .rax 9223372036854775808, i64 (.add (.reg (rr .rax)) (oR .rdx)), movRI .rdx 0]
+   i64 (.add (.reg (rr .rax)) (oR .rcx)), movRI .rdx 0]
 
 /-- The exit (the caller's `r15` and the return address back) and the decline. -/
 def cmpExit (tab : Tab) : Program :=

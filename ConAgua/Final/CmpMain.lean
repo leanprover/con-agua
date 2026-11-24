@@ -379,11 +379,11 @@ theorem cmp_front (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk ta
     (Or.inr (Or.inr ⟨.rax, rfl, rfl⟩)) ?_
   refine ev_jcc (hC.get (i := 36) rfl) (fun hlt => ?_) (fun hge => ?_)
   · -- declined
-    rw [Code.label (i := 157) hC rfl]
-    refine ev_label (hC.get (i := 157) rfl) ?_
+    rw [Code.label (i := 156) hC rfl]
+    refine ev_label (hC.get (i := 156) rfl) ?_
+    refine ev_movRI (hC.get (i := 157) rfl) ?_
     refine ev_movRI (hC.get (i := 158) rfl) ?_
-    refine ev_movRI (hC.get (i := 159) rfl) ?_
-    refine ev_ret (hC.get (i := 160) rfl) (ra := ra)
+    refine ev_ret (hC.get (i := 159) rfl) (ra := ra)
       (by rsimp; rw [toBitVec_eq_A]; exact hc.hra) ?_
     refine Eventually.done _ ⟨⟨rfl, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, fun h => ?_, fun h => ?_⟩, fun h => ?_⟩ <;>
       dsimp only at * <;> (try rsimp at *)
