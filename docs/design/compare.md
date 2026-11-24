@@ -337,3 +337,10 @@ order, `checkStreamJ`), `TwinCompareVerdict`, `TwinCompareVerdictPooled`.
   `TwinCompareVerdictSeqI`; the threaded statements stay (`…I`). **Follow-up idea, not this lane:**
   the full tier-0 invariant (no job stores below the tier-0 counts) would also discharge the
   threaded mode's trusted `BufKept` premise (route A's `mprotect`).
+* **Worker address space** (amendment 3 check, numbers from `checker.s`): a flat worker region is
+  `ca_worker_size` = 3 848 290 697 216 bytes (3.85 TB virtual, `MAP_NORESERVE`: 112 slots of
+  32 GiB; only touched pages cost memory), unchanged by this lane; `ca_worker_size` stays one
+  `workerNeed`. A compared run's thread maps two sub-regions (`main.c`: twice that when the
+  buffer's word 5 is nonzero), 7.70 TB. With a 47-bit user address space (128 TiB = 140.7 TB)
+  and the driver region unmapped after entry 1 except `OUT`, that allows about 36 flat threads
+  and about 18 compared threads before `mmap` fails (a startup failure, exit 3, never a verdict).
