@@ -89,8 +89,8 @@ theorem cmpExt_spec (p : Prog) (hp : p.lookup "cmp_ext" = some cmpExtL) (n : Nat
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, warr]
-    all_goals simp only [L.St.setLoc_mem, St.setLoc_loc, Cmp.eval, BinOp.eval, UInt64.toNat_zero,
-      Locals.init, ite_true, ite_false] at *
+    all_goals simp only [L.St.setLoc_mem, St.setLoc_loc, Cmp.eval, UInt64.toNat_zero,
+      Locals.init, ite_true] at *
     all_goals (try simp only [L.St.setLoc_mem, St.setLoc_loc, St.setLoc_mem] at *)
     all_goals (try simp only [Locals.get_set] at *)
     all_goals (try simp only [L.St.setLoc_mem, Prod.snd] at *)

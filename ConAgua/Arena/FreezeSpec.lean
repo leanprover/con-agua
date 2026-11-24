@@ -437,15 +437,14 @@ theorem parCompact_run {p : Prog} (hp : p.lookup "par_compact" = some parCompact
       hF.size]
     by_cases hok : (pcHdrOK (s.mem.arr64 OUT).size b ∧ 0 < (s.mem.arr64 L.Front.DECL).size) ∧
         128 < (s.mem.arr64 CTL).size
-    · rw [if_pos hok]
+    · rw [ite_eq_left hok]
       obtain ⟨⟨⟨h0, h1, h2, h3, h4, h5, h8, h9⟩, hd⟩, hc⟩ := hok
       have hd' : (Nat.toUInt64 0).toNat < (s.mem.arr64 L.Front.DECL).size := by simpa using hd
       have hc' : (Nat.toUInt64 128).toNat < (s.mem.arr64 CTL).size := by simpa using hc
-      simp only [h0, h1, h2, h3, h4, h5, h8, h9, hd, hc, hd', hc', and_self, ite_true]
-      simp [step, evalArgs, evalE, Sig.retVal, Sig.retOr, parCompactMem, pcImages, hG, pcTail, hS2, hSm,
-        rd64_set64_out _ L.Front.DECL (by decide), rd64_set64_out _ CTL (by decide)]
+      simp only [h0, h1, h2, h3, h4, h5, h8, h9, hd', hc', and_self, ite_true]
+      simp [step, evalArgs, evalE, Sig.retVal, Sig.retOr, parCompactMem, pcImages, hG, pcTail, hS2]
       rfl
-    · rw [if_neg hok]
+    · rw [ite_eq_right hok]
       (repeat' split) <;> first | rfl |
         (exfalso; refine hok ⟨⟨?_, ?_⟩, ?_⟩ <;> simp_all [pcHdrOK])
   · simp [h1]
@@ -736,7 +735,7 @@ theorem getD_pcTail_lo_b (M : Mem) (o b : Word) (h : pcHdrOK (M.arr64 OUT).size 
     toNat_badd _ _ (by omega : b.toNat + 3 < 2 ^ 64), toNat_badd _ _ (by omega : b.toNat + 4 < 2 ^ 64),
     toNat_badd _ _ (by omega : b.toNat + 5 < 2 ^ 64), toNat_badd _ _ (by omega : b.toNat + 8 < 2 ^ 64),
     toNat_badd _ _ (by omega : b.toNat + 9 < 2 ^ 64)]
-  simp (config := { decide := true }) [h0, h1, h2, h3, h4, h5, h8, h9]
+  simp (config := { decide := true }) [h1, h2, h3, h4, h5, h8, h9]
   exact fun h => absurd h (by omega)
 
 theorem getD_pcTail_hi_b (M : Mem) (o b : Word) (k : Nat) (hk : k < b.toNat ∨ b.toNat + 10 ≤ k)

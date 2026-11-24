@@ -61,7 +61,7 @@ theorem evalE_ldc (a : ArrId) (k : Nat) (s : St) (h : k < (s.mem.arr64 a).size) 
     (evalE (.ld64 a (fzC k))).run s = .ok (rd64 s.mem a k.toUInt64, s) := by
   have := evalE_ld_run a k s
   simp only [fzC]
-  rw [this, if_pos (by rw [toNat_hdr k hk]; exact h)]
+  rw [this, ite_eq_left (by rw [toNat_hdr k hk]; exact h)]
 
 /-! ## Header S's entries from header C's -/
 
@@ -109,7 +109,7 @@ theorem OutFrame.hsMem : ∀ (M : Mem) (is : List Nat), OutFrame M (hsMem M is)
 theorem rd64_set64_lt (M : Mem) (a : ArrId) (i v j : Word) (h : i ≠ j) :
     rd64 (M.set64 a i v) a j = rd64 M a j := by
   simp only [rd64, getD_set64_same]
-  rw [if_neg (fun e => h (UInt64.toNat_inj.mp e.1.symm))]
+  rw [ite_eq_right (fun e => h (UInt64.toNat_inj.mp e.1.symm))]
 
 /-- **Header S's entry `i` runs as `hsStep`** (the words of both headers in bounds). -/
 theorem hsStmt_run {p : Prog} {f : Stmt → M Sig} (i : Nat) (hi : i < frozen.length) (s : St)
@@ -311,13 +311,13 @@ theorem seedFold_run {p : Prog} {f : Stmt → M Sig} (rest : Stmt) : ∀ (ks : L
     simp only [L.Mem.size64_set64] at ih
     by_cases h1 : k.toUInt64.toNat < (s.mem.arr64 L.Checker.SCTL).size ∧
         (s.loc 2 + k.toUInt64).toNat < (s.mem.arr64 OUT).size
-    · rw [if_pos h1, ih]
+    · rw [ite_eq_left h1, ih]
       simp only [List.foldl_cons, seedPut, List.forall_mem_cons]
       by_cases h2 : ∀ x ∈ ks, (s.loc 2 + x.toUInt64).toNat < (s.mem.arr64 OUT).size ∧
           x.toUInt64.toNat < (s.mem.arr64 L.Checker.SCTL).size
-      · rw [if_pos h2, if_pos ⟨⟨h1.2, h1.1⟩, h2⟩]
-      · rw [if_neg h2, if_neg (fun h => h2 h.2)]
-    · rw [if_neg h1, if_neg (fun h => h1 ⟨(List.forall_mem_cons.mp h).1.2, (List.forall_mem_cons.mp h).1.1⟩)]
+      · rw [ite_eq_left h2, ite_eq_left ⟨⟨h1.2, h1.1⟩, h2⟩]
+      · rw [ite_eq_right h2, ite_eq_right (fun h => h2 h.2)]
+    · rw [ite_eq_right h1, ite_eq_right (fun h => h1 ⟨(List.forall_mem_cons.mp h).1.2, (List.forall_mem_cons.mp h).1.1⟩)]
 
 /-- Header S's words, then the length. -/
 def hsTailS : Stmt :=
@@ -350,8 +350,8 @@ theorem cmpHdrSL_eq : cmpHdrSL = { nparams := 1, nlocals := 3, body := (Stmt.seq
 theorem ite_ok {β : Type} {c : Prop} [Decidable c] {a : Except Err β} {x : β}
     (h : (if c then a else .error .oob) = .ok x) : c ∧ a = .ok x := by
   by_cases hc : c
-  · rw [if_pos hc] at h; exact ⟨hc, h⟩
-  · rw [if_neg hc] at h; cases h
+  · rw [ite_eq_left hc] at h; exact ⟨hc, h⟩
+  · rw [ite_eq_right hc] at h; cases h
 
 theorem evalE_c_if (k : Nat) (s : St) : (evalE (fzC k)).run s = if True then .ok (k.toUInt64, s) else .error .oob := rfl
 theorem evalE_const_if (w : Word) (s : St) :
@@ -361,7 +361,7 @@ theorem evalE_var_if (x : Var) (s : St) :
 
 theorem OutFrame.seedFold (so : Word) : ∀ (ks : List Nat) (M : Mem), OutFrame M (ks.foldl (seedPut so) M)
   | [], M => OutFrame.refl M
-  | k :: ks, M => (OutFrame.set64 M _ _).trans (OutFrame.seedFold so ks _)
+  | _k :: ks, M => (OutFrame.set64 M _ _).trans (OutFrame.seedFold so ks _)
 
 /-- **`cmp_hdr_s`'s body**: a run that returns stayed in bounds, ends in `cmpHdrSMem` and returns
 the whole buffer's length (`lc` local `0`; header C's words in bounds). -/

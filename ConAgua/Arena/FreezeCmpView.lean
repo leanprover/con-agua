@@ -31,7 +31,7 @@ def cmpBufC (out : ArrId) (m : Mem) : Array Word :=
 
 theorem getD_set64_ne (M : Mem) (a : ArrId) (i v : Word) (k : Nat) (h : k ≠ i.toNat) :
     ((M.set64 a i v).arr64 a).getD k 0 = (M.arr64 a).getD k 0 := by
-  rw [getD_set64_same, if_neg (fun e => h e.1)]
+  rw [getD_set64_same, ite_eq_right (fun e => h e.1)]
 
 theorem toNat_c (k : Nat) (h : k < 2 ^ 64) : (Nat.toUInt64 k).toNat = k := toNat_hdr k h
 
@@ -54,9 +54,9 @@ theorem fzStep_low (M : Mem) (i : Nat) (z : Fz) (o : Word) (hi : 11 + 2 * i < 2 
     rw [UInt64.zero_add, toNat_c _ (by omega)]
   simp only [fzStep, fzCopy, e0]
   rw [getD_set64_ne _ _ _ _ _ (by rw [i11]; exact h11), getD_set64_ne _ _ _ _ _ (by rw [i10]; exact h10),
-    if_pos (by decide : (1 : Word) ≠ 0)]
+    ite_eq_left (by decide : (1 : Word) ≠ 0)]
   have := (fzEv M z.e).toNat_lt
-  rw [getD_copy64 (Ne.symm hz) _ _ _ _ (by omega) (by simp; omega), if_neg (by omega)]
+  rw [getD_copy64 (Ne.symm hz) _ _ _ _ (by omega) (by simp; omega), ite_eq_right (by omega)]
 
 theorem fzOK_fit (M : Mem) (i : Nat) (z : Fz) (o : Word) (hok : fzOK M 1 i z o 0 = true) :
     o.toNat + (fzEv M z.e).toNat ≤ (M.arr64 OUT).size := by
@@ -311,8 +311,8 @@ theorem viewSCtl_getD (m : Mem) (k : Nat) (hk : vsPatched k = false) :
 theorem viewS_ctl (m : Mem) : (viewS m).arr64 ↑CTL = viewSCtl m := by
   simp only [viewS, Mem.arr64]
   unfold viewSArr
-  rw [if_neg (by decide), if_neg (by decide), if_neg (by decide), if_neg (by decide), if_neg (by decide),
-    if_neg (by decide), if_neg (by decide), if_neg (by decide), if_neg (by decide), if_pos rfl]
+  rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide),
+    ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]
 
 theorem fzEv_viewS (m : Mem) : ∀ (e : Expr), e.vsOk = true → fzEv (viewS m) e = fzEv m e
   | .const _, _ => rfl
@@ -385,13 +385,13 @@ theorem viewSArr_moved (m : Mem) : viewSArr m ↑EIXA = m.arr64 SIXA ∧ viewSAr
     viewSArr m ↑TIXN = m.arr64 STXN := by
   unfold viewSArr
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
-  · rw [if_pos rfl]
-  · rw [if_neg (by decide), if_pos rfl]
-  · rw [if_neg (by decide), if_neg (by decide), if_pos rfl]
-  · rw [if_neg (by decide), if_neg (by decide), if_neg (by decide), if_pos rfl]
-  · rw [if_neg (by decide), if_neg (by decide), if_neg (by decide), if_neg (by decide), if_pos rfl]
-  · rw [if_neg (by decide), if_neg (by decide), if_neg (by decide), if_neg (by decide), if_neg (by decide),
-      if_pos rfl]
+  · rw [ite_eq_left rfl]
+  · rw [ite_eq_right (by decide), ite_eq_left rfl]
+  · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]
+  · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]
+  · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]
+  · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide),
+      ite_eq_left rfl]
 
 theorem fzEv_ctl_viewS (m : Mem) (k : Nat) (hk : vsPatched k = false) (hk' : k < 2 ^ 64) :
     fzEv (viewS m) (fzCtl k) = fzEv m (fzCtl k) := by
@@ -504,8 +504,8 @@ theorem hsMem_entry : ∀ (is : List Nat) (M : Mem), is.Nodup → (∀ i ∈ is,
         cases hv
         refine ⟨?_, ?_⟩
         · rw [getD_set64_ne _ _ _ _ _ (by rw [toNat_c _ (by omega)]; omega), getD_set64_same,
-            if_pos ⟨by rw [toNat_c _ (by omega)], by omega⟩]
-        · rw [getD_set64_same, if_pos ⟨by rw [toNat_c _ (by omega)], by simp only [L.Mem.size64_set64]; omega⟩]
+            ite_eq_left ⟨by rw [toNat_c _ (by omega)], by omega⟩]
+        · rw [getD_set64_same, ite_eq_left ⟨by rw [toNat_c _ (by omega)], by simp only [L.Mem.size64_set64]; omega⟩]
       | extra => simp only [hE] at hv; cases hv
     · have := hsMem_entry is (hsStep M i0) hnd.2 (fun j hj => h j (by simp [hj])) hsz' i hi' v
         (by rw [hsVal_step _ _ _ (h i (by simp [hi'])) (h i0 (by simp))]; exact hv)
@@ -535,13 +535,13 @@ theorem fzStep_put (M : Mem) (i : Nat) (z : Fz) (o : Word) (hz : z.src ≠ OUT) 
   have i11 : ((0 : Word) + (11 + 2 * i).toUInt64).toNat = 11 + 2 * i := by
     rw [UInt64.zero_add, toNat_c _ (by omega)]
   have e0 : (0 + o) = o := by simp
-  simp only [fzStep, fzCopy, e0, if_pos (by decide : (1 : Word) ≠ 0)]
+  simp only [fzStep, fzCopy, e0, ite_eq_left (by decide : (1 : Word) ≠ 0)]
   have := (fzEv M z.e).toNat_lt
   refine ⟨?_, ?_, fun t ht => ?_⟩
-  · rw [getD_set64_ne _ _ _ _ _ (by rw [i11]; omega), getD_set64_same, if_pos ⟨by rw [i10], by rw [hsz]; omega⟩]
-  · rw [getD_set64_same, if_pos ⟨by rw [i11], by simp only [L.Mem.size64_set64, hsz]; omega⟩]
+  · rw [getD_set64_ne _ _ _ _ _ (by rw [i11]; omega), getD_set64_same, ite_eq_left ⟨by rw [i10], by rw [hsz]; omega⟩]
+  · rw [getD_set64_same, ite_eq_left ⟨by rw [i11], by simp only [L.Mem.size64_set64, hsz]; omega⟩]
   · rw [getD_set64_ne _ _ _ _ _ (by rw [i11]; omega), getD_set64_ne _ _ _ _ _ (by rw [i10]; omega),
-      getD_copy64 (Ne.symm hz) _ _ _ _ (by omega) (by simp; omega), if_pos ⟨by omega, by omega, by omega⟩]
+      getD_copy64 (Ne.symm hz) _ _ _ _ (by omega) (by simp; omega), ite_eq_left ⟨by omega, by omega, by omega⟩]
     congr 1; simp
 
 /-- The solution's images keep every word below their first offset but their header entries. -/
@@ -697,13 +697,13 @@ theorem seedMem_at (M : Mem) (so : Word) (hso : so.toNat + 256 ≤ (M.arr64 OUT)
     L.Mem.size64_set64, rd64_set64_out _ L.Checker.SCTL (by decide)]
   by_cases h224 : t = 224
   · subst h224; simp; omega
-  · rw [if_neg (by omega), if_neg h224]
+  · rw [ite_eq_right (by omega), ite_eq_right h224]
     by_cases hs : 162 ≤ t ∧ t ≤ 173
-    · rw [if_pos ⟨hWm.mpr hs, by omega⟩, if_pos hs]
-    · rw [if_neg (fun h => hs (hWm.mp h.1)), if_neg hs]
+    · rw [ite_eq_left ⟨hWm.mpr hs, by omega⟩, ite_eq_left hs]
+    · rw [ite_eq_right (fun h => hs (hWm.mp h.1)), ite_eq_right hs]
       by_cases h128 : t = 128
       · subst h128; simp; omega
-      · rw [if_neg (by omega), if_neg h128]
+      · rw [ite_eq_right (by omega), ite_eq_right h128]
 
 section viewS2
 variable {m9 : Mem}

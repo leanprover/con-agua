@@ -269,19 +269,19 @@ theorem cmpOrW_on {m : Mem} (h : rdW (m.arr64 CTL) (UInt64.ofNat cmpCW) = 1) (e 
 theorem truncFrozen_firsts (m : Mem) :
     (truncFrozen m).arr64 FIRSTS = (m.arr64 FIRSTS).extract 0 (xD m).toNat := by
   have := truncFrozen_mem m (x := FIRSTS) (z := ⟨FIRSTS, fzDeclX⟩) (by rw [frozen_drop1]; simp)
-  rw [this]; simp only [fzExt, fzDeclX, fzDlpX, fzCmpOr, fzDecl, fzCtl, fzC, Expr.pval, BinOp.eval, rd64, rdW, xD, xP, cmpOrW, cmpCW, cmpKD, cmpKP, Array.getD_eq_getD_getElem?]; rfl
+  rw [this]; simp only [fzExt, fzDeclX, fzCmpOr, fzDecl, fzCtl, fzC, Expr.pval, BinOp.eval, rd64, rdW, xD, cmpOrW, cmpCW, cmpKD, Array.getD_eq_getD_getElem?]; rfl
 
 theorem truncFrozen_decl (m : Mem) : (truncFrozen m).arr64 L.Front.DECL =
     (m.arr64 L.Front.DECL).extract 0 (1 + 8 * xD m).toNat := by
   have := truncFrozen_mem m (x := L.Front.DECL)
     (z := ⟨L.Front.DECL, .bin .add (fzC 1) (.bin .mul (fzC 8) fzDeclX)⟩) (by rw [frozen_drop1]; simp)
-  rw [this]; simp only [fzExt, fzDeclX, fzDlpX, fzCmpOr, fzDecl, fzCtl, fzC, Expr.pval, BinOp.eval, rd64, rdW, xD, xP, cmpOrW, cmpCW, cmpKD, cmpKP, Array.getD_eq_getD_getElem?]; rfl
+  rw [this]; simp only [fzExt, fzDeclX, fzCmpOr, fzDecl, fzCtl, fzC, Expr.pval, BinOp.eval, rd64, rdW, xD, cmpOrW, cmpCW, cmpKD, Array.getD_eq_getD_getElem?]; rfl
 
 theorem truncFrozen_dlp (m : Mem) : (truncFrozen m).arr64 L.Front.DLP =
     (m.arr64 L.Front.DLP).extract 0 (1 + xP m).toNat := by
   have := truncFrozen_mem m (x := L.Front.DLP)
     (z := ⟨L.Front.DLP, .bin .add (fzC 1) fzDlpX⟩) (by rw [frozen_drop1]; simp)
-  rw [this]; simp only [fzExt, fzDeclX, fzDlpX, fzCmpOr, fzDecl, fzCtl, fzC, Expr.pval, BinOp.eval, rd64, rdW, xD, xP, cmpOrW, cmpCW, cmpKD, cmpKP, Array.getD_eq_getD_getElem?]; rfl
+  rw [this]; simp only [fzExt, fzDlpX, fzCmpOr, fzCtl, fzC, Expr.pval, BinOp.eval, rd64, rdW, xP, cmpOrW, cmpCW, cmpKP, Array.getD_eq_getD_getElem?]; rfl
 
 /-- **A solution row** (`SIX*`, `STX*`, `MAT*`) with the compare flag `CTL[cmpCW] = 1`: its
 prefix of `2 · CTL[k]` words. -/
