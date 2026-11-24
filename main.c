@@ -305,14 +305,13 @@ static int run_main(int argc, char **argv) {
    justified by SOLUTION, which is checked as a FILE is. The two files are read as FILE is
    (`read_input`); the verdict line and the exit status are `print_verdict`'s. The only
    difference from a FILE run is the entry called with the second file: `ca_start_c` (the
-   sequential driver, on a region of ca_cmp_region_size bytes) resp. `ca_start_ac` (entry 1 of
-   the threaded run, `run_jobs`), the challenge's bytes in the first two arguments (as
-   `ca_start`'s input), the solution's in the last two (on the stack). The sequential accept is
-   covered by `checkerFile_compare_accepts` (ConAgua/Final/Compare.lean; the call is as `CmpCall`
-   states), the threaded one by `checkerFile_compare_threads_accept`. */
+   sequential driver) resp. `ca_start_ac` (entry 1 of the threaded run, `run_jobs`), the
+   challenge's bytes in the first two arguments (as `ca_start`'s input), the solution's in the
+   last two (on the stack), on a region of ca_region_size bytes. The call is as `CmpCall`
+   (ConAgua/Final/CmpAbi.lean) states; the threaded accept is covered by
+   `checkerFile_compare_threads_accept`. */
 extern ca_res ca_start_c(const uint8_t *c, uint64_t c_len, const uint8_t *pins, uint64_t pins_len,
                          void *base, uint64_t base_len, const uint8_t *s, uint64_t s_len);
-extern const uint64_t ca_cmp_region_size;
 
 static int compare_usage(const char *prog, const char *why) {
   fprintf(stderr, "%s: --compare takes %s, a challenge and its solution\n", prog, why);
@@ -326,13 +325,12 @@ static int run_compare(const char *prog, int jobs, int argc, char **argv) {
   uint64_t c_len, s_len;
   uint8_t *c = read_input(argv[0], &c_len, &in_mapped);
   uint8_t *s = read_input(argv[1], &s_len, &s_mapped);
-  uint64_t size = jobs > 1 ? ca_region_size : ca_cmp_region_size;
-  uint8_t *region = mmap(0, size, PROT_READ | PROT_WRITE,
+  uint8_t *region = mmap(0, ca_region_size, PROT_READ | PROT_WRITE,
                          MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
   if (region == MAP_FAILED) fail("mmap", strerror(errno));
   advise_huge(region + ca_w0, ca_nw);
   if (jobs > 1) return run_jobs(jobs, c, c_len, s, s_len, region);
-  return print_verdict(ca_start_c(c, c_len, pins, sizeof pins, region, size, s, s_len));
+  return print_verdict(ca_start_c(c, c_len, pins, sizeof pins, region, ca_region_size, s, s_len));
 }
 
 /* Every path flushes the verdict line before exiting: a flush that fails is status 3 (the
