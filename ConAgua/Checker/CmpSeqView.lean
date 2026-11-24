@@ -36,6 +36,18 @@ theorem csA_arr {b : TieredArray} (h : b ∈ csA) : b.hi = false ∧ (b.arr = 67
   simp only [csA, List.mem_cons, List.not_mem_nil, or_false] at h
   rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
 
+/-- `csA` and the stash arrays modes `8`/`9` keep the challenge's view in (`CDECL`, `CEIX*`,
+`CTIX*`, `CFIRSTS`, `CDLP`, `CCTL`): what a bank switch writes. -/
+def csAS : List TieredArray := csA ++ ([CDECL, CEIXA, CEIXS, CEIXN, CTIXA, CTIXS, CTIXN, CFIRSTS, CDLP, CCTL] : List ArrId).map TieredArray.t0
+
+theorem csAS_arr {b : TieredArray} (h : b ∈ csAS) : b.hi = false ∧
+    (b.arr = 67 ∨ b.arr = 68 ∨ (129 ≤ b.arr ∧ b.arr ≤ 137) ∨ (223 ≤ b.arr ∧ b.arr ≤ 236)) := by
+  simp only [csAS, csA, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.mem_cons, List.not_mem_nil, or_false] at h
+  rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl |
+    rfl | rfl | rfl <;> decide
+
+theorem csA_sub_csAS {b : TieredArray} (h : b ∈ csA) : b ∈ csAS := List.mem_append_left _ h
+
 theorem csC_val {x : Word} (h : x ∈ csC) : x.toNat = 128 ∨ (162 ≤ x.toNat ∧ x.toNat ≤ 173) ∨ x.toNat = 224 := by
   simp only [csC, List.mem_cons, List.not_mem_nil, or_false] at h
   rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
@@ -216,32 +228,32 @@ variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds ds'
 /-- **The jobs' memory half across a swap of the stream index, at any solution** (`JobM.csSwap`
 with the new memory's solution `J'` given). -/
 theorem _root_.L.Arena.JobM.csSwapJ {J J' : Option ISolution} {t t' : Mem} (h : JobM pins dn ds J I t a)
-    (hf : MemFrame csA csC t t') (hI : IndexR t' I') (hD : DeclsF (t'.arr64 DECL) (t'.arr64 DLP) ds')
+    (hf : MemFrame csAS csC t t') (hI : IndexR t' I') (hD : DeclsF (t'.arr64 DECL) (t'.arr64 DLP) ds')
     (hfz : FrozenR t' I') (hfs : I'.firsts.size = ds'.size) (hs : JSol J' t') :
     JobM pins dn ds' J' I' t' a := by
   have hE : t'.arr64 EREC = t.arr64 EREC := hf.arr _ (by decide) (by decide)
   have hbelow : OwnBelow t' := by
     intro w hw
-    have hA : ∀ (u : UInt64), 140 ≤ (tierA (oixArr (rowTag w)) u).arr := fun u => by
+    have hA : ∀ (u : UInt64), 140 ≤ (tierA (oixArr (rowTag w)) u).arr ∧ (tierA (oixArr (rowTag w)) u).arr ≤ 148 := fun u => by
       unfold tierA oixArr; generalize (u &&& 1 != 0) = b
       cases b <;> split <;> (try split) <;> decide
-    have hB : ∀ (u : UInt64), 140 ≤ (tierA (otxArr (rowTag w)) u).arr := fun u => by
+    have hB : ∀ (u : UInt64), 140 ≤ (tierA (otxArr (rowTag w)) u).arr ∧ (tierA (otxArr (rowTag w)) u).arr ≤ 148 := fun u => by
       unfold tierA otxArr; generalize (u &&& 1 != 0) = b
       cases b <;> split <;> (try split) <;> decide
     have e1 : ∀ u, t'.arr64 (tierA (oixArr (rowTag w)) u) = t.arr64 (tierA (oixArr (rowTag w)) u) :=
-      fun u => hf.arr _ (not_mem_csA (.inr ⟨by have := hA u; omega, by have := hA u; omega, .inr (by have := hA u; omega)⟩))
+      fun u => hf.arr _ (fun hm => by have := csAS_arr hm; have := hA u; omega)
         (fun e => by have := hA u; rw [e] at this; revert this; decide)
     have e2 : ∀ u, t'.arr64 (tierA (otxArr (rowTag w)) u) = t.arr64 (tierA (otxArr (rowTag w)) u) :=
-      fun u => hf.arr _ (not_mem_csA (.inr ⟨by have := hB u; omega, by have := hB u; omega, .inr (by have := hB u; omega)⟩))
+      fun u => hf.arr _ (fun hm => by have := csAS_arr hm; have := hB u; omega)
         (fun e => by have := hB u; rw [e] at this; revert this; decide)
     have e3 : ownRow t' w = ownRow t w := by simp only [ownRow, e1]
     simp only [stampW, hf.ctl 133 (by decide), e3, e2]
     exact h.below w hw
-  have hAh : ∀ b ∈ csA, InHigh b := fun b hb => by have := csA_arr hb; exact ⟨this.1, by omega⟩
+  have hAh : ∀ b ∈ csAS, InHigh b := fun b hb => by have := csAS_arr hb; exact ⟨this.1, by omega⟩
   have hCh : ∀ x ∈ csC, 64 ≤ x.toNat := fun x hx => by have := csC_val hx; omega
   exact ⟨arenaD_frame_hi h.arena hf hAh hCh,
-    h.core.frame (fun b hb => by have := csA_arr hb; omega) (fun x hx => by have := csC_val hx; omega) hf,
-    h.pinsR.frame (fun b hb => by have := csA_arr hb; omega) hf, h.mode.frame hf (by decide) (by decide),
+    h.core.frame (fun b hb => by have := csAS_arr hb; omega) (fun x hx => by have := csC_val hx; omega) hf,
+    h.pinsR.frame (fun b hb => by have := csAS_arr hb; omega) hf, h.mode.frame hf (by decide) (by decide),
     hI, hbelow,
     by simp only [stampW, hf.ctl 133 (by decide)]; exact h.stamp,
     hD,
@@ -254,7 +266,7 @@ theorem _root_.L.Arena.JobM.csSwapJ {J J' : Option ISolution} {t t' : Mem} (h : 
         ⟨by decide, by decide, by decide⟩ (by decide)
         ⟨by decide, by decide, by decide⟩ (by decide) (by decide), h.mem.dnN⟩,
     by rw [pinW_frame hf (by decide)]; exact h.flag,
-    h.memos.frame hf (fun b hb => by have := csA_arr hb; refine ⟨?_, ?_, ?_⟩ <;>
+    h.memos.frame hf (fun b hb => by have := csAS_arr hb; refine ⟨?_, ?_, ?_⟩ <;>
         (try (intro e; subst e; revert this; decide)) <;> omega)
       (fun x hx => by have := csC_val hx; omega),
     hfs, hfz, hs⟩
@@ -309,7 +321,7 @@ theorem _root_.L.Arena.JobM.csBack {J : ISolution} {IS IC : IStreamIndex} {dsS d
       · rw [hf.ctl _ (by decide)]; exact hK.scnt) hx
   have h224 : ctlW mC SOLC = 1 := by
     simp only [ctlW]; rw [hV.ctl _ (by decide)]; exact hC.jsol.sol.1
-  refine hS.csSwapJ hf hI (by rw [hV.arr _ (by decide), hV.arr _ (by decide)]; exact hC.decls)
+  refine hS.csSwapJ (hf.mono (fun _ h => csA_sub_csAS h) (fun _ h => h)) hI (by rw [hV.arr _ (by decide), hV.arr _ (by decide)]; exact hC.decls)
     (hC.frozen.congr fun x hx' => hV.ctl x (by
       simp only [frozenCtl, csC, List.mem_cons, List.not_mem_nil, or_false] at hx' ⊢
       rcases hx' with h | h | h | h | h | h | h | h | h | h | h | h <;> simp [h]))
