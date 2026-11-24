@@ -143,7 +143,7 @@ theorem cmpV_tjobC {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS 
     have hk' : (UInt64.ofNat k).toNat = k := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
     obtain ⟨⟨a', hrj, X, hJ, hPB, hX⟩, hI'⟩ := runThr hJP.check_jobs hRS hds n hn a (UInt64.ofNat k)
       (by rw [hk']; exact hk) (by rw [hk']; exact hfo) _ rfl (hR _) rfl rfl hrun
-    refine ⟨a', ?_, fun j => ⟨X, hJ, hPB, fun t ht => (thr_next _ j hI' hkept t ht).trans (hX t ht)⟩⟩
+    refine ⟨a', ?_, fun j => ⟨X, hJ, hPB, fun t ht => (thr_next _ j hI' hkept (thr_ctl_next hrun) t ht).trans (hX t ht)⟩⟩
     have e : res.toArray[(UInt64.ofNat k).toNat]'(by rw [hk']; exact hk) = res.toArray[k] := by simp only [hk']
     rw [← e]; simp only [hk'] at hrj ⊢; exact hrj
   have H := hH hstep
@@ -200,7 +200,7 @@ theorem cmpV_tjobC {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS 
       have hj' : j'.toNat < res.toArray.size := by omega
       obtain ⟨⟨a₁, hrj, X, hJ, hPB, hX⟩, hI'⟩ := runThr hJP.check_jobs hRS hds n' hn' a j' hj'
         (hfold _ a hj' (by omega) hw) _ rfl (hR _) rfl rfl hrun
-      have hR' : Rel r' a₁ := fun j => ⟨X, hJ, hPB, fun t ht => (thr_next _ j hI' hkept t ht).trans (hX t ht)⟩
+      have hR' : Rel r' a₁ := fun j => ⟨X, hJ, hPB, fun t ht => (thr_next _ j hI' hkept (thr_ctl_next hrun) t ht).trans (hX t ht)⟩
       obtain ⟨hx', hdk⟩ := H.hden _ hj'
       obtain ⟨hw', -⟩ := job_specC H.hrec H.hpp H.hpinsOK H.hpersPins H.hpins H.hpd H.hI
         H.hpI H.hIS H.hpIS H.hndS H.hmates hw hj' hx' hdk (hpre j'.toNat (by omega)) hrj
@@ -216,7 +216,8 @@ theorem cmpV_tjobC {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS 
     simpa using hcN c' hc
   · rw [List.mem_singleton.mp ht]; simpa using hjN
 
-/-- info: 'L.Checker.cmpV_tjobC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+-- TEMP (compare2-freeze): `sorryAx` from the stand-ins (thr_ctl_next, ...)
+/-- info: 'L.Checker.cmpV_tjobC' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms cmpV_tjobC
 
 end L.Checker

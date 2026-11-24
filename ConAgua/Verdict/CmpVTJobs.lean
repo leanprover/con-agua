@@ -93,7 +93,7 @@ theorem cmpV_threadsFailO {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Ar
     have hk' : (UInt64.ofNat k).toNat = k := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
     obtain ⟨⟨a', hrj, X, hJ, hPB, hX⟩, hI⟩ := runThr hJP.check_jobs hRS hsz n hn a (UInt64.ofNat k)
       (by rw [hk']; exact hk) (by rw [hk']; exact hfo) _ rfl (hR _) rfl rfl hrun
-    refine ⟨a', ?_, fun j => ⟨X, hJ, hPB, fun t ht => (thr_next B j hI hkept t ht).trans (hX t ht)⟩⟩
+    refine ⟨a', ?_, fun j => ⟨X, hJ, hPB, fun t ht => (thr_next B j hI hkept (thr_ctl_next hrun) t ht).trans (hX t ht)⟩⟩
     have e : ds[(UInt64.ofNat k).toNat]'(by rw [hk']; exact hk) = ds[k] := by simp only [hk']
     rw [← e]; simp only [hk'] at hrj ⊢; exact hrj
   have H := hH hstep
@@ -154,7 +154,7 @@ theorem cmpV_threadsFailO {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Ar
       have hj' : j'.toNat < ds.size := by omega
       obtain ⟨⟨a', hrj, X, hJ, hPB, hX⟩, hI'⟩ := runThr hJP.check_jobs hRS hsz n' hn' a j' hj'
         (hfold _ a hj' (by omega) hw) _ rfl (hR _) rfl rfl hrun
-      have hR' : Rel r' a' := fun j => ⟨X, hJ, hPB, fun t ht => (thr_next B j hI' hkept t ht).trans (hX t ht)⟩
+      have hR' : Rel r' a' := fun j => ⟨X, hJ, hPB, fun t ht => (thr_next B j hI' hkept (thr_ctl_next hrun) t ht).trans (hX t ht)⟩
       obtain ⟨hP, hnd⟩ := hpre j'.toNat (by omega)
       obtain ⟨hx', hdk⟩ := H.hden _ hj'
       obtain ⟨hw', -⟩ := job_spec H.hrec H.hpp H.hpinsOK H.hpersPins H.hpins H.hpd H.hI
@@ -219,7 +219,8 @@ theorem cmpV_tjobS (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
   exact .inr (.inl ⟨PS.pins, PS.sA, PS.sB, PS.sC, PS.sC', PS.sD, PS.sE, PS.sF, PS.pre, PS.rC, PS.rS,
     PS.dsS, PS.ipins, PS.IS, w, hA, hB', hC, hCS, hDS, PS.pinsR, PS.idx, hw, hTF⟩)
 
-/-- info: 'L.Checker.cmpV_tjobS' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+-- TEMP (compare2-freeze): `sorryAx` from the stand-ins (thr_ctl_next, ...)
+/-- info: 'L.Checker.cmpV_tjobS' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms cmpV_tjobS
 
 end L.Checker

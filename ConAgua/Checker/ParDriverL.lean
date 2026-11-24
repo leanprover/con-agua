@@ -1,5 +1,6 @@
 module
 
+public import ConAgua.Checker.SeedReread
 public import ConAgua.Checker.PhaseBReads
 public import ConAgua.Checker.JobsStart
 import ConAgua.Checker.RomProgInit
@@ -281,6 +282,7 @@ theorem checkJobs_seqTO {b pb : ByteArray}
 theorem checkerProg_flushProg : FlushProg checkerProg := by
   constructor <;> chk_lk
 
+set_option maxHeartbeats 1000000 in
 /-- **Entry 2 in place, `check_b`**: from a memory that agrees with the memory after the index
 build on every array the jobs name, with the range `[0, k)` (`k` the number of records) and an
 empty seed `CTLF`, a run that returns `ACCEPT` means the twin's jobs over every record accept from
@@ -301,6 +303,10 @@ theorem checkB_seqO {b pb : ByteArray}
   have hl : (UInt64.toNat (s₀.mem.len64 CTLF)) = 0 := by simp [Mem.len64, hctlf]
   have hlo' : s₀.mem.glob ⟨9⟩ = 0 := hlo
   have hhi'' : s₀.mem.glob ⟨11⟩ = hi := hhi'
+  -- in place the seed re-read is the identity: `CTLF` is empty (the memory there differs from `s₀`'s
+  -- only in globals)
+  have hl0 : s₀.mem.len64 CTLF = 0 := by simp [Mem.len64, hctlf]
+  have hl0' : ∀ b g, (Mem.mk b s₀.mem.words g).len64 CTLF = 0 := fun _ _ => hl0
   rw [invoke_eq _ checkerProg_lookup_check_b]
   simp only [callFn, checkBL]
   cases n with
@@ -308,12 +314,14 @@ theorem checkB_seqO {b pb : ByteArray}
   | succ n =>
     have hJ := checkJobs_seqTO ho hidx hF hJP n (by omega) hi hhi
     have hFl := flushCaches_spec checkerProg checkerProg_flushProg n
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · ·), (hFl ·)]
+    have hRR := seedReread_spec checkerProg (by chk_lk) n
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · ·), (hFl ·), (hRR ·)]
     all_goals (try simp only [L.St.setLoc_mem, St.setLoc_loc,
       L.Locals.init_nil, Cmp.eval,
       reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
     all_goals (try simp only [hl, Mem.copy64_zero] at *)
     all_goals (try simp only [St.setG, Mem.setG, St.setLoc] at *)
+    all_goals (try simp only [rereadMem_empty, hl0, hl0'] at *)
     all_goals first
       | (simp_all (config := { decide := true }) [Mem.arr64]; done)
       | skip
@@ -321,6 +329,8 @@ theorem checkB_seqO {b pb : ByteArray}
       obtain ⟨-, hfx, hm⟩ := ‹LocEq _ _ ∧ FlushOK _ ∧ _›
       first
         | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, fun a ha => hw a ha⟩
+        | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm,
+            fun a ha => by rw [L.St.setLocs_mem]; simp_all [Mem.arr64]⟩
         | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp_all)
 
 /-! ## At a phase A -/

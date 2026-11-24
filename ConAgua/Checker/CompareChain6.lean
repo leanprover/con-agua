@@ -10,6 +10,8 @@ import all ConAgua.Arena.FreezeCmp
 import all ConAgua.Checker.CmpSeqEntry
 import ConRon.Bridge.Checker.Install
 import ConAgua.Arena.IWFrame
+public import ConAgua.Checker.CmpSStash
+import ConAgua.L.Blocks
 
 @[expose] public section
 
@@ -31,21 +33,44 @@ open ConRon.Arena ConRon.Arena.Frontend
 
 /-! ## Mode `6`'s start -/
 
-/-- **A memory that agrees with `m` but in `OUT`** (the frozen buffer, which the solution's jobs
-may have changed), with the same sizes and bytes. -/
+/-- The arrays mode `6`'s start may differ in: the frozen buffer `OUT` (which the solution's jobs
+may have changed) and the solution's stash (`cmp_sstash`: `SDECL`, `SFIRSTS`, `SDLP`, `SCTL`). -/
+def sstA : List TieredArray :=
+  [OUT, L.Checker.SDECL, L.Checker.SFIRSTS, L.Checker.SDLP, L.Checker.SCTL]
+
+theorem sstA_arr {a : TieredArray} (h : a ∈ sstA) : a = OUT ∨ (224 ≤ a.arr ∧ a.arr ≤ 227) := by
+  simp only [sstA, List.mem_cons, List.not_mem_nil, or_false] at h
+  rcases h with rfl | rfl | rfl | rfl | rfl <;> simp <;> decide
+
+/-- **A memory that agrees with `m` but in `sstA`**, with the same sizes and bytes. -/
 structure OutEq (m m' : Mem) : Prop where
-  arr : ∀ a : TieredArray, a ≠ OUT → m'.arr64 a = m.arr64 a
+  arr : ∀ a : TieredArray, a ∉ sstA → m'.arr64 a = m.arr64 a
   size : ∀ a : TieredArray, (m'.arr64 a).size = (m.arr64 a).size
   bytes : m'.bytes = m.bytes
 
-theorem OutEq.memFrame {m m' : Mem} (h : OutEq m m') : MemFrame [OUT] [] m m' :=
-  ⟨fun b hb _ => h.arr b (fun e => hb (by simp [e])),
+theorem OutEq.memFrame {m m' : Mem} (h : OutEq m m') : MemFrame sstA [] m m' :=
+  ⟨fun b hb _ => h.arr b hb,
    fun x _ => by rw [h.arr CTL (by decide)], h.size⟩
 
-theorem OutEq.of_out {m m' : Mem} (h : OutFrame m m') : OutEq m m' := ⟨h.arr, h.size, h.bytes⟩
+theorem OutEq.of_out {m m' : Mem} (h : OutFrame m m') : OutEq m m' :=
+  ⟨fun a ha => h.arr a (fun e => ha (by simp [sstA, e])), h.size, h.bytes⟩
 
 theorem OutEq.setG {m m' : Mem} (h : OutEq m m') (g : GVar) (w : Word) : OutEq m (m'.setG g w) :=
   ⟨fun a ha => h.arr a ha, fun a => h.size a, h.bytes⟩
+
+/-- **`OutEq` across the solution's stash** (`cmp_sstash` writes `sstA`'s arrays only). -/
+theorem OutEq.sstash {m m' : Mem} (h : OutEq m m') : OutEq m (sstashM m') := by
+  have hne : ∀ a, a ∉ sstA → (sstashM m').arr64 a = m'.arr64 a := fun a ha => by
+    have h1 : a ≠ L.Checker.SDECL := fun e => ha (by simp [sstA, e])
+    have h2 : a ≠ L.Checker.SFIRSTS := fun e => ha (by simp [sstA, e])
+    have h3 : a ≠ L.Checker.SDLP := fun e => ha (by simp [sstA, e])
+    have h4 : a ≠ L.Checker.SCTL := fun e => ha (by simp [sstA, e])
+    simp only [sstashM]
+    rw [arr64_copy64_ne _ _ _ _ _ _ h4, arr64_copy64_ne _ _ _ _ _ _ h3, arr64_copy64_ne _ _ _ _ _ _ h2,
+      arr64_copy64_ne _ _ _ _ _ _ h1]
+  refine ⟨fun a ha => (hne a ha).trans (h.arr a ha), fun a => ?_, ?_⟩
+  · simp only [sstashM, size_copy64]; exact h.size a
+  · simp only [sstashM, Mem.copy64_bytes]; exact h.bytes
 
 /-! ## The solution's twin facts after its index build -/
 
@@ -79,13 +104,16 @@ theorem cmp_zero6 {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Array IDec
     simp only [biA, List.mem_filter, Bool.and_eq_true, Bool.not_eq_true'] at hm
     have := hm.2.2; simp [ht.1, ht.2] at this
   have hout : t ≠ OUT := fun e => by subst e; simp [OUT] at ht
-  rw [hO.arr t hout, hF.frame.arr t hbi hc, hF.r7.since.frame.arr t hpl hc, loadMem_arr]
+  rw [hO.arr t (fun hm => by rcases sstA_arr hm with e | e; exact hout e; omega), hF.frame.arr t hbi hc, hF.r7.since.frame.arr t hpl hc, loadMem_arr]
 
 theorem rdN_replicate (n k : Nat) : rdN (Array.replicate n (0 : Word)) k = 0 := by
   simp only [rdN, Array.getElem?_replicate]; split <;> rfl
 
 theorem _root_.L.Arena.IndexR.outEq {m m' : Mem} {I : IStreamIndex} (h : IndexR m I) (hO : OutEq m m') : IndexR m' I :=
-  h.grow (fun b _ hb => hO.arr b (fun e => by subst e; simp [OUT] at hb))
+  h.grow (fun b _ hb => hO.arr b (fun hm => by
+      rcases sstA_arr hm with rfl | e
+      · simp [OUT] at hb
+      · omega))
     (by rw [hO.arr CTL (by decide)]) (by
       have : erecP m' = erecP m := by
         funext i; simp only [erecP, erTop, erecTop1, hO.arr EREC (by decide),
@@ -106,8 +134,9 @@ theorem move_step {bC bS pb : ByteArray} {sz : TieredArray → Nat} (PS : PhaseS
     SolIdxR m1 PS.IS ∧ IndexR m1 {} ∧ MemFrame moveA moveC m0 m1 := by
   obtain ⟨-, -, -, -, ⟨J, hJ⟩, hpI⟩ := PS.built
   have hI := hF.build.idx.outEq hO
-  have hA : ArenaR m0 PS.sF := ArenaR.frame_ext [OUT] [] (fun b hb => by
-      simp only [List.mem_singleton] at hb; subst hb; decide) (fun _ h => by simp at h) m m0
+  have hA : ArenaR m0 PS.sF := ArenaR.frame_ext sstA [] (fun b hb => by
+      simp only [sstA, List.mem_cons, List.not_mem_nil, or_false] at hb
+      rcases hb with rfl | rfl | rfl | rfl | rfl <;> decide) (fun _ h => by simp at h) m m0
     hO.memFrame PS.sF hF.build.stage.check.arena.base
   have hK := indexKeysIn_of hA hJ hpI
   have hS7 := hF.r7.since

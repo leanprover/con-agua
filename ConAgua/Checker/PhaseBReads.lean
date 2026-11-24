@@ -170,7 +170,7 @@ import all ConAgua.Arena.NatSized
 # Phase B's read set in the checker's program (lane parmode)
 
 `phaseBFns`: every function `check_b` (entry 2, the jobs over the frozen arrays) reaches in `checkerProg`, as a
-literal computed from the program's call graph (1482 names; `scripts/phaseb_fns.py` regenerates
+literal computed from the program's call graph (1483 names; `scripts/phaseb_fns.py` regenerates
 it, and the check below fails if a callee is missing). Without `check_b` itself (`phaseBJobFns`,
 the closure of `check_jobs`), none of them names the frozen buffer's arrays `OUT`, `HDRF`,
 `CTLF` (`Arena/Freeze.lean`) or any byte array: `checkerProg_phaseBReads`, so by
@@ -425,32 +425,32 @@ def phaseBFns : List FnName :=
    "rule_agree", "rule_binds", "rule_body_at", "rule_copy", "rule_eq_a", "rule_eq_b",
    "rule_eq_but_rhs", "rule_reads", "rules_at_lps_go", "rules_eq", "rules_link_ok", "rules_read",
    "rules_refire", "rules_to_erec", "rules_to_erec_go", "same_const_heads", "same_cv_up_to_levels",
-   "scratch_drop", "scratch_enter", "scratch_reset", "shift_left_refused", "shl_n", "shr_n",
-   "size_bytes", "sl_all_in", "sl_append", "sl_cons", "sl_contains", "sl_eq", "sl_find", "sl_get",
-   "sl_getd", "sl_memo", "sl_new1", "sl_nodup", "sl_set_eq", "sl_snoc", "sle_go", "slp_go",
-   "sls_go", "sls_memo", "sol_find", "sol_find_table", "sol_row_get", "sol_tbl_get", "sort_find",
-   "sort_push", "spine_cmp", "spine_head", "spn_get", "spn_ls", "spn_pool", "spn_push",
-   "spn_to_er", "spn_to_iw", "stack_cover", "std_ax_family", "std_axiom_ok", "stk_pool",
-   "stk_push", "stmt1", "str_cons_spine", "str_ctor_pre", "str_cv", "str_lit_ctor", "str_ls1",
-   "str_param_sort", "str_utf8_char", "stream_closed", "stream_k_check", "stream_nested_bvars",
-   "stream_nested_dom", "stream_nested_ok", "stream_nested_pins", "stream_rec_check",
-   "stream_rec_compare", "stream_recs_check", "stream_rules_check", "stream_rules_shape",
-   "string_of_list_ty_ok", "string_ty_ok", "strip_lams", "strip_pis", "struct_ctor_resid_ok",
-   "struct_elim_level", "struct_eta_cert", "struct_eta_cert_go", "struct_eta_cert_partial",
-   "struct_eta_cert_tail", "struct_eta_cert_with", "struct_eta_cert_wtb", "struct_eta_expand",
-   "struct_eta_full", "struct_eta_full_at", "struct_proj_arg_p", "struct_proj_bodies",
-   "struct_proj_bodies_go", "struct_proj_ps", "struct_ps_at", "struct_ps_at_go",
-   "struct_unit_cert", "struct_unit_tail", "struct_used_later", "stuck_app", "stuck_app_cong",
-   "stuck_irrel", "stuck_rest", "stuck_str", "sub_1", "sub_n", "sub_row", "subst_const0",
-   "subst_const0_list", "subst_const0_pairs", "subst_const_all", "subst_pw_at", "succ_find",
-   "succ_push", "sum_rules", "sum_rules_go", "ta_clear", "ta_find", "ta_put", "target_abs",
-   "target_abs_const", "target_abs_go", "target_abs_node", "target_canon_params",
-   "target_class_match", "target_ctor_at", "target_ctors_of", "target_holes", "target_k53",
-   "target_k53_args", "target_k53_heads", "target_k53_tele", "target_major_at",
-   "target_major_default", "target_major_nfs", "target_major_of", "target_major_of_const",
-   "target_major_of_member", "target_major_of_outside", "target_major_of_outside_closed",
-   "target_major_of_outside_occ", "target_major_of_outside_tail", "target_major_pins",
-   "target_outside_inst", "target_params_def_eq", "target_params_def_eq_step",
+   "scratch_drop", "scratch_enter", "scratch_reset", "seed_reread", "shift_left_refused", "shl_n",
+   "shr_n", "size_bytes", "sl_all_in", "sl_append", "sl_cons", "sl_contains", "sl_eq", "sl_find",
+   "sl_get", "sl_getd", "sl_memo", "sl_new1", "sl_nodup", "sl_set_eq", "sl_snoc", "sle_go",
+   "slp_go", "sls_go", "sls_memo", "sol_find", "sol_find_table", "sol_row_get", "sol_tbl_get",
+   "sort_find", "sort_push", "spine_cmp", "spine_head", "spn_get", "spn_ls", "spn_pool",
+   "spn_push", "spn_to_er", "spn_to_iw", "stack_cover", "std_ax_family", "std_axiom_ok",
+   "stk_pool", "stk_push", "stmt1", "str_cons_spine", "str_ctor_pre", "str_cv", "str_lit_ctor",
+   "str_ls1", "str_param_sort", "str_utf8_char", "stream_closed", "stream_k_check",
+   "stream_nested_bvars", "stream_nested_dom", "stream_nested_ok", "stream_nested_pins",
+   "stream_rec_check", "stream_rec_compare", "stream_recs_check", "stream_rules_check",
+   "stream_rules_shape", "string_of_list_ty_ok", "string_ty_ok", "strip_lams", "strip_pis",
+   "struct_ctor_resid_ok", "struct_elim_level", "struct_eta_cert", "struct_eta_cert_go",
+   "struct_eta_cert_partial", "struct_eta_cert_tail", "struct_eta_cert_with",
+   "struct_eta_cert_wtb", "struct_eta_expand", "struct_eta_full", "struct_eta_full_at",
+   "struct_proj_arg_p", "struct_proj_bodies", "struct_proj_bodies_go", "struct_proj_ps",
+   "struct_ps_at", "struct_ps_at_go", "struct_unit_cert", "struct_unit_tail", "struct_used_later",
+   "stuck_app", "stuck_app_cong", "stuck_irrel", "stuck_rest", "stuck_str", "sub_1", "sub_n",
+   "sub_row", "subst_const0", "subst_const0_list", "subst_const0_pairs", "subst_const_all",
+   "subst_pw_at", "succ_find", "succ_push", "sum_rules", "sum_rules_go", "ta_clear", "ta_find",
+   "ta_put", "target_abs", "target_abs_const", "target_abs_go", "target_abs_node",
+   "target_canon_params", "target_class_match", "target_ctor_at", "target_ctors_of",
+   "target_holes", "target_k53", "target_k53_args", "target_k53_heads", "target_k53_tele",
+   "target_major_at", "target_major_default", "target_major_nfs", "target_major_of",
+   "target_major_of_const", "target_major_of_member", "target_major_of_outside",
+   "target_major_of_outside_closed", "target_major_of_outside_occ", "target_major_of_outside_tail",
+   "target_major_pins", "target_outside_inst", "target_params_def_eq", "target_params_def_eq_step",
    "target_pi_doms_with", "target_pin_tys", "target_rec_pins", "target_rec_pins_names",
    "target_rec_pins_split", "tbl_base_get", "tbl_beq_p", "tbl_eq", "tbl_own_get", "tbl_own_set",
    "trust_compiler_ok", "try_unfold_proj_app", "type_pin_guard", "type_pin_stored",
@@ -478,10 +478,11 @@ theorem check_b_mem_phaseBFns : "check_b" ∈ phaseBFns :=
 def phaseBG (g : GVar) : Bool := g.id == 8 || g.id == 9 || g.id == 10 || g.id == 11
 
 /-- The jobs' closure: `phaseBFns` but `check_b` itself (which reads the seed `CTLF` and writes
-`INIT`); compared by name codes. -/
+`INIT`) and `seed_reread` (which reads the seed); compared by name codes. -/
 def phaseBJobFns : List FnName :=
   let out := nameCode "check_b"
-  phaseBFns.filter fun f => nameCode f != out
+  let rr := nameCode "seed_reread"
+  phaseBFns.filter fun f => nameCode f != out && nameCode f != rr
 
 /-- `phaseBJobFns` as a tree of name codes. -/
 names_tree phaseBJobTree : phaseBJobFns

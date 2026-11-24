@@ -34,7 +34,7 @@ def Side6.phase {c : Word} {m2 m3 : Mem} {dsC : Array IDeclaration} {sG : AState
 /-- An array outside mode `6`'s writes before the mates, by its number. -/
 theorem not_mem_A64 {b : TieredArray} (h : ¬((129 ≤ b.arr ∧ b.arr ≤ 134) ∨ (210 ≤ b.arr ∧ b.arr ≤ 215) ∨
     b.arr = 240 ∨ b.arr = 67 ∨ b.arr = 208 ∨ b.arr = 33 ∨ b.arr = 34 ∨ b.arr = 75 ∨ b.arr = 76 ∨
-    b.arr = 200)) : b ∉ A64 := fun hb => h (A64_arr b hb)
+    b.arr = 200 ∨ (224 ≤ b.arr ∧ b.arr ≤ 227))) : b ∉ A64 := fun hb => h (A64_arr b hb)
 
 /-- A control word outside mode `6`'s writes before the mates. -/
 theorem not_mem_C64 {x : Word} (h : ¬(x = 225 ∨ x = 226 ∨ x = 128 ∨ x = 34 ∨ x = 35 ∨ x = 73 ∨ x = 74 ∨

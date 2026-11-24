@@ -73,7 +73,11 @@ def fzsImgs : List (Nat × Fz) :=
    (fzIdx L.Front.DLP, ⟨L.Checker.SDLP, .bin .add (fzC 1) (.ld64 L.Checker.SDLP (fzC 0))⟩)]
 
 /-- The name of the solution's image function for header entry `i`. -/
-def fzsName (i : Nat) : FnName := "fzs_" ++ toString i
+def fzsName : Nat → FnName
+  | 60 => "fzs_60"
+  | 61 => "fzs_61"
+  | 62 => "fzs_62"
+  | i => "fzs_" ++ toString i
 
 /-- con-ron: none — the compared run's phase boundary (con-ron runs the solution's jobs on its own tables)
 

@@ -7,6 +7,8 @@ import ConAgua.Checker.NoVerdictClosed
 import ConAgua.Checker.RomProgInit
 import ConAgua.Checker.LoopStage
 import ConAgua.L.Blocks
+import ConAgua.Checker.LoopProgTac
+meta import ConAgua.Checker.LoopProgTac
 public import ConAgua.Final.TwinVerdict
 import all ConAgua.Checker.Entry
 import ConAgua.Front.FrontRunRef
@@ -167,6 +169,19 @@ theorem checkJobs_thrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerPro
   have hJ2 : JobRel pins dn ds J I a₀ s₂.mem a := ⟨a₁, ⟨(hJR.flush hfx).setGlob _, hx, hp⟩, hSE⟩
   exact hE n s₂.mem a j hn hj hJ2 hF (L.Front.callE_of_run_err hrun₂)
 
+theorem seedReread_specNV (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "seed_reread" []
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = rereadMem s₀.mem ∧ r = [0]; fun e => e.cls = 0⦄ := by
+  have hm : "seed_reread" ∈ nvFns := nv_mem (by decide +kernel)
+  have hS := seedReread_spec checkerProg (by chk_lk) n s₀
+  have hN := invoke_nv checkerProg checkerProg_nv n "seed_reread" hm []
+  apply M.triple_of_run'
+  · intro s r s' hp hr
+    exact M.of_run' (P := fun s => s = s₀)
+      (Q := fun r s' => LocEq s' s₀ ∧ s'.mem = rereadMem s₀.mem ∧ r = [0]) (E := ⊤) hp hr hS
+  · intro s e _ hr
+    exact M.of_run_err (P := fun _ => True) trivial hr hN
+
 /-- **`check_b` on a thread's memory, error half of `checkB_thr`.** -/
 theorem checkB_thrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg) J)
     (n : Nat) (hn : n ≤ 2 ^ 62) (a : AState) (j : Word) (hj : j.toNat < ds.size)
@@ -177,13 +192,13 @@ theorem checkB_thrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg) 
     ⦃fun _ _ => True; ErrClaimV (checkJobList VM pins J I ds [j.toNat]) a⦄ := by
   have hlo' : s₀.mem.glob ⟨9⟩ = j := hlo
   have hhi' : s₀.mem.glob ⟨11⟩ = j + 1 := hhi
-  have hR0 : s₀.mem.glob ⟨10⟩ = 0 → ThrAt (J := J) pins dn ds I a₀ bs
+  have hR0 : s₀.mem.glob ⟨10⟩ = 0 → ThrAt (J := J) pins dn ds I a₀ bs (rereadMem
       { bytes := (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).bytes,
         words := (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).words,
         glob := fun h => if h = ⟨10⟩ then 1
-          else (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).glob h } a := by
+          else (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).glob h }) a := by
     intro h0; have := hR; simp only [seedMem, ite_eq_left h0] at this; exact this
-  have hR1 : ¬ s₀.mem.glob ⟨10⟩ = 0 → ThrAt pins dn ds I a₀ bs s₀.mem a J := by
+  have hR1 : ¬ s₀.mem.glob ⟨10⟩ = 0 → ThrAt pins dn ds I a₀ bs (rereadMem s₀.mem) a J := by
     intro h0; have := hR; simp only [seedMem, ite_eq_right h0] at this; exact this
   rw [invoke_eq _ checkerProg_lookup_check_b]
   simp only [callFn, checkBL]
@@ -192,7 +207,8 @@ theorem checkB_thrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg) 
   | succ n =>
     have hJ := checkJobs_thrE hE n (by omega) a j hj hF
     have hFl := flushCaches_specNV n
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · ·), (hFl ·)]
+    have hRR := seedReread_specNV n
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · ·), (hFl ·), (hRR ·)]
     all_goals (try simp only [L.St.setLoc_mem, St.setLoc_loc,
       L.Locals.init_nil, Cmp.eval,
       reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
@@ -208,8 +224,16 @@ theorem checkB_thrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg) 
           | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, hR0 (by simp_all)⟩
           | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, hR1 (by simp_all)⟩
           | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp_all; done)
-          | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp only [Mem.copy64_glob] at *; simp_all; done))
+          | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp only [Mem.copy64_glob, rereadMem_glob] at *; simp_all; done)
+          | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm,
+              by rw [L.St.setLocs_mem, ‹St.mem _ = rereadMem _›]; exact hR0 (by simp_all)⟩
+          | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm,
+              by rw [L.St.setLocs_mem, ‹St.mem _ = rereadMem _›]; exact hR1 (by simp_all)⟩
+          | (simp only [flushMem_glob, rereadMem_glob, Mem.copy64_glob] at *; simp_all; done)
+          | (rw [L.St.setLocs_mem, hm, flushMem_glob, L.St.setLocs_mem, ‹St.mem _ = rereadMem _›,
+              rereadMem_glob]; simp_all; done))
       | (rw [L.St.setLocs_mem]; simp_all; done)
+      | (rw [L.St.setLocs_mem]; simp_all [flushMem_glob, rereadMem_glob, Mem.copy64_glob]; done)
       | (trace_state; fail "ThreadsE.checkB_thrE: no closing tactic applies")
 
 /-- **`check` with the mode word `2` on a thread's memory, error half of `checkThr`.** -/
@@ -234,6 +258,7 @@ theorem checkThrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg) J)
     have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
       (callE_spec checkerProg n "check_a" [1] ·), (callE_spec checkerProg n "check_a" [0] ·),
+      (callE_spec checkerProg n "check_bs" [] ·), (callE_spec checkerProg n "check_bc" [] ·),
       (callE_spec checkerProg n "check_c1" [] ·), (callE_spec checkerProg n "check_c2" [] ·),
       (callE_spec checkerProg n "check_c3" [·] ·)]
     all_goals (try simp only [Cmp.eval, beq_iff_eq] at *)
@@ -356,7 +381,7 @@ theorem threads_twinVerdictPooled (hCd : CheckerCd)
     have hk' : (UInt64.ofNat k).toNat = k := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
     obtain ⟨⟨a', hrj, X, hJ, hPB, hX⟩, hI⟩ := runThr hJP.check_jobs hRS hsz n hn a (UInt64.ofNat k)
       (by rw [hk']; exact hk) (by rw [hk']; exact hfo) _ rfl (hR _) rfl rfl hrun
-    refine ⟨a', ?_, fun j => ⟨X, hJ, hPB, fun t ht => (thr_next B j hI hkept t ht).trans (hX t ht)⟩⟩
+    refine ⟨a', ?_, fun j => ⟨X, hJ, hPB, fun t ht => (thr_next B j hI hkept (thr_ctl_next hrun) t ht).trans (hX t ht)⟩⟩
     have e : PA.ds[(UInt64.ofNat k).toNat]'(by rw [hk']; exact hk) = PA.ds[k] := by simp only [hk']
     rw [← e]; simp only [hk'] at hrj ⊢; exact hrj
   have H := hH hstep
@@ -416,7 +441,7 @@ theorem threads_twinVerdictPooled (hCd : CheckerCd)
       have hj' : j'.toNat < PA.ds.size := by omega
       obtain ⟨⟨a', hrj, X, hJ, hPB, hX⟩, hI'⟩ := runThr hJP.check_jobs hRS hsz n' hn' a j' hj'
         (hfold _ a hj' (by omega) hw) _ rfl (hR _) rfl rfl hrun
-      have hR' : Rel r' a' := fun j => ⟨X, hJ, hPB, fun t ht => (thr_next B j hI' hkept t ht).trans (hX t ht)⟩
+      have hR' : Rel r' a' := fun j => ⟨X, hJ, hPB, fun t ht => (thr_next B j hI' hkept (thr_ctl_next hrun) t ht).trans (hX t ht)⟩
       obtain ⟨hP, hnd⟩ := hpre j'.toNat (by omega)
       obtain ⟨hx', hdk⟩ := H.hden _ hj'
       obtain ⟨hw', -⟩ := job_spec H.hrec H.hpp H.hpinsOK H.hpersPins H.hpins H.hpd H.hI

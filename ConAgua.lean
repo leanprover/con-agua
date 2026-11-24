@@ -117,6 +117,7 @@ public import ConAgua.Checker.CmpSStash
 public import ConAgua.Arena.FreezeView
 public import ConAgua.Arena.FreezeCmp
 public import ConAgua.Arena.FreezeCmpSpec
+public import ConAgua.Arena.FreezeCmpView
 public import ConAgua.Checker.CompareChain
 public import ConAgua.Checker.CompareTwinFacts
 public import ConAgua.Checker.CompareChain5
@@ -160,6 +161,7 @@ public import ConAgua.Arena.JobStartX
 public import ConAgua.Checker.CmpSeqChain
 public import ConAgua.Checker.CmpSeqJobs
 public import ConAgua.Checker.CmpSeqErr
+public import ConAgua.Checker.SeedReread
 public import ConAgua.Final.CpThreads
 public import ConAgua.Final.CpThreadFail
 public import ConAgua.Final.CmpThreads

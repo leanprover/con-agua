@@ -101,6 +101,9 @@ theorem checkB_seqER {m : Mem} (hJ0 : FlushOK m → JobR ipins dn ds J I (flushM
   have hl : (UInt64.toNat (s₀.mem.len64 CTLF)) = 0 := by simp [Mem.len64, hctlf]
   have hlo' : s₀.mem.glob ⟨9⟩ = 0 := hlo
   have hhi'' : s₀.mem.glob ⟨11⟩ = hi := hhi'
+  -- in place the seed re-read is the identity (`CTLF` empty)
+  have hl0 : s₀.mem.len64 CTLF = 0 := by simp [Mem.len64, hctlf]
+  have hl0' : ∀ b g, (Mem.mk b s₀.mem.words g).len64 CTLF = 0 := fun _ _ => hl0
   rw [invoke_eq _ checkerProg_lookup_check_b]
   simp only [callFn, checkBL]
   cases n with
@@ -108,12 +111,14 @@ theorem checkB_seqER {m : Mem} (hJ0 : FlushOK m → JobR ipins dn ds J I (flushM
   | succ n =>
     have hJ := checkJobs_seqER hJ0 hPB hi hE n (by omega)
     have hFl := flushCaches_specNV n
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · ·), (hFl ·)]
+    have hRR := seedReread_specNV n
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · ·), (hFl ·), (hRR ·)]
     all_goals (try simp only [L.St.setLoc_mem, St.setLoc_loc,
       L.Locals.init_nil, Cmp.eval,
       reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
     all_goals (try simp only [hl, Mem.copy64_zero] at *)
     all_goals (try simp only [St.setG, Mem.setG, St.setLoc] at *)
+    all_goals (try simp only [rereadMem_empty, hl0, hl0'] at *)
     all_goals first
       | exact ErrClaimV.of_cls0 (by decide)
       | exact ErrClaimV.of_cls0 ‹_›
@@ -123,6 +128,8 @@ theorem checkB_seqER {m : Mem} (hJ0 : FlushOK m → JobR ipins dn ds J I (flushM
       | (obtain ⟨-, hfx, hm⟩ := ‹LocEq _ _ ∧ FlushOK _ ∧ _›
          first
           | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, fun a ha => hw a ha⟩
+          | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm,
+              fun a ha => by rw [L.St.setLocs_mem]; simp_all [Mem.arr64]⟩
           | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp_all; done))
       | (trace_state; fail "CmpVCJobs.checkB_seqER: no closing tactic applies")
 
@@ -151,6 +158,7 @@ theorem checkMode2_seqER {m : Mem} (hJ0 : FlushOK m → JobR ipins dn ds J I (fl
     have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
       (callE_spec checkerProg n "check_a" [1] ·), (callE_spec checkerProg n "check_a" [0] ·),
+      (callE_spec checkerProg n "check_bs" [] ·), (callE_spec checkerProg n "check_bc" [] ·),
       (callE_spec checkerProg n "check_c1" [] ·), (callE_spec checkerProg n "check_c2" [] ·),
       (callE_spec checkerProg n "check_c3" [·] ·)]
     all_goals (try simp only [Cmp.eval, beq_iff_eq] at *)

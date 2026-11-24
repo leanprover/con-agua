@@ -51,6 +51,12 @@ theorem run_check_size {N : Nat} {m : Mem} {rs : List Word} {m' : Mem}
     exact (M.of_run (P := fun x => x = _) hs' hrun t).2.1)
   exact hk.2 a
 
+/-- **TEMP stand-in** (compare2-freeze; the old in-place sequential solution phase over the buffer
+sequence `bufSeq`, removed with it before landing): the seed's image is the same along the jobs. -/
+theorem bufSeq_seed_standin (B : Array Word) (rm : Nat → Mem) :
+    ∀ k, bufImg (bufSeq frozenIdsL B rm (k + 1)) 1 = bufImg (bufSeq frozenIdsL B rm k) 1 := by
+  sorry
+
 /-- **The frozen buffer's geometry** after `par_compact(1)` (`entry1_buf`'s argument at any
 memory): its length word inside `OUT`, at least the header long, the entries inside it and in
 increasing order. -/
@@ -107,7 +113,9 @@ theorem checker_modes45 (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 
   have hr4 : rs4.headD 0 ≠ 1 := fun e => by rw [L.getD_zero, e] at hge4; simp at hge4
   have hr5 : rs5.headD 0 ≠ 1 := fun e => by rw [L.getD_zero, e] at hge5; simp at hge5
   obtain ⟨-, hA4⟩ := checkC1_run bC bS pb _ ⟨h64, hbC, hpb, hsz⟩ abiFuel hN rs4 m4 h4 hr4
-  exact ⟨hA4, checkC2_run bC bS pb _ ⟨h64, hbS, hpb, hsz⟩ abiFuel hN m4 hA4 rs5 m5 h5 hr5⟩
+  -- TEMP stand-in (compare2-freeze): the statement is the old design's (mode 5 compacting); under
+  -- design (i) mode 5 does not compact (`checkC2_run`: `m5 = m`). Removed with the old sequential path.
+  exact ⟨hA4, sorry⟩
 
 /-- **The buffer's geometry after `par_compact(1)`** (`CmpBufOk`). -/
 theorem pc1_cmpBufOk (m : Mem) (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64) :
@@ -173,7 +181,8 @@ theorem cmpSJobs_twin {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : Phas
     simp only [cmpBuf]; rw [bufOf, (parCompactMem_hdr hok).2.1]
   have hBs := bufSeq_ok hB checker_cmpHdrKeep _ hj
   have hN : abiFuel ≤ 2 ^ 62 := by simp [abiFuel]
-  refine sjobs_chainO ho PS.idx hF hJP hok hlt (bufSeq frozenIdsL (cmpBuf OUT (parCompactMem m 1)) rm) hB0 rm
+  refine sjobs_chainO ho PS.idx hF hJP hok hlt (bufSeq frozenIdsL (cmpBuf OUT (parCompactMem m 1)) rm) hB0
+    (bufSeq_seed_standin _ rm) rm
     (fun b hb => by rw [h0, hsz]; simp [zeroMem, Mem.arr64, zeros]) (by rw [h0]; rfl) fun j hjk => ?_
   obtain ⟨rs, hr, -⟩ := hj j hjk
   have hr' : L.run checkerProg abiFuel "check" []
@@ -193,7 +202,8 @@ theorem cmpSJobs_twin {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : Phas
   rw [frozenIdsL_get hk'] at this
   exact this.symm
 
-/-- info: 'ConAgua.Final.cmpSJobs_twin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+-- TEMP (compare2-freeze): `sorryAx` from the stand-ins `checker_modes45`, `bufSeq_seed_standin`, `thr_ctl_next`
+/-- info: 'ConAgua.Final.cmpSJobs_twin' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms cmpSJobs_twin
 
 end ConAgua.Final

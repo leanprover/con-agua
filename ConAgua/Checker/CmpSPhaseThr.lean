@@ -47,7 +47,7 @@ local notation "VM" => ConLeche.CheckMode.verified
 `bufMem B r j` agrees with `freshMem m` on `thrS` (`thr_first` for `bufOf m`). -/
 def CsFirst (B : Array Word) (m : Mem) : Prop :=
   ∀ (r : Mem) (j : Word), (∀ b ∈ parOwnedL, r.arr64 b = zeros (m.arr64 b).size) → r.glob INIT = 0 →
-    ∀ t, thrS t = true → (seedMem (bufMem B r j)).arr64 t = (freshMem m).arr64 t
+    ∀ t, thrS t = true → (L.Checker.seedMem (bufMem B r j)).arr64 t = (freshMem m).arr64 t
 
 theorem csFirst_bufOf {m : Mem} (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64) :
     CsFirst (bufOf m) m := fun r j hz hI => thr_first hok hlt r j hz hI
@@ -130,7 +130,7 @@ theorem cmpThreadsS_poolI {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : 
   -- the twin's side
   let a₀ : AState := { a' with caches := Caches.empty }
   let Rel : Mem → AState → Prop := fun r a =>
-    ∀ j, ThrAt PS.ipins (dnOf sG.store) PS.dsS PS.IS a₀ pb.data.toList (seedMem (bufMem B r j)) a
+    ∀ j, ThrAt PS.ipins (dnOf sG.store) PS.dsS PS.IS a₀ pb.data.toList (L.Checker.seedMem (bufMem B r j)) a
   let Call : Nat → Mem → Mem → Prop := fun k r r' => ∃ n rs, n ≤ 2 ^ 62 ∧
     L.run checkerProg n "check" [] (bufMem B r (UInt64.ofNat k)) = .ok (rs, r') ∧ BufKept B r'
   obtain ⟨pinsP, dsP, hst, hrec, hpp, hden, hPD, -, -, -, hH⟩ := poolHypsS_I h.phase hI Rel Call
@@ -150,7 +150,7 @@ theorem cmpThreadsS_poolI {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : 
     have hk' : (UInt64.ofNat k).toNat = k := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
     obtain ⟨⟨a', hrj, X, hJ, hPB, hX⟩, hI'⟩ := runThr hJP.check_jobs hRS hds n hn a (UInt64.ofNat k)
       (by rw [hk']; exact hk) (by rw [hk']; exact hfo) _ rfl (hR _) rfl rfl hrun
-    refine ⟨a', ?_, fun j => ⟨X, hJ, hPB, fun t ht => (thr_next _ j hI' hkept t ht).trans (hX t ht)⟩⟩
+    refine ⟨a', ?_, fun j => ⟨X, hJ, hPB, fun t ht => (thr_next _ j hI' hkept (thr_ctl_next hrun) t ht).trans (hX t ht)⟩⟩
     have e : PS.dsS[(UInt64.ofNat k).toNat]'(by rw [hk']; exact hk) = PS.dsS[k] := by simp only [hk']
     rw [← e]; simp only [hk'] at hrj ⊢; exact hrj
   have H := hH hstep
@@ -237,7 +237,7 @@ theorem cmpThreadsC_poolI {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : 
   -- the twin's side
   let a₀ : AState := { a' with caches := Caches.empty }
   let Rel : Mem → AState → Prop := fun r a =>
-    ∀ j, ThrAt PS.ipins (dnOf sG.store) res.toArray I a₀ pb.data.toList (seedMem (bufMem B r j)) a (some J)
+    ∀ j, ThrAt PS.ipins (dnOf sG.store) res.toArray I a₀ pb.data.toList (L.Checker.seedMem (bufMem B r j)) a (some J)
   let Call : Nat → Mem → Mem → Prop := fun k r r' => ∃ n rs, n ≤ 2 ^ 62 ∧
     L.run checkerProg n "check" [] (bufMem B r (UInt64.ofNat k)) = .ok (rs, r') ∧ BufKept B r'
   obtain ⟨pinsP, dsP, dsSP, matesU, hst, hspec, hpp, hden, hPD, hH⟩ :=
@@ -256,7 +256,7 @@ theorem cmpThreadsC_poolI {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : 
     have hk' : (UInt64.ofNat k).toNat = k := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
     obtain ⟨⟨a', hrj, X, hJ, hPB, hX⟩, hI'⟩ := runThr hJP.check_jobs hRS hds n hn a (UInt64.ofNat k)
       (by rw [hk']; exact hk) (by rw [hk']; exact hfo) _ rfl (hR _) rfl rfl hrun
-    refine ⟨a', ?_, fun j => ⟨X, hJ, hPB, fun t ht => (thr_next _ j hI' hkept t ht).trans (hX t ht)⟩⟩
+    refine ⟨a', ?_, fun j => ⟨X, hJ, hPB, fun t ht => (thr_next _ j hI' hkept (thr_ctl_next hrun) t ht).trans (hX t ht)⟩⟩
     have e : res.toArray[(UInt64.ofNat k).toNat]'(by rw [hk']; exact hk) = res.toArray[k] := by simp only [hk']
     rw [← e]; simp only [hk'] at hrj ⊢; exact hrj
   have H := hH hstep

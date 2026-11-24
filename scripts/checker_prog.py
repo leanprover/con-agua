@@ -323,6 +323,8 @@ namespace L.Checker
 
 open L L.Compiler
 
+-- the kernel's whnf of a long body (`par_compact`'s calls, lane compare2) recurses deeply
+set_option maxRecDepth 100000 in
 skt_part checkerSkt : checkerProgI "check" {lo} {hi}
 
 end L.Checker
@@ -464,6 +466,7 @@ namespace L.Checker
 
 open L L.Compiler
 
+set_option maxRecDepth 100000 in
 set_option asmLitBatch {batch} in
 asm_lit_fns checkerAsm : checkerTab checkerNrt checkerSkt checkerProgI {lo} {hi} asm checkerX
 
