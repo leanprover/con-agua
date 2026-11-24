@@ -37,6 +37,49 @@ variable {m : Mem} {b : Word}
 theorem getD_of_agree {B A : Array Word} {o L : Nat} (hB : ∀ k < L, B.getD k 0 = A.getD (o + k) 0) {k : Nat}
     (hk : k < L) : B.getD k 0 = A.getD (o + k) 0 := hB k hk
 
+/-- **The entries of a buffer with the words of `OUT[b‥b+len)` after `par_compact(1, b)`**: the
+header's own, then each frozen image at `hdrW` plus the extents before it, apart in order. -/
+theorem hdrEnt_of (B : Array Word) (hok : parCompactOK m 1 b = true) (hb : b.toNat + hdrW < 2 ^ 64)
+    (hlt : (m.arr64 OUT).size < 2 ^ 64)
+    (hB : ∀ k < (fzOff m frozen.length).toNat,
+      B.getD k 0 = ((parCompactMem m 1 b).arr64 OUT).getD (b.toNat + k) 0) :
+    bufEntry B 0 = (0, hdrW) ∧
+    (∀ i (_ : i < frozen.length), bufEntry B (i + 1) = ((fzOff m i).toNat, fzExt m (fzAt i))) ∧
+    (∀ i < frozenIdsL.length, ∀ i' < frozenIdsL.length, i < i' →
+      (bufEntry B i).1 + (bufEntry B i).2 ≤ (bufEntry B i').1) := by
+  have hW := parCompactOK_hdr_b hok hb
+  have hfl := frozen_length
+  have hhw := hdrW_eq
+  have hg : (∀ j ≤ frozen.length, (fzOff m j).toNat = hdrW + fzSum m j) ∧
+      b.toNat + hdrW + fzSum m frozen.length ≤ (m.arr64 OUT).size := by
+    have h' := hok
+    simp only [parCompactOK, Bool.and_eq_true] at h'
+    exact (pcGo_good m 1 b hW hb (fun _ => hlt) frozen.length (Nat.le_refl _) h'.1.1.1).1 one_ne_zero'
+  have hlen : (fzOff m frozen.length).toNat = hdrW + fzSum m frozen.length := hg.1 _ (Nat.le_refl _)
+  have hH := parCompactMem_hdr_b hok hb
+  have hrd : ∀ k, k < hdrW → B.getD k 0 = ((parCompactMem m 1 b).arr64 OUT).getD (b.toNat + k) 0 :=
+    fun k hk => hB k (by omega)
+  have hE0 : bufEntry B 0 = (0, hdrW) := by
+    simp only [bufEntry, Nat.mul_zero, Nat.add_zero, hrd 8 (by omega), hrd 9 (by omega), hH.2.2.2.2.2.2.1,
+      hH.2.2.2.2.2.2.2]
+    simp [hhw]
+  have hEs : ∀ i (hi : i < frozen.length), bufEntry B (i + 1) = ((fzOff m i).toNat, fzExt m (fzAt i)) := by
+    intro i hi
+    have he := parCompactMem_entry_b hok hb (fun _ => hlt) hi
+    simp only [bufEntry, show 8 + 2 * (i + 1) = 10 + 2 * i by omega, show 9 + 2 * (i + 1) = 11 + 2 * i by omega]
+    rw [hrd (10 + 2 * i) (by omega), hrd (11 + 2 * i) (by omega), he.1, he.2,
+      UInt64.toNat_ofNat_of_lt' (by rw [fzExt_eq]; exact UInt64.toNat_lt_size _)]
+  refine ⟨hE0, hEs, fun i hi i' hi' hii => ?_⟩
+  have hL := frozenIdsL_length
+  obtain ⟨c, rfl⟩ : ∃ c, i' = c + 1 := ⟨i' - 1, by omega⟩
+  rw [hEs c (by omega), hg.1 c (by omega)]
+  rcases i with _ | a
+  · rw [hE0]; simp only; omega
+  · rw [hEs a (by omega), hg.1 a (by omega)]
+    have := fzSum_mono m (j := a + 1) (n := c) (by omega)
+    rw [fzSum_succ, ← fzExt_eq] at this
+    simp only; omega
+
 /-- **After `par_compact(1, b)`, a buffer with the words of `OUT[b‥b+len)` shows `m`.** -/
 theorem hdrView_of (B : Array Word) (hok : parCompactOK m 1 b = true) (hb : b.toNat + hdrW < 2 ^ 64)
     (hlt : (m.arr64 OUT).size < 2 ^ 64)

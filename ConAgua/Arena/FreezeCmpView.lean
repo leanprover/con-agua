@@ -625,6 +625,50 @@ theorem xsGo_put : ∀ (xs : List (Nat × Fz)) (M : Mem) (o : Word),
       simp only [he, hs] at q2 q3 q5 q6
       exact ⟨ox, by omega, q2, q3, q4, q5, q6⟩
 
+/-- **The solution's images lie apart**: any two of them, by their entries in the final words. -/
+theorem xsGo_disj : ∀ (xs : List (Nat × Fz)) (M : Mem) (o : Word),
+    (xs.map (·.1)).Nodup → (∀ x ∈ xs, x.2.src ≠ OUT ∧ x.2.e.fzOk = true ∧ 12 + 2 * x.1 ≤ o.toNat) →
+    xsOK xs M o = true → (M.arr64 OUT).size < 2 ^ 64 →
+    ∀ x ∈ xs, ∀ y ∈ xs, x.1 ≠ y.1 →
+      (((xsGo xs M o).1.arr64 OUT).getD (10 + 2 * x.1) 0).toNat +
+          (((xsGo xs M o).1.arr64 OUT).getD (11 + 2 * x.1) 0).toNat ≤
+        (((xsGo xs M o).1.arr64 OUT).getD (10 + 2 * y.1) 0).toNat ∨
+      (((xsGo xs M o).1.arr64 OUT).getD (10 + 2 * y.1) 0).toNat +
+          (((xsGo xs M o).1.arr64 OUT).getD (11 + 2 * y.1) 0).toNat ≤
+        (((xsGo xs M o).1.arr64 OUT).getD (10 + 2 * x.1) 0).toNat
+  | [], _, _, _, _, _, _, x, hx, _, _, _ => absurd hx (by simp)
+  | (i, z) :: xs, M, o, hnd, h, hok, hlt, x, hx, y, hy, hxy => by
+    simp only [xsOK, Bool.and_eq_true] at hok
+    simp only [List.map_cons, List.nodup_cons] at hnd
+    have hz := h (i, z) (by simp)
+    have hfit := fzOK_fit M i z o hok.1
+    have hF := OutFrame.fzStep M 1 i z o 0
+    have ho : (o + fzEv M z.e).toNat = o.toNat + (fzEv M z.e).toNat := toNat_add_lt _ _ (by omega)
+    have h' : ∀ y ∈ xs, y.2.src ≠ OUT ∧ y.2.e.fzOk = true ∧ 12 + 2 * y.1 ≤ (o + fzEv M z.e).toNat :=
+      fun y hy => ⟨(h y (by simp [hy])).1, (h y (by simp [hy])).2.1, by have := (h y (by simp [hy])).2.2; omega⟩
+    have hlt' : ((fzStep M 1 i z o 0).arr64 OUT).size < 2 ^ 64 := by rw [hF.size]; exact hlt
+    simp only [xsGo]
+    -- the head's entry
+    have hhead : (((xsGo xs (fzStep M 1 i z o 0) (o + fzEv M z.e)).1.arr64 OUT).getD (10 + 2 * i) 0) = o ∧
+        (((xsGo xs (fzStep M 1 i z o 0) (o + fzEv M z.e)).1.arr64 OUT).getD (11 + 2 * i) 0) = fzEv M z.e := by
+      obtain ⟨p1, p2, -⟩ := fzStep_put M i z o hz.1 hok.1 hlt hz.2.2
+      refine ⟨?_, ?_⟩
+      · rw [xsGo_keep xs _ _ (fun y hy => ⟨(h' y hy).1, (h' y hy).2.2⟩) hok.2 hlt' _ (by omega)
+          (fun y hy => by have : y.1 ≠ i := fun e => hnd.1 (List.mem_map.mpr ⟨y, hy, e⟩); omega), p1]
+      · rw [xsGo_keep xs _ _ (fun y hy => ⟨(h' y hy).1, (h' y hy).2.2⟩) hok.2 hlt' _ (by omega)
+          (fun y hy => by have : y.1 ≠ i := fun e => hnd.1 (List.mem_map.mpr ⟨y, hy, e⟩); omega), p2]
+    -- a later image starts past the head's
+    have htail : ∀ w ∈ xs, o.toNat + (fzEv M z.e).toNat ≤
+        (((xsGo xs (fzStep M 1 i z o 0) (o + fzEv M z.e)).1.arr64 OUT).getD (10 + 2 * w.1) 0).toNat := by
+      intro w hw
+      obtain ⟨ow, q1, -, -, q4, -⟩ := xsGo_put xs _ _ hnd.2 h' hok.2 hlt' w hw
+      rw [q4]; omega
+    rcases List.mem_cons.mp hx with hxe | hx' <;> rcases List.mem_cons.mp hy with hye | hy'
+    · subst hxe hye; exact absurd rfl hxy
+    · subst hxe; left; rw [hhead.1, hhead.2]; exact htail y hy'
+    · subst hye; right; rw [hhead.1, hhead.2]; exact htail x hx'
+    · exact xsGo_disj xs _ _ hnd.2 h' hok.2 hlt' x hx' y hy' hxy
+
 /-! ### Header S's view -/
 
 theorem xsL_facts : (xsL.map (·.1)).Nodup ∧ (∀ x ∈ xsL, x.2.src ≠ OUT ∧ x.2.e.fzOk = true ∧ 12 + 2 * x.1 ≤ hdrW) := by
@@ -1210,6 +1254,186 @@ theorem cmpView_S (hok : parCompactOK m9 1 hdrWW = true) (hlt : (m9.arr64 OUT).s
         obtain ⟨ox, -, q2, -, q4, q5, -⟩ := cmpS_extra hok hlt hS x hx
         rw [q4, q5]
         exact q2
+
+/-- **A buffer's frozen entries lie apart** (`HdrOk.disj`'s statement). -/
+def EntApart (B : Array Word) : Prop :=
+  ∀ i < frozenIdsL.length, ∀ i' < frozenIdsL.length, i ≠ i' →
+    (bufEntry B i).1 + (bufEntry B i).2 ≤ (bufEntry B i').1 ∨
+    (bufEntry B i').1 + (bufEntry B i').2 ≤ (bufEntry B i).1 ∨ (bufEntry B i).2 = 0 ∨ (bufEntry B i').2 = 0
+
+theorem entApart_of_inc {B : Array Word}
+    (h : ∀ i < frozenIdsL.length, ∀ i' < frozenIdsL.length, i < i' →
+      (bufEntry B i).1 + (bufEntry B i).2 ≤ (bufEntry B i').1) : EntApart B := by
+  intro i hi i' hi' hne
+  rcases Nat.lt_or_gt_of_ne hne with h' | h'
+  · exact Or.inl (h i hi i' hi' h')
+  · exact Or.inr (Or.inl (h i' hi' i hi h'))
+
+/-- **Header C's buffer: its header inside it, its entries apart.** -/
+theorem cmpApart_C (hok : parCompactOK m9 1 hdrWW = true) (hlt : (m9.arr64 OUT).size < 2 ^ 64)
+    (hS : CmpHdrSOK (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)) :
+    (∀ i < frozenIdsL.length, 9 + 2 * i <
+      (cmpBufC OUT (cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length))).size) ∧
+    EntApart (cmpBufC OUT (cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length))) := by
+  obtain ⟨hsz, ho0, hlc, h256, hX1, hX2, h1, h5, hk⟩ := cmpC_facts hok hlt hS
+  generalize hmc : cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length) = mc at *
+  generalize hT : (hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).2 = T at *
+  have hhw := hdrW_eq
+  have hL := frozenIdsL_length
+  have hb : hdrWW.toNat + hdrW < 2 ^ 64 := by simp [hdrWW]; omega
+  have hb' : hdrWW.toNat = hdrW := by simp [hdrWW]; omega
+  have hSz : (cmpBufS OUT mc).size = T.toNat := by
+    simp only [cmpBufS, h1, Array.size_extract]; omega
+  have hSg : ∀ k < T.toNat, (cmpBufS OUT mc).getD k 0 = (mc.arr64 OUT).getD k 0 := by
+    intro k hk'
+    simp only [cmpBufS, h1]
+    rw [getD_extract_lt _ _ _ _ (by simp only [Array.size_extract]; omega), Nat.zero_add]
+  have h5' : (cmpBufS OUT mc).getD 5 0 = hdrWW := by rw [hSg 5 (by omega), h5]
+  have hCg : ∀ k, hdrW + k < T.toNat →
+      (cmpBufC OUT mc).getD k 0 = (mc.arr64 OUT).getD (hdrW + k) 0 := by
+    intro k hk'
+    simp only [cmpBufC, h5', hb']
+    rw [getD_extract_lt _ _ _ _ (by simp only [Array.size_extract, hSz]; omega), hSg _ hk']
+  have hCs : (cmpBufC OUT mc).size = T.toNat - hdrW := by
+    simp only [cmpBufC, h5', hb', Array.size_extract, hSz]; omega
+  refine ⟨fun i hi => by rw [hCs]; omega, entApart_of_inc (hdrEnt_of _ hok hb hlt (fun k hk' => ?_)).2.2⟩
+  rw [hCg k (by omega), hk _ (by omega) (by omega), hb']
+
+theorem hsE_same_inj : (List.range frozen.length).all (fun i => (List.range frozen.length).all (fun i' =>
+    match hsE i, hsE i' with
+    | .same j, .same j' => i == i' || j != j'
+    | _, _ => true)) = true := by decide +kernel
+
+/-- **Header S's entries lie apart**: its own header first, header C's images (each once, the
+swap a permutation) below the solution's, and those apart (`xsGo_disj`). -/
+theorem cmpApart_S (hok : parCompactOK m9 1 hdrWW = true) (hlt : (m9.arr64 OUT).size < 2 ^ 64)
+    (hS : CmpHdrSOK (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length))
+    (h224 : rd64 m9 CTL (Nat.toUInt64 cmpCW) = 1) :
+    EntApart (cmpBufS OUT (cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length))) := by
+  obtain ⟨hsz, ho0, hlc, h256, hX1, hX2, h1, h5, hk⟩ := cmpC_facts hok hlt hS
+  have hV := (cmpView_S hok hlt hS h224).1
+  have hhw := hdrW_eq
+  have hfl := frozen_length
+  have hL := frozenIdsL_length
+  have hSg : ∀ k < (hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).2.toNat,
+      (cmpBufS OUT (cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length))).getD k 0 =
+      ((cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).arr64 OUT).getD k 0 := by
+    intro k hk'
+    simp only [cmpBufS, h1]
+    rw [getD_extract_lt _ _ _ _ (by simp only [Array.size_extract]; omega), Nat.zero_add]
+  -- the entries `i + 1` as the final words
+  have hE : ∀ i < frozen.length, bufEntry (cmpBufS OUT (cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length))) (i + 1) =
+      ((((cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).arr64 OUT).getD (10 + 2 * i) 0).toNat,
+       (((cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).arr64 OUT).getD (11 + 2 * i) 0).toNat) := by
+    intro i hi
+    simp only [bufEntry, show 8 + 2 * (i + 1) = 10 + 2 * i by omega, show 9 + 2 * (i + 1) = 11 + 2 * i by omega]
+    rw [hSg _ (by omega), hSg _ (by omega)]
+  -- header C's images at header S's offsets
+  have hb : hdrWW.toNat + hdrW < 2 ^ 64 := by simp [hdrWW]; omega
+  have hW := parCompactOK_hdr_b hok hb
+  have hg : (∀ j ≤ frozen.length, (fzOff m9 j).toNat = hdrW + fzSum m9 j) := by
+    have h' := hok
+    simp only [parCompactOK, Bool.and_eq_true] at h'
+    exact ((pcGo_good m9 1 hdrWW hW hb (fun _ => hlt) frozen.length (Nat.le_refl _) h'.1.1.1).1 one_ne_zero').1
+  have hSame : ∀ i < frozen.length, ∀ j, hsE i = .same j →
+      bufEntry (cmpBufS OUT (cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length))) (i + 1) =
+        (hdrW + (fzOff m9 j).toNat, fzExt m9 (fzAt j)) ∧ j < frozen.length := by
+    intro i hi j hj
+    have hj' := hsE_lt hi j hj
+    have hv : hsVal (parCompactMem m9 1 hdrWW) i = some (rd64 (parCompactMem m9 1 hdrWW) OUT
+        (hdrW + (10 + 2 * j)).toUInt64 + hdrW.toUInt64, rd64 (parCompactMem m9 1 hdrWW) OUT
+        (hdrW + (11 + 2 * j)).toUInt64) := by simp only [hsVal, hj]
+    obtain ⟨e1, e2⟩ := cmpS_entry hok hlt hS hi _ hv
+    obtain ⟨c1, c2⟩ := hsVal_C hok hlt hj'
+    obtain ⟨o1, -⟩ := cmpS_offs hok hlt hj'
+    refine ⟨?_, hj'⟩
+    rw [hE i hi, e1, e2, c1, c2, o1, UInt64.toNat_ofNat_of_lt' (by rw [fzExt_eq]; exact UInt64.toNat_lt_size _)]
+  have hX : ∀ i < frozen.length, hsE i = .extra → ∃ x ∈ xsL, x.1 = i := fun i hi h => by
+    obtain ⟨x, hx, e⟩ := List.mem_map.mp ((hsE_extra_iff hi).mp h)
+    exact ⟨x, hx, e⟩
+  -- an extra's entry: the images' words
+  have hxw : ∀ x ∈ xsL, ((cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).arr64 OUT).getD (10 + 2 * x.1) 0 =
+        ((hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).1.arr64 OUT).getD (10 + 2 * x.1) 0 ∧
+      ((cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).arr64 OUT).getD (11 + 2 * x.1) 0 =
+        ((hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).1.arr64 OUT).getD (11 + 2 * x.1) 0 := by
+    intro x hx
+    have := (xsL_facts.2 x hx).2.2
+    simp only [cmpHdrSMem]
+    exact ⟨by rw [hsTail_high _ _ _ (by omega), seedMem_low _ _ (by omega) _ (by omega)],
+      by rw [hsTail_high _ _ _ (by omega), seedMem_low _ _ (by omega) _ (by omega)]⟩
+  have hlo : ∀ k < frozenIdsL.length, k ≠ 0 →
+      hdrW ≤ (bufEntry (cmpBufS OUT (cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length))) k).1 := by
+    intro k hk hk0
+    obtain ⟨i, rfl⟩ : ∃ i, k = i + 1 := ⟨k - 1, by omega⟩
+    cases h : hsE i with
+    | same j => rw [(hSame i (by omega) j h).1]; simp only; omega
+    | extra =>
+      obtain ⟨x, hx, rfl⟩ := hX i (by omega) h
+      obtain ⟨ox, q1, -, -, q4, -⟩ := cmpS_extra hok hlt hS x hx
+      rw [hE _ (by omega), q4]; simp only; omega
+  intro k hk k' hk' hne
+  rcases Nat.eq_zero_or_pos k with rfl | hk0
+  · left; rw [hV.hdr0]; simp only [Nat.zero_add]; exact hlo k' hk' (by omega)
+  rcases Nat.eq_zero_or_pos k' with rfl | hk0'
+  · right; left; rw [hV.hdr0]; simp only [Nat.zero_add]; exact hlo k hk (by omega)
+  obtain ⟨i, rfl⟩ : ∃ i, k = i + 1 := ⟨k - 1, by omega⟩
+  obtain ⟨i', rfl⟩ : ∃ i', k' = i' + 1 := ⟨k' - 1, by omega⟩
+  have hi : i < frozen.length := by omega
+  have hi' : i' < frozen.length := by omega
+  have hii : i ≠ i' := by omega
+  cases h : hsE i with
+  | same j =>
+    obtain ⟨ej, hj⟩ := hSame i hi j h
+    obtain ⟨-, oj⟩ := cmpS_offs hok hlt hj
+    cases h' : hsE i' with
+    | same j' =>
+      obtain ⟨ej', hj'⟩ := hSame i' hi' j' h'
+      have hjj : j ≠ j' := by
+        have := List.all_eq_true.mp (List.all_eq_true.mp hsE_same_inj i (List.mem_range.mpr hi)) i'
+          (List.mem_range.mpr hi')
+        rw [h, h'] at this
+        simp only [Bool.or_eq_true, beq_iff_eq, bne_iff_ne] at this
+        omega
+      rw [ej, ej']
+      simp only
+      rw [hg j (by omega), hg j' (by omega)]
+      rcases Nat.lt_or_gt_of_ne hjj with hl | hl
+      · left
+        have := fzSum_mono m9 (j := j + 1) (n := j') (by omega)
+        rw [fzSum_succ, ← fzExt_eq] at this
+        omega
+      · right; left
+        have := fzSum_mono m9 (j := j' + 1) (n := j) (by omega)
+        rw [fzSum_succ, ← fzExt_eq] at this
+        omega
+    | extra =>
+      obtain ⟨x, hx, rfl⟩ := hX i' hi' h'
+      obtain ⟨ox, q1, -, -, q4, -⟩ := cmpS_extra hok hlt hS x hx
+      left; rw [ej, hE _ hi', q4]; simp only; omega
+  | extra =>
+    obtain ⟨x, hx, rfl⟩ := hX i hi h
+    obtain ⟨ox, q1, -, -, q4, -⟩ := cmpS_extra hok hlt hS x hx
+    cases h' : hsE i' with
+    | same j' =>
+      obtain ⟨ej', hj'⟩ := hSame i' hi' j' h'
+      obtain ⟨-, oj'⟩ := cmpS_offs hok hlt hj'
+      right; left; rw [ej', hE _ hi, q4]; simp only; omega
+    | extra =>
+      obtain ⟨y, hy, rfl⟩ := hX i' hi' h'
+      have hF : OutFrame m9 (hsMem (parCompactMem m9 1 hdrWW) (List.range frozen.length)) :=
+        (parCompactMem_out_b m9 1 hdrWW).trans (OutFrame.hsMem _ _)
+      have hd := xsGo_disj xsL _ _ xsL_facts.1
+        (fun z hz => ⟨(xsL_facts.2 z hz).1, (xsL_facts.2 z hz).2.1, by have := (xsL_facts.2 z hz).2.2; omega⟩)
+        hS.1 (by rw [hF.size]; exact hlt) x hx y hy hii
+      rw [hE _ hi, hE _ hi', (hxw x hx).1, (hxw x hx).2, (hxw y hy).1, (hxw y hy).2]
+      have hI : hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length) =
+          xsGo xsL (hsMem (parCompactMem m9 1 hdrWW) (List.range frozen.length))
+            (hdrW.toUInt64 + fzOff m9 frozen.length) := rfl
+      rw [← hI] at hd
+      dsimp only
+      rcases hd with hd | hd
+      · exact Or.inl hd
+      · exact Or.inr (Or.inl hd)
 
 end viewS2
 
