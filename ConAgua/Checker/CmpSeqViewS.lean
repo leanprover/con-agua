@@ -17,6 +17,7 @@ the solution's below `2 · count` and the challenge's past it (`cqBankSM_eix`/`c
 namespace L.Checker
 
 open L L.Arena L.Front
+open ConRon.Arena ConRon.Arena.Frontend
 
 /-! ## Frames of single steps -/
 
@@ -170,5 +171,116 @@ theorem cqTailS_dlp {M : Mem} (hok : CqTailSOK M) {j : Nat} (hj : j < 1 + (cqDlp
   rw [cq_copy64_lo (by decide) _ (by omega) (by simp (disch := decide) only [size_copy64, L.Mem.size64_set64]; omega)
     (by simp (disch := decide) only [arr64_copy64_ne, Mem.arr64_set64_ne]; omega) (by omega)]
   simp (disch := decide) only [arr64_copy64_ne, Mem.arr64_set64_ne]
+
+/-! ## The solution's jobs' memory half after the switch -/
+
+theorem cqMax_ge_right (a b : Word) : b.toNat ≤ (cqMax a b).toNat := by
+  unfold cqMax; split
+  · exact Nat.le_refl _
+  · rename_i h; have := UInt64.not_lt.mp h; exact UInt64.le_iff_toNat_le.mp this
+
+theorem cqRowsS_arr (m : Mem) {b : TieredArray} (h : b ∉ csAS) (hc : b ≠ CCTL)
+    (h2 : b ≠ CEIXA ∧ b ≠ CEIXS ∧ b ≠ CEIXN ∧ b ≠ CTIXA ∧ b ≠ CTIXS ∧ b ≠ CTIXN) :
+    (cqRowsS m).arr64 b = m.arr64 b := by
+  have hn : ∀ x : TieredArray, x ∈ csA → b ≠ x := fun x hx e => h (e ▸ csA_sub_csAS hx)
+  obtain ⟨c1, c2, c3, c4, c5, c6⟩ := h2
+  simp only [cqRowsS]
+  rw [cqRowStep_arr _ c6 (hn _ (by decide)) hc, cqRowStep_arr _ c3 (hn _ (by decide)) hc,
+    cqRowStep_arr _ c5 (hn _ (by decide)) hc, cqRowStep_arr _ c2 (hn _ (by decide)) hc,
+    cqRowStep_arr _ c4 (hn _ (by decide)) hc, cqRowStep_arr _ c1 (hn _ (by decide)) hc]
+
+theorem cqS_arrT (m : Mem) {b : TieredArray} (h : b ∈ cqTailA) (hc : b ≠ CCTL) :
+    (cqCtlSM (cqBankSM m)).arr64 b = (cqBankSM m).arr64 b :=
+  (cqCtlSM_frame _).arr b (by simpa using hc) (fun e => by subst e; revert h; decide)
+
+section
+variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
+
+/-- **The solution's jobs' memory half at mode `8`'s switch**: from the challenge's at the frozen
+memory `m9` (its solution's index `IS`), what `m9` keeps of the solution's index build `m`
+(`CsStash`) and the solution's records `dsS`: the solution's (no solution, `CTL[224] = 0`) at the
+switched memory, at the same owned state. -/
+theorem _root_.L.Arena.JobM.csViewS {J : ISolution} {IS IC : IStreamIndex} {dsS dsC : Array IDeclaration}
+    {m m9 : Mem} {a : AState}
+    (hC : JobM pins dn dsC (some J) IC m9 a) (hJI : J.idx = IS) (hSt : CsStash m m9)
+    (hIS : IndexR m IS) (hDS : DeclsF (m.arr64 L.Front.DECL) (m.arr64 L.Front.DLP) dsS) (hFS : FrozenR m IS)
+    (hfs : IS.firsts.size = dsS.size) (hKS : IndexKeysIn m9 IS) (hKC : IndexKeysIn m9 IC)
+    (hR : CqRowsSOK m9) (hT : CqTailSOK (cqRowsS m9)) (hCt : CqCtlSOK (cqBankSM m9)) :
+    JobM pins dn dsS none IS (cqCtlSM (cqBankSM m9)) a := by
+  have hf := cqS_frame m9
+  have hBF := cqBankSM_frame [] m9
+  have hctl := cqCtlSM_ctl hCt
+  have hsol := hC.jsol.sol.2
+  have hS : SolIdxR m9 IS := hJI ▸ ⟨hsol.base, hsol.btbl, hsol.next, hsol.size, hsol.rows⟩
+  have hout : ∀ w : Word, w.toNat < 2 ^ 32 → rowTag w ≤ 2 → rowTier w = 0 →
+      ¬ (idxW w).toNat < nmCnt m9 (rowTag w) → (baseRow m9 w).1 = 0 ∧ (baseTbl m9 w).1 = 0 := by
+    intro w hw hg _ hl
+    have e : (Idx.ofWord (k := .name) w.toUInt32).word.toUInt64 = w :=
+      UInt64.toNat_inj.mp (by simp; omega)
+    have := baseRow_out hC.idx hKC (Idx.ofWord w.toUInt32) (by rw [e]; exact hg) (by rw [e]; exact hl)
+    rw [e] at this; exact this
+  have hE : erecP (cqCtlSM (cqBankSM m9)) = erecP m9 :=
+    erecP_congr' (hf.arr _ (by decide) (by decide)) (hf.arr _ (by decide) (by decide))
+      (hf.ctl 129 (by decide)) (hf.ctl 130 (by decide))
+  -- the records' extent
+  have eD : (cqRowsS m9).arr64 L.Front.DECL = m9.arr64 L.Front.DECL := by
+    simp only [cqRowsS]; simp (disch := decide) only [cqRowStep_arr]
+  have eSD : (cqRowsS m9).arr64 SDECL = m9.arr64 SDECL := cqRowsS_arr m9 (by decide) (by decide) (by decide)
+  have eSF : (cqRowsS m9).arr64 SFIRSTS = m9.arr64 SFIRSTS := cqRowsS_arr m9 (by decide) (by decide) (by decide)
+  have eSP : (cqRowsS m9).arr64 SDLP = m9.arr64 SDLP := cqRowsS_arr m9 (by decide) (by decide) (by decide)
+  have eP : (cqRowsS m9).arr64 L.Front.DLP = m9.arr64 L.Front.DLP := by
+    simp only [cqRowsS]; simp (disch := decide) only [cqRowStep_arr]
+  have hcnt : (rdW (m.arr64 L.Front.DECL) 0).toNat = dsS.size := hDS.count
+  have hsd0 : rdW (m9.arr64 SDECL) 0 = rdW (m.arr64 L.Front.DECL) 0 := by
+    simp only [rdW, UInt64.toNat_zero]; rw [hSt.decl 0 (by omega)]
+  have hA : dsS.size ≤ (cqDeclA (cqRowsS m9)).toNat := by
+    have := cqMax_ge_right (rdW ((cqRowsS m9).arr64 L.Front.DECL) 0) (rdW ((cqRowsS m9).arr64 SDECL) 0)
+    rw [eSD, hsd0, hcnt] at this; simp only [cqDeclA]; rw [eSD, hsd0]; exact this
+  have hsp0 : rdW (m9.arr64 SDLP) 0 = rdW (m.arr64 L.Front.DLP) 0 := by
+    simp only [rdW, UInt64.toNat_zero]; rw [hSt.dlp 0 (by omega)]
+  have hB : (rdW (m.arr64 L.Front.DLP) 0).toNat ≤ (cqDlpA (cqRowsS m9)).toNat := by
+    have := cqMax_ge_right (rdW ((cqRowsS m9).arr64 L.Front.DLP) 0) (rdW ((cqRowsS m9).arr64 SDLP) 0)
+    rw [eSP, hsp0] at this; simp only [cqDlpA]; rw [eSP, hsp0]; exact this
+  have hsz : ∀ b, ((cqCtlSM (cqBankSM m9)).arr64 b).size = (m9.arr64 b).size := hf.size
+  have hszR : ∀ b, ((cqRowsS m9).arr64 b).size = (m9.arr64 b).size := fun b => by
+    rw [← (cqBankSM_frame [] m9).size b]; simp only [cqBankSM]; exact ((cqTailS_frame [] _).size b).symm
+  have ⟨_, _, _, _, hA59, _, _, hT2, _, _, hT5, _, _, hT8, _⟩ := hT
+  have eB : cqBankSM m9 = cqTailS (cqRowsS m9) := rfl
+  have e0 : ∀ P : Array Word, P[0]?.getD 0 = rdW P 0 := fun P => by simp [rdW]
+  have hfst : ∀ i (h : i < IS.firsts.size),
+      (rdW ((cqCtlSM (cqBankSM m9)).arr64 FIRSTS) (UInt64.ofNat i)).toNat = IS.firsts[i] := by
+    intro i h
+    have hi : i < dsS.size := hfs ▸ h
+    have hn : (UInt64.ofNat i).toNat = i := by simp; omega
+    have e1 : rdW ((cqCtlSM (cqBankSM m9)).arr64 FIRSTS) (UInt64.ofNat i) =
+        rdW (m.arr64 FIRSTS) (UInt64.ofNat i) := by
+      simp only [rdW, hn]
+      rw [cqS_arrT m9 (by decide) (by decide), eB, cqTailS_firsts hT (by omega), eSF,
+        hSt.firsts i (by omega)]
+    rw [e1]; exact hIS.firsts i h
+  have hfsz : IS.firsts.size ≤ ((cqCtlSM (cqBankSM m9)).arr64 FIRSTS).size := by
+    rw [hsz, ← hszR]; omega
+  have h128 : rdW ((cqCtlSM (cqBankSM m9)).arr64 CTL) 128 = rdW (m9.arr64 CTL) 225 := by
+    rw [hctl.1]; exact hBF.ctl 225 (by simp)
+  have hI : IndexR (cqCtlSM (cqBankSM m9)) IS :=
+    csIndexRP hS hKS hout (fun g hg => (cqS_rows hR g hg).1) (fun g hg => (cqS_rows hR g hg).2) hE hfst
+      hfsz h128
+  have hD : DeclsF ((cqCtlSM (cqBankSM m9)).arr64 L.Front.DECL) ((cqCtlSM (cqBankSM m9)).arr64 L.Front.DLP) dsS :=
+    DeclsF.agree hDS
+      (fun j hj => by
+        rw [cqS_arrT m9 (by decide) (by decide), eB, cqTailS_decl hT (by omega), eSD, hSt.decl j (by omega)])
+      (fun j hj => by
+        rw [e0] at hj
+        rw [cqS_arrT m9 (by decide) (by decide), eB, cqTailS_dlp hT (by omega), eSP, hSt.dlp j (by omega)])
+      (by rw [hsz]; exact hC.decls.dsize) (by rw [hsz]; exact hC.decls.psize)
+      (by rw [hsz, ← hszR]; omega) (by rw [e0, hsz, ← hszR]; omega)
+  have hfz : FrozenR (cqCtlSM (cqBankSM m9)) IS := hFS.congr fun x hx => by
+    have hx' : 162 ≤ x.toNat ∧ x.toNat ≤ 173 := by
+      simp only [frozenCtl, List.mem_cons, List.not_mem_nil, or_false] at hx
+      rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+    rw [hctl.2.1 x hx'.1 hx'.2, hBF.arr SCTL (by decide) (by decide)]; exact hSt.frz x hx
+  exact hC.csSwapJ hf hI hD hfz hfs (JSol.none hctl.2.2)
+
+end
 
 end L.Checker
