@@ -157,7 +157,7 @@ theorem checkMode2_seqER {m : Mem} (hJ0 : FlushOK m → JobR ipins dn ds J I (fl
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
       (callE_spec checkerProg n "check_a" [1] ·), (callE_spec checkerProg n "check_a" [0] ·),
       (callE_spec checkerProg n "check_c1" [] ·), (callE_spec checkerProg n "check_c2" [] ·),
-      (callE_spec checkerProg n "check_c3" [] ·)]
+      (callE_spec checkerProg n "check_c3" [·] ·)]
     all_goals (try simp only [Cmp.eval, beq_iff_eq] at *)
     all_goals first
       | exact ErrClaimV.of_cls0 (by decide)
@@ -322,8 +322,8 @@ theorem cmpV_cjob (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
       abiSz checkerTab (stxArr g) = abiSz checkerTab (tixArr g) := by
     intro g hg
     rcases (show g = 0 ∨ g = 1 ∨ g = 2 by omega) with rfl | rfl | rfl <;> exact ⟨by decide, by decide⟩
-  obtain ⟨c, ⟨m9, hF6, -, rfl⟩, hres6⟩ := checkC3_run PS hF hst hk6 hsz hpb hsz6 hO
-    (by simp [cmpM6, Mem.setG]) abiFuel hN rs6 _ h6
+  obtain ⟨c, ⟨m9, hF6, -, rfl⟩, hres6⟩ := checkC3_run PS hF hst hk6 hsz hpb hsz6 hO 6 0
+    (Or.inl ⟨rfl, rfl⟩) (by simp [cmpM6, Mem.setG]) abiFuel hN rs6 _ h6
   -- the challenge's jobs
   have hO9 : OutEq m9 (parCompactMem m9 0) := OutEq.of_out (parCompactMem_out m9 0)
   have hb9 : m9.bytes = m.bytes := by

@@ -34,7 +34,7 @@ at `CmpAt4`'s twin prefix). Mode `6` (`check_c3`) is in `nvFns` itself: it claim
 
 * `cmpV_a4`: a failing mode-`4` run of class other than `0` is `TwinCompareVerdict`;
 * `cmpV_a5`: so is a failing mode-`5` run after mode `4` returned `2^63`;
-* `cmpV_a6`: a failing mode-`6` run has class `0`.
+* `cmpV_a6`, `cmpV_a7` (`cmpV_a67`): a failing mode-`6` or mode-`7` run has class `0`.
 -/
 
 namespace L.Checker
@@ -161,22 +161,23 @@ theorem checkC2_err_of_stages {p : Prog} (hp : p.lookup "check_c2" = some checkC
     all_goals grind (gen := 30) (ematch := 40) [lang_grind, Locals.init_cons_zero]
 
 /-- **`check` fails only as the compared entry its mode word names does**: with the mode word
-`4`, `5` or `6`, as `check_c1`, `check_c2`, `check_c3`. -/
+`4`, `5`, `6` or `7`, as `check_c1`, `check_c2`, `check_c3(0)`, `check_c3(1)`. -/
 theorem check_err_dispatchC {p : Prog} (hp : p.lookup "check" = some checkL) (n : Nat) (s₀ : St)
     (E : Err → Prop)
     (h1 : ∀ s₁ : St, ⦃fun s => s = s₁⦄ invoke p (exec p n) "check_c1" []
       ⦃fun _ _ => True; fun e => s₁.mem = s₀.mem → s₀.mem.glob MODE = 4 → E e⦄)
     (h2 : ∀ s₁ : St, ⦃fun s => s = s₁⦄ invoke p (exec p n) "check_c2" []
       ⦃fun _ _ => True; fun e => s₁.mem = s₀.mem → s₀.mem.glob MODE = 5 → E e⦄)
-    (h3 : ∀ s₁ : St, ⦃fun s => s = s₁⦄ invoke p (exec p n) "check_c3" []
-      ⦃fun _ _ => True; fun e => s₁.mem = s₀.mem → s₀.mem.glob MODE = 6 → E e⦄)
+    (h3 : ∀ (k : Word) (s₁ : St), ⦃fun s => s = s₁⦄ invoke p (exec p n) "check_c3" [k]
+      ⦃fun _ _ => True; fun e => s₁.mem = s₀.mem →
+        (s₀.mem.glob MODE = 6 ∨ s₀.mem.glob MODE = 7) → E e⦄)
     (hE : E (.abort 0)) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check" []
     ⦃fun _ _ => True; fun e => (s₀.mem.glob MODE = 4 ∨ s₀.mem.glob MODE = 5 ∨
-      s₀.mem.glob MODE = 6) → E e⦄ := by
+      s₀.mem.glob MODE = 6 ∨ s₀.mem.glob MODE = 7) → E e⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, checkL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (h1 ·), (h2 ·), (h3 ·),
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (h1 ·), (h2 ·), (h3 · ·),
     (L.invoke_loc p (exec p n) "check_a" [·] ·), (L.invoke_loc p (exec p n) "check_b" [] ·)]
   all_goals (try simp only at *)
   all_goals grind [lang_grind]
@@ -225,7 +226,7 @@ theorem cmpV_a4 (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64) (hbC
             (cmpV_frontCStageE bC bS pb sz hin) n hn s) (by rw [hm, ← hsz']; rfl))
       (fun s₁ => M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ _ _ h5 => by
         rw [hmode] at h5; exact absurd h5 (by decide))
-      (fun s₁ => M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ _ _ h6 => by
+      (fun _ s₁ => M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ _ _ h6 => by
         rw [hmode] at h6; exact absurd h6 (by decide))
       (fun h0 => absurd (by decide) h0))
   exact H (.inl hmode) hk
@@ -265,14 +266,14 @@ theorem cmpV_a5 (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64) (hbC
           (checkC2_err_of_stages hc2 checkerProg_nv (by decide +kernel) (by decide +kernel)
             (by decide +kernel) (by decide +kernel)
             (cmpV_frontSStageE bC bS pb (abiSz checkerTab) h64 hbS) n hn s) (by rw [hm]; exact hQ4))
-      (fun s₁ => M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ _ _ h6 => by
+      (fun _ s₁ => M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ _ _ h6 => by
         rw [hmode] at h6; exact absurd h6 (by decide))
       (fun h0 => absurd (by decide) h0))
   exact H (.inr (.inl hmode)) hk
 
-/-- **Mode `6` claims nothing**: `check_c3` is outside the verdict closure, so a failing run of
-`check` with the mode word `6` fails with class `0`. -/
-theorem cmpV_a6 {m : Mem} (hmode : m.glob MODE = 6) {e : Err}
+/-- **Modes `6` and `7` claim nothing**: `check_c3` is outside the verdict closure, so a failing
+run of `check` with the mode word `6` or `7` fails with class `0`. -/
+theorem cmpV_a67 {m : Mem} (hmode : m.glob MODE = 6 ∨ m.glob MODE = 7) {e : Err}
     (hrun : cmpRun checkerProg m = .error e) : e.cls = 0 := by
   have hlc : checkerProg.lookup "check" = some checkL := by chk_lk
   have hr := run_err hrun
@@ -280,16 +281,27 @@ theorem cmpV_a6 {m : Mem} (hmode : m.glob MODE = 6) {e : Err}
   rw [hN'] at hr
   let n := abiFuel - 1
   let s₀ : St := { mem := m, loc := Locals.init [] }
+  have h67 : ¬ (m.glob MODE = 4 ∨ m.glob MODE = 5) := by
+    rcases hmode with h | h <;> rw [h] <;> decide
   have H := M.of_run_err (P := fun s => s = s₀) rfl hr
     (check_err_dispatchC hlc n s₀ (fun e => e.cls = 0)
-      (fun s₁ => M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ _ _ h4' => by
-        rw [hmode] at h4'; exact absurd h4' (by decide))
-      (fun s₁ => M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ _ _ h5 => by
-        rw [hmode] at h5; exact absurd h5 (by decide))
-      (fun s₁ => M.triple_of_run' (fun _ _ _ _ _ => trivial) fun s e' hs hr' _ _ =>
+      (fun s₁ => M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ _ _ h4' =>
+        absurd (.inl h4') h67)
+      (fun s₁ => M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ _ _ h5 =>
+        absurd (.inr h5) h67)
+      (fun k s₁ => M.triple_of_run' (fun _ _ _ _ _ => trivial) fun s e' hs hr' _ _ =>
         M.of_run_err (P := fun t => t = s₁) hs hr' (nv_at checkerProg_nv (f := "check_c3")
-          (by decide +kernel) n [] s₁))
+          (by decide +kernel) n [k] s₁))
       rfl)
   exact H (.inr (.inr hmode))
+
+/-- **Mode `6` claims nothing** (`cmpV_a67`). -/
+theorem cmpV_a6 {m : Mem} (hmode : m.glob MODE = 6) {e : Err}
+    (hrun : cmpRun checkerProg m = .error e) : e.cls = 0 := cmpV_a67 (.inl hmode) hrun
+
+/-- **Mode `7` claims nothing** (`cmpV_a67`): mode `7` is `check_c3(1)`, outside the verdict
+closure as mode `6`'s `check_c3(0)`. -/
+theorem cmpV_a7 {m : Mem} (hmode : m.glob MODE = 7) {e : Err}
+    (hrun : cmpRun checkerProg m = .error e) : e.cls = 0 := cmpV_a67 (.inr hmode) hrun
 
 end L.Checker
