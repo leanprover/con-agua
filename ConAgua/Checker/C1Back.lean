@@ -86,8 +86,13 @@ theorem c1_back {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} 
     (hQ : c1Q (freshMem mS) X) : JobM pins dn dsC (some J) IC (c1Patch (freshMem m9) X) a := by
   have hF := c1_fresh_frame hfr hext
   have hXs : (X.arr64 CTL).size = ((freshMem m9).arr64 CTL).size := by rw [hQ.1.size, hF.size]
+  have harr : ∀ b ∈ csA, (c1Patch (freshMem m9) X).arr64 b = (freshMem m9).arr64 b := fun b hb => by
+    rw [c1Patch_arr, ite_eq_left hb]
+  have hD : (c1Patch (freshMem m9) X).arr64 L.Front.DECL = (freshMem m9).arr64 L.Front.DECL := harr _ (by decide)
+  have hP : (c1Patch (freshMem m9) X).arr64 L.Front.DLP = (freshMem m9).arr64 L.Front.DLP := harr _ (by decide)
   have hV : CsViewC (freshMem m9) X (c1Patch (freshMem m9) X) := by
-    refine ⟨⟨fun b hb hc => ?_, fun x hx => ?_, fun b => ?_⟩, fun b hb => ?_, fun x hx => ?_⟩
+    refine ⟨⟨fun b hb hc => ?_, fun x hx => ?_, fun b => ?_⟩, fun b hb => ?_, fun i _ => by rw [hD],
+      fun i _ => by rw [hP], by rw [hD], by rw [hP], fun x hx => ?_⟩
     · rw [c1Patch_arr, ite_eq_right hb, ite_eq_right hc]
     · rw [c1Patch_arr, ite_eq_right (by decide), ite_eq_left rfl, c1_rdW, c1_rdW, getD_c1CtlP]
       have : x.toNat ∉ rrWs := fun h => hx ((csC_iff x).mpr h)
@@ -98,7 +103,8 @@ theorem c1_back {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} 
       · split
         · subst ‹b = CTL›; rw [size_c1CtlP]
         · rfl
-    · rw [c1Patch_arr, ite_eq_left hb]
+    · simp only [IdxArr, Bool.and_eq_true, beq_iff_eq, Bool.or_eq_true, decide_eq_true_eq] at hb
+      exact harr b (csA_of_idx hb.1 hb.2)
     · rw [c1Patch_arr, ite_eq_right (by decide), ite_eq_left rfl, c1_rdW, c1_rdW, getD_c1CtlP]
       have := (csC_iff x).mp hx
       split
