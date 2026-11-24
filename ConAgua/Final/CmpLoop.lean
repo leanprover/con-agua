@@ -46,6 +46,7 @@ theorem cmp_loop (q p : Prog) (hq : Refines q p) (hok : abiTabOk tab = true)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (hmo : bufMinOk tab fz own = true) (hdisj : ∀ a ∈ own, a ∉ fz)
     (hnd : fz.Nodup) (hdom : ∀ a ∈ fz, tab.dom64 a = true)
+    (hfz0 : 0 < fz.length) (hwn2 : 2 * workerNeed own < 2 ^ 64)
     {Kc : Nat} (hC : Code (cmpStubL tab mode out own) Kc)
     (dm : MachineData) (ra sa : Word) {nS base rsp0 : Nat} (B : Array Word) (k : Nat) (hk : k < 2 ^ 63)
     (hgeo : CmpGeo tab own base dm.regs.r9.toNat rsp0 (base + abiSlot * abiSlot64 tab out) B.size)
@@ -180,8 +181,11 @@ theorem cmp_loop (q p : Prog) (hq : Refines q p) (hok : abiTabOk tab = true)
       · rcases hwin (rsp0 - 24) (by omega) (by omega) with h2 | h2
         · omega
         · exact .inr h2
-    refine ev_seq (abiB_outcome q p hq tab hok hAX hwf mode plo phi out hdrf ctlf hw fz own hngm hngl hngh h12 h13 h23
-      hfzl k0 hcode fd hentry hnp (bufSeq fz B rm j) (rm j) _ (UInt64.ofBitVec (at_ (Kc + 77 + 1)).toBitVec) ?_ ?_ hmo) ?_
+    refine ev_seq (abiB_outcome_w q p hq tab hok hAX hwf mode plo phi out hdrf ctlf hw fz own hngm hngl hngh h12 h13 h23
+      hfzl k0 hcode fd hentry hnp (bufSeq fz B rm j) (rm j) _ (UInt64.ofBitVec (at_ (Kc + 77 + 1)).toBitVec) ?_ ?_ hmo
+      (by rw [hBs]; have := hg.hdr 0 hfz0; omega)
+      (by rsimp; rw [hwN]; have : 0 < workerNeed own := by simp only [workerNeed, abiSlot]; omega
+          omega) hwn2) ?_
     · refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> dsimp only <;> (try rsimp)
       · rw [hbufN', hWN, hwN]; exact hgj
       · intro i hi

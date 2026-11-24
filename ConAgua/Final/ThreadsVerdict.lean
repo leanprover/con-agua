@@ -281,6 +281,9 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     rcases Nat.lt_or_gt_of_ne hne with h | h
     · exact Or.inl (hinc' i hi i' hi' h)
     · exact Or.inr (Or.inl (hinc' i' hi' i hi h))
+  have hk2 : st₀.data.regs.rax - 9223372036854775808 ≤ B.getD 2 0 := by
+    rw [hrax₁]
+    exact entry1_k b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq (by have := hhdr 0 (by decide); omega)
   -- the thread: a call's outcome, at any region memory
   obtain ⟨hH0, -, hcx0, h80⟩ := hR.calls 0 (Nat.zero_le _)
   have hneed : workerNeed parOwnedL ≤ t.blen := h80 ▸ hH0.need
@@ -297,7 +300,8 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     have hEv := abiB_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok checkerProgI_wf MODE PLO PHI OUT HDRF
       CTLF hdrHw frozenIdsL parOwnedL (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) B r (t.dm i') (t.ra i') hbc
-      (by rw [hcx]; exact hr) checker_bufMinOk
+      (by rw [hcx]; exact hr) checker_bufMinOk (by have := hhdr 0 (by decide); omega)
+      (.inl (cp_lt_of_lt_le (hR.claimed i' hi) hk2))
     rw [hdi, hcx] at hEv
     exact hR.ret i' hi _ hEv (fun s h => h.1)
   -- the calls before `i` (`thread_chain`)
@@ -321,7 +325,7 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
   rw [h0] at hruns
   -- the other threads' calls (`threadsAcc_runs`)
   obtain ⟨f, hf⟩ := Classical.axiomOfChoice
-    (threadsAcc_runs k0 hcode dm₀ st₀ B ths hR.others hhdr hent' hdisj)
+    (threadsAcc_runs k0 hcode dm₀ st₀ B ths hR.others hhdr hent' hdisj hk2)
   have hzero : ∀ a ∈ parOwnedL, (zeroMem checkerTab).arr64 a = zeros (m₁.arr64 a).size := by
     intro a ha
     have hl := parOwnedL_dom a ha
