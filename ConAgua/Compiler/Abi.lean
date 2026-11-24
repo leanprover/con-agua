@@ -215,7 +215,11 @@ arrays.
   frozen array `i` at `buf + 8 · buf[8 + 2i]` with length `buf[9 + 2i]`, every other array
   `(0, 0)`, the constant data as `ca_setup`; `plo := j`, `phi := j + 1` (one pending group), the
   mode word `2`; then `ca_enter`. Declines (`rdx = 1`) if a frozen array is shorter than its
-  minimum length (`Tab.min64`, `bufMinStub`) or `region_len < workerNeed own`.
+  minimum length (`Tab.min64`, `bufMinStub`) or `region_len < workerNeed own`. A buffer with two
+  phases (the compared run: `buf[5]`, the second phase's offset, nonzero) maps a job index
+  `j ≥ buf[2]` to job `j - buf[2]` of the second phase's buffer at `buf + 8 · buf[5]`, on the
+  region's second half (`cpProStub`); the harness's region is `2 · workerNeed own` bytes
+  (`ca_worker_size`).
 * `ca_check_seq` (**entry 2 in place**, the sequential driver; the region in `r8`, the range
   `lo`, `hi` in `rsi`, `rdx`), on a region entry 1 left: the table as `ca_setup` lays it out, except
   that `out`, the seed of `CTL` and the byte arrays get no memory and the header `hdrf` is the
@@ -236,6 +240,8 @@ arrays.
 def abiStartAL : Label := "ca_start_a"
 def abiStartA0L : Label := "ca_start_a0"
 def abiCheckBL : Label := "ca_check_b"
+/-- `ca_check_b` past its phase prologue (`cpProStub`), at its length tests. -/
+def abiCheckB0L : Label := "ca_check_b_min"
 /-- `ca_check_b` past its length tests (`bufMinStub`). -/
 def abiCheckB1L : Label := "ca_check_b_go"
 def abiCheckSL : Label := "ca_check_seq"
@@ -327,9 +333,27 @@ def bufMinChk (tab : Tab) : Nat → List TieredArray → Program
       [i64 (.cmp (.mem (mb .rdi (8 * (9 + 2 * i : Nat)))) (oI (tab.min64 a))), jccL .c abiDeclineL]) ++
     bufMinChk tab (i + 1) l
 
-/-- `ca_check_b`'s entry: the length tests (`bufMinChk`), then the stub proper (`parStub0`). -/
-def bufMinStub (tab : Tab) (fz : List TieredArray) : Program :=
-  [.label abiCheckBL] ++ bufMinChk tab 0 fz ++ [jmpL abiCheckB1L]
+/-- **`ca_check_b`'s phase prologue** (a buffer with two phases, the compared run): with `rdi`
+the buffer, `rdx` the job index `j`, `rcx`/`r8` the region: if `j ≥ buf[2]` (the first phase's job
+count) and `buf[5] ≠ 0` (the second phase's offset, in words; `0` in a one-phase buffer), then
+`j := j - buf[2]`, `buf := buf + 8 · buf[5]` (the second phase's self-contained buffer) and the
+region's second half, `[rcx + workerNeed, rcx + r8)` (declines below `2 · workerNeed`); else
+nothing. The buffer length (`rsi`) stays: entry 2 never reads it. -/
+def cpProStub (own : List TieredArray) : Program :=
+  [movRM .rax (mb .rdi 16), i64 (.cmp (.reg (rr .rdx)) (oR .rax)), jccL .c abiCheckB0L,
+   movRM .rax (mb .rdi 40), i64 (.cmp (.reg (rr .rax)) (oI 0)), jccL .z abiCheckB0L,
+   movRI .rax (2 * workerNeed own).toUInt64, i64 (.cmp (.reg (rr .r8)) (oR .rax)), jccL .c abiDeclineL,
+   movRR .rax .rdx, i64 (.sub (.reg (rr .rax)) (oM (mb .rdi 16))), movRR .rdx .rax,
+   movRM .rax (mb .rdi 40), i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
+   i64 (.add (.reg (rr .rax)) (oR .rdi)), movRR .rdi .rax,
+   movRI .rax (workerNeed own).toUInt64, i64 (.add (.reg (rr .rax)) (oR .rcx)), movRR .rcx .rax,
+   movRI .r9 (workerNeed own).toUInt64, movRR .rax .r8, i64 (.sub (.reg (rr .rax)) (oR .r9)),
+   movRR .r8 .rax]
+
+/-- `ca_check_b`'s entry: the phase prologue (`cpProStub`), the length tests (`bufMinChk`), then
+the stub proper (`parStub0`). -/
+def bufMinStub (tab : Tab) (fz own : List TieredArray) : Program :=
+  [.label abiCheckBL] ++ cpProStub own ++ [.label abiCheckB0L] ++ bufMinChk tab 0 fz ++ [jmpL abiCheckB1L]
 
 /-- The parallel mode's entries, for the globals `mode`, `plo`, `phi`, the buffer array `out`, the
 frozen arrays `fz` and the owned arrays `own` (`ca_check_b`'s length tests apart, `parStub`). -/
@@ -382,11 +406,11 @@ def parStub0 (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat
 /-- The parallel mode's entries (`parStub0`), then `ca_check_b`'s length tests (`bufMinStub`). -/
 def parStub (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat) (fz own : List TieredArray) :
     Program :=
-  parStub0 tab mode plo phi out hdrf ctlf hw fz own ++ bufMinStub tab fz
+  parStub0 tab mode plo phi out hdrf ctlf hw fz own ++ bufMinStub tab fz own
 
 /-- The symbols of the parallel mode for the harness. -/
 def parSymbols (tab : Tab) (out : ArrId) (own : List TieredArray) : String :=
-  s!".section .rodata\n.globl ca_out_off\n.globl ca_worker_size\nca_out_off: .quad {abiSlot * abiSlot64 tab out}\nca_worker_size: .quad {workerNeed own}\n"
+  s!".section .rodata\n.globl ca_out_off\n.globl ca_worker_size\nca_out_off: .quad {abiSlot * abiSlot64 tab out}\nca_worker_size: .quad {2 * workerNeed own}\n"
 
 /-- The assembler file with the parallel mode's entries (`parStub`) before the stub. -/
 def asmTextAbiPar (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
