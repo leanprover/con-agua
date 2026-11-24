@@ -148,6 +148,8 @@ public import ConAgua.Checker.CmpSPhase
 public import ConAgua.Checker.CmpSPhaseT
 public import ConAgua.Checker.CmpSPhaseThr
 public import ConAgua.Checker.C1Hdr
+public import ConAgua.Checker.C1ThrQ
+public import ConAgua.Arena.JobStartX
 public import ConAgua.Checker.CmpSeqW
 public import ConAgua.Checker.CmpSeqEntry
 public import ConAgua.Checker.CmpSeqView
