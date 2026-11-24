@@ -224,8 +224,16 @@ theorem checkB_thrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg) 
           | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, hR0 (by simp_all)⟩
           | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, hR1 (by simp_all)⟩
           | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp_all; done)
-          | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp only [Mem.copy64_glob, rereadMem_glob] at *; simp_all; done))
+          | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp only [Mem.copy64_glob, rereadMem_glob] at *; simp_all; done)
+          | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm,
+              by rw [L.St.setLocs_mem, ‹St.mem _ = rereadMem _›]; exact hR0 (by simp_all)⟩
+          | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm,
+              by rw [L.St.setLocs_mem, ‹St.mem _ = rereadMem _›]; exact hR1 (by simp_all)⟩
+          | (simp only [flushMem_glob, rereadMem_glob, Mem.copy64_glob] at *; simp_all; done)
+          | (rw [L.St.setLocs_mem, hm, flushMem_glob, L.St.setLocs_mem, ‹St.mem _ = rereadMem _›,
+              rereadMem_glob]; simp_all; done))
       | (rw [L.St.setLocs_mem]; simp_all; done)
+      | (rw [L.St.setLocs_mem]; simp_all [flushMem_glob, rereadMem_glob, Mem.copy64_glob]; done)
       | (trace_state; fail "ThreadsE.checkB_thrE: no closing tactic applies")
 
 /-- **`check` with the mode word `2` on a thread's memory, error half of `checkThr`.** -/

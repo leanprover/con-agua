@@ -216,8 +216,16 @@ theorem checkB_thr (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = some
           | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, hR0 (by simp_all)⟩
           | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, hR1 (by simp_all)⟩
           | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp_all; done)
-          | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp only [Mem.copy64_glob, rereadMem_glob] at *; simp_all; done))
+          | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp only [Mem.copy64_glob, rereadMem_glob] at *; simp_all; done)
+          | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm,
+              by rw [L.St.setLocs_mem, ‹St.mem _ = rereadMem _›]; exact hR0 (by simp_all)⟩
+          | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm,
+              by rw [L.St.setLocs_mem, ‹St.mem _ = rereadMem _›]; exact hR1 (by simp_all)⟩
+          | (simp only [flushMem_glob, rereadMem_glob, Mem.copy64_glob] at *; simp_all; done)
+          | (rw [L.St.setLocs_mem, hm, flushMem_glob, L.St.setLocs_mem, ‹St.mem _ = rereadMem _›,
+              rereadMem_glob]; simp_all; done))
       | (rw [L.St.setLocs_mem]; simp_all; done)
+      | (rw [L.St.setLocs_mem]; simp_all [flushMem_glob, rereadMem_glob, Mem.copy64_glob]; done)
 
 /-- **`check` with the mode word `2` on a thread's memory**: `check_b` (as `checkB_thr`). -/
 theorem checkThr (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = some checkJobsL)
@@ -340,14 +348,14 @@ theorem thr_first {m : Mem} (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT)
   have hnoop : ∀ k ∈ rrWs, ((W.copy64 CTL 0 CTLF 0 256).arr64 CTL).getD k 0 =
       ((W.copy64 CTL 0 CTLF 0 256).arr64 CTLF).getD k 0 := by
     intro k hk
-    have hk' : k < 256 := by
-      simp only [rrWs, List.mem_cons, List.mem_append, List.mem_range'_1, List.mem_singleton] at hk
-      omega
+    have hk' : k < 256 := (by decide : ∀ k ∈ rrWs, k < 256) k hk
     rw [getD_copy64 (by decide) 256 W 0 0 (by simp) (by simp) k, arr64_copy64_ne _ _ _ _ _ _ (by decide)]
     simp only [UInt64.toNat_zero, Nat.zero_le, true_and, Nat.zero_add, Nat.sub_zero]
     rw [ite_eq_left ⟨hk', by omega⟩]
   intro b hb
-  rw [rereadMem_arr _ (fun _ k hk => hnoop k hk)]
+  have hrr := rereadMem_arr ((W.copy64 CTL 0 CTLF 0 256).setG INIT 1) (fun _ k hk => by
+    rw [L.Mem.setG_arr64, L.Mem.setG_arr64]; exact hnoop k hk)
+  rw [hrr]
   rw [show ∀ M : Mem, (M.setG INIT 1).arr64 b = M.arr64 b from fun _ => rfl]
   by_cases hbc : b = CTL
   · subst hbc

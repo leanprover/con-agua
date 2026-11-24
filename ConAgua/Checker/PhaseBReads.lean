@@ -478,10 +478,11 @@ theorem check_b_mem_phaseBFns : "check_b" ∈ phaseBFns :=
 def phaseBG (g : GVar) : Bool := g.id == 8 || g.id == 9 || g.id == 10 || g.id == 11
 
 /-- The jobs' closure: `phaseBFns` but `check_b` itself (which reads the seed `CTLF` and writes
-`INIT`); compared by name codes. -/
+`INIT`) and `seed_reread` (which reads the seed); compared by name codes. -/
 def phaseBJobFns : List FnName :=
   let out := nameCode "check_b"
-  phaseBFns.filter fun f => nameCode f != out
+  let rr := nameCode "seed_reread"
+  phaseBFns.filter fun f => nameCode f != out && nameCode f != rr
 
 /-- `phaseBJobFns` as a tree of name codes. -/
 names_tree phaseBJobTree : phaseBJobFns

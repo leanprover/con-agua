@@ -142,7 +142,7 @@ theorem stage_moved {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Array ID
     (hF : FoldOn b pb sz ds ipins sE I sF m₇ m) (hO : OutEq m m0) (hI : IndexR m1 {})
     (hf : MemFrame moveA moveC m0 m1) : L.Ind.StageR 0 (fe0 sF.pins) m1 sF := by
   have hf' : MemFrame (sstA ++ moveA) moveC m m1 :=
-    (hO.memFrame.mono (by simp) (by simp)).trans (hf.mono (fun b hb => List.mem_append_right _ hb) (by simp))
+    (hO.memFrame.mono (fun _ hb => List.mem_append_left _ hb) (by simp)).trans (hf.mono (fun b hb => List.mem_append_right _ hb) (by simp))
   have hiw : L.Ind.IWOK m1 := IWOK.frame hf' (by decide) (by decide) (by decide) (by decide)
     hF.build.stage.iw (by decide) (by decide)
   have hx : erecP m1 = erecP m :=
@@ -152,7 +152,8 @@ theorem stage_moved {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Array ID
       simp only [moveC, SNEXTC, SCNTC, List.mem_cons, List.not_mem_nil, or_false] at hx
       rcases hx with rfl | rfl | rfl <;> decide) (by rw [hx]; exact fun _ _ h => h) hI hiw
   rcases List.mem_append.mp hb with h | h
-  · simp only [List.mem_singleton] at h; subst h; exact frameG_hi (by decide) (by decide)
+  · simp only [sstA, List.mem_cons, List.not_mem_nil, or_false] at h
+    rcases h with rfl | rfl | rfl | rfl | rfl <;> exact frameG_hi (by decide) (by decide)
   · obtain ⟨h0, h1 | h1⟩ := moveA_facts b h
     · exact frameG_idx h0 h1.1 h1.2
     · exact frameG_hi h0 (by omega)

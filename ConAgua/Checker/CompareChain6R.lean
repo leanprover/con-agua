@@ -90,7 +90,8 @@ theorem moveA_memos : ∀ b ∈ (sstA ++ moveA),
     b ≠ ILFM ∧ b ≠ L.Stubs.CRM ∧ (b.arr < 201 ∨ 208 < b.arr) := by
   intro b hb
   rcases List.mem_append.mp hb with h | h
-  · simp only [List.mem_singleton] at h; subst h; decide
+  · simp only [sstA, List.mem_cons, List.not_mem_nil, or_false] at h
+    rcases h with rfl | rfl | rfl | rfl | rfl <;> decide
   · obtain ⟨-, h1 | h1⟩ := moveA_facts b h <;>
       exact ⟨fun e => by subst e; revert h1; decide, fun e => by subst e; revert h1; decide, by omega⟩
 
@@ -98,7 +99,7 @@ theorem prep6_of (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m)
     (hk6 : Keep6 m PS.pre) {m2 : Mem} (h : Q62 PS m m2) : Prep6 PS.pre PS.rC PS.sF m2 := by
   obtain ⟨m1, ⟨m0, hO, -, hI, hf⟩, hok, rfl⟩ := h
   have hf' : MemFrame (sstA ++ moveA) moveC m m1 :=
-    (hO.memFrame.mono (by simp) (by simp)).trans (hf.mono (fun b hb => List.mem_append_right _ hb) (by simp))
+    (hO.memFrame.mono (fun _ hb => List.mem_append_left _ hb) (by simp)).trans (hf.mono (fun b hb => List.mem_append_right _ hb) (by simp))
   have hst1 : Stash m1 PS.pre PS.rC := hst.frame hf' (by decide) (by decide)
   have hD1 : (m1.arr64 L.Front.DECL).size < 2 ^ 63 := by
     rw [hf'.size]; exact hF.build.decls.dsize
@@ -297,7 +298,7 @@ theorem C64_val : ∀ x ∈ C64, x = 225 ∨ x = 226 ∨ x = 128 ∨ x = 34 ∨ 
 theorem Side6.frameM {c : Word} {m2 m3 : Mem} {dsC : Array IDeclaration} {sG : AState}
     {res : List IDeclaration} {m4 : Mem} (h : Side6 PS m c m2 m3 dsC sG res m4) : MemFrame A64 C64 m m4 := by
   obtain ⟨m1, ⟨m0, hO, -, -, hf⟩, -, rfl⟩ := h.q62
-  have e1 := hO.memFrame.mono (A' := A64) (C' := C64) (by simp [A64]) (by simp)
+  have e1 := hO.memFrame.mono (A' := A64) (C' := C64) (fun b hb => by simp [A64, hb]) (by simp)
   have e2 := hf.mono (A' := A64) (C' := C64) (fun b hb => by simp [A64, hb]) (fun x hx => by simp [C64, hx])
   have e3 := (restoreM_frame m1).mono (A' := A64) (C' := C64) (by simp [A64]) (by simp)
   have e4 := h.prep.frame.mono (A' := A64) (C' := C64) (fun b hb => by simp [A64, hb]) (fun x hx => by simp [C64, hx])
