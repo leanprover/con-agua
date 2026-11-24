@@ -128,6 +128,54 @@ theorem c1Thr_accepts {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : Phas
     have e : PS.dsS[(UInt64.ofNat k).toNat]'(by rw [hk']; exact hk) = PS.dsS[k] := by simp only [hk']
     rw [← e]; simp only [hk'] at hrj ⊢; exact hrj
   have H := hH hstepS
+  -- the threads' starts
+  have hKI := indexKeysIn_of hJM.arena.base H.hI H.hpI
+  have hJR0 := JobM.fresh (hJM.trunc hoff hKI) hwf hoff
+  have hPB0 : X₀.arr8 L.Rom.PB = pb.data.toList.toArray := by
+    rw [freshMem_arr8]
+    show mS.bytes L.Rom.PB = _
+    rw [hV.bytes, hb9, hF.bytes, ← Mem.arr8, hF.r7.since.keep.arr8]; exact loadMem_pb bS pb _
+  have hstart0 : ∀ r : Mem, (∀ b ∈ parOwnedL, r.arr64 b = zeros (mS.arr64 b).size) → r.glob INIT = 0 →
+      RelS r a'.worker := by
+    intro r hz hI0 j
+    refine ⟨X₀, ⟨_, ⟨hJR0, PExt.of_ext (Ext.refl _), rfl⟩, ?_⟩, ⟨MemFrame.refl _ _ _, fun _ _ h => h⟩, hPB0,
+      csFirst_hdrView hBS r j hz hI0⟩
+    exact ⟨by simp [AState.worker, estore_dropScratch_self hwf hoff], rfl, rfl⟩
+  let thsE : List (Mem × List Nat × Mem) := ths.map fun t => (t.1, t.2.1.map (·.1.toNat), runsEnd t.1 t.2.1)
+  have hinc' : ∀ t ∈ thsE, t.2.1.Pairwise (· < ·) := by
+    intro t ht
+    obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp ht
+    have := hincS t₀ ht₀
+    rw [List.pairwise_map] at this ⊢
+    exact this.imp fun h => UInt64.lt_iff_toNat_lt.mp h
+  have hrange : ∀ t ∈ thsE, ∀ k ∈ t.2.1, k < PS.dsS.size := by
+    intro t ht k hk'
+    obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp ht
+    obtain ⟨c', hc, rfl⟩ := List.mem_map.mp hk'
+    have := (hth t₀ ht₀).2.2.2.1 c' hc
+    rw [UInt64.lt_iff_toNat_lt, hk] at this
+    exact this
+  have hcov' : ∀ k < PS.dsS.size, ∃ t ∈ thsE, k ∈ t.2.1 := by
+    intro k hk'
+    have hk64 : (UInt64.ofNat k).toNat = k := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
+    obtain ⟨t, ht, c', hc, hcj⟩ := hcovS (UInt64.ofNat k) (by rw [UInt64.lt_iff_toNat_lt, hk, hk64]; exact hk')
+    exact ⟨_, List.mem_map_of_mem ht, List.mem_map.mpr ⟨c', hc, by rw [hcj, hk64]⟩⟩
+  have hE := pool_twinE H hst thsE
+    (fun t ht => by
+      obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp ht
+      exact hstart0 _ (hth t₀ ht₀).1 (hth t₀ ht₀).2.1)
+    (fun t ht => by
+      obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp ht
+      exact threadRuns_chainE B _ _ (hth t₀ ht₀).2.2.1) hinc' hrange hcov'
+  have hPS : PoolJobs VM PS.ipins none PS.IS PS.dsS a' :=
+    ⟨thsE.map (·.2.1),
+      fun k hk' => by obtain ⟨t, ht, hkt⟩ := hcov' k hk'; exact ⟨t.2.1, List.mem_map_of_mem ht, hkt⟩,
+      fun w hw k hkw => by obtain ⟨t, ht, rfl⟩ := List.mem_map.mp hw; exact hrange t ht k hkw,
+      fun w hw => by obtain ⟨t, ht, rfl⟩ := List.mem_map.mp hw; exact hinc' t ht,
+      fun w hw => by
+        obtain ⟨t, ht, rfl⟩ := List.mem_map.mp hw
+        obtain ⟨a'', hl, -⟩ := hE t ht
+        exact ⟨a'', hl⟩⟩
   sorry
 
 end ConAgua.Final
