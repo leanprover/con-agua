@@ -305,3 +305,11 @@ order, `checkStreamJ`), `TwinCompareVerdict`, `TwinCompareVerdictPooled`.
   the region to the second phase and its worker sub-region (`ca_worker_size = 2 · workerNeed`);
   the flat path never shifts. The solution's jobs see the whole buffer, which agrees with mode
   5's on its prefix except header words 1 and 5 (`BufAgreeS`).
+* H1b: the challenge's threaded job failure at `J = some` (`cmpV_tjobC`, the error half of
+  `cmpThreadsC_pooledJ`) merged (463fa6d83). Every L-level verdict claim is now proved: modes 4,
+  5 (`cmpV_a4`, `cmpV_a5`), modes 6, 7 claim nothing (`cmpV_a67`, class 0), the solution's jobs
+  (`cmpV_sjob`, threaded `cmpV_tjobS`), the challenge's (`cmpV_cjob`, threaded `cmpV_tjobC`), and
+  `cmpErr_twin` for the sequential driver.
+* The user then asked for one frozen store image with two headers (the solution's terms not
+  duplicated) and an independent design review of the one-pool layout; the buffer/entry work
+  (H2b, H3b, H4) is on hold until it is decided.
