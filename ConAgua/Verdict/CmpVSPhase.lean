@@ -328,12 +328,10 @@ theorem cmpV_tjobSI {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS
     exact hcN c' hc
   · rw [List.mem_singleton.mp ht]; exact hjN
 
--- TEMP (compare2-freeze): `sorryAx` from the stand-ins (thr_ctl_next, ...)
-/-- info: 'L.Checker.cmpV_tjobSI' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound] -/
+/-- info: 'L.Checker.cmpV_tjobSI' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms cmpV_tjobSI
 
--- TEMP (compare2-freeze): `sorryAx` from the stand-ins (thr_ctl_next, ...)
-/-- info: 'L.Checker.cmpV_tjobCI' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound] -/
+/-- info: 'L.Checker.cmpV_tjobCI' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms cmpV_tjobCI
 
 end L.Checker

@@ -202,7 +202,7 @@ theorem cmpSJobs_twin {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : Phas
   rw [frozenIdsL_get hk'] at this
   exact this.symm
 
--- TEMP (compare2-freeze): `sorryAx` from the stand-ins `checker_modes45`, `bufSeq_seed_standin`, `thr_ctl_next`
+-- TEMP (compare2-freeze): `sorryAx` from the stand-ins (bufSeq_seed_standin, checker_modes45, checkC3_of_stages)
 /-- info: 'ConAgua.Final.cmpSJobs_twin' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms cmpSJobs_twin
 
