@@ -138,4 +138,37 @@ theorem cqS_rows {m : Mem} (hok : CqRowsSOK m) (g : Nat) (hg : g ≤ 2) :
     simp (disch := decide) only [cqRowsS, cqRowStep_arr]
     exact ⟨r5, r6⟩
 
+/-! ## The records, firsts and declaration pool after the switch -/
+
+theorem cqTailS_decl {M : Mem} (hok : CqTailSOK M) {j : Nat} (hj : j < 1 + 8 * (cqDeclA M).toNat) :
+    ((cqTailS M).arr64 L.Front.DECL)[j]? = (M.arr64 SDECL)[j]? := by
+  obtain ⟨-, -, -, -, hA, -, h1, h2, h3, -⟩ := hok
+  have hn : (1 + 8 * cqDeclA M).toNat = 1 + 8 * (cqDeclA M).toNat := by
+    simp [UInt64.toNat_add, UInt64.toNat_mul]; omega
+  simp only [cqTailS]
+  simp (disch := decide) only [arr64_copy64_ne, Mem.arr64_set64_ne]
+  rw [cq_copy64_lo (by decide) _ (by omega) (by simp [L.Mem.size64_set64]; omega)
+    (by simp (disch := decide) only [arr64_copy64_ne, Mem.arr64_set64_ne]; omega) (by omega)]
+  simp (disch := decide) only [arr64_copy64_ne, Mem.arr64_set64_ne]
+
+theorem cqTailS_firsts {M : Mem} (hok : CqTailSOK M) {j : Nat} (hj : j < (cqDeclA M).toNat) :
+    ((cqTailS M).arr64 FIRSTS)[j]? = (M.arr64 SFIRSTS)[j]? := by
+  obtain ⟨-, -, -, -, hA, -, -, -, -, h4, h5, h6, -⟩ := hok
+  simp only [cqTailS]
+  simp (disch := decide) only [arr64_copy64_ne, Mem.arr64_set64_ne]
+  rw [cq_copy64_lo (by decide) _ (by omega) (by simp (disch := decide) only [size_copy64, L.Mem.size64_set64]; omega)
+    (by simp (disch := decide) only [arr64_copy64_ne, Mem.arr64_set64_ne]; omega) (by omega)]
+  simp (disch := decide) only [arr64_copy64_ne, Mem.arr64_set64_ne]
+
+theorem cqTailS_dlp {M : Mem} (hok : CqTailSOK M) {j : Nat} (hj : j < 1 + (cqDlpA M).toNat) :
+    ((cqTailS M).arr64 L.Front.DLP)[j]? = (M.arr64 SDLP)[j]? := by
+  obtain ⟨-, -, -, -, -, hB, -, -, -, -, -, -, h7, h8, h9⟩ := hok
+  have hn : (1 + cqDlpA M).toNat = 1 + (cqDlpA M).toNat := by
+    simp [UInt64.toNat_add]; omega
+  simp only [cqTailS]
+  simp (disch := decide) only [arr64_copy64_ne, Mem.arr64_set64_ne, cqDlpA] at hn hj hB h7 h8 h9 ⊢
+  rw [cq_copy64_lo (by decide) _ (by omega) (by simp (disch := decide) only [size_copy64, L.Mem.size64_set64]; omega)
+    (by simp (disch := decide) only [arr64_copy64_ne, Mem.arr64_set64_ne]; omega) (by omega)]
+  simp (disch := decide) only [arr64_copy64_ne, Mem.arr64_set64_ne]
+
 end L.Checker
