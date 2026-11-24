@@ -125,6 +125,25 @@ theorem c1_back {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} 
         (cq_not_cqC (.inr (by decide))) (cq_not_cqC (.inr (by decide))))
   exact hS.csBack hC hV hK
 
+/-- **The switch at a thread's call**: a region `r` whose next solution call is the solution's
+jobs' relation at `a` (with `c1Q`) has its next challenge call the challenge's at `a`. -/
+theorem c1_thrBack {B BC : Array Word} (hB : HdrView B mS) (hC : HdrView BC m9)
+    {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {J : ISolution}
+    {IS IC : IStreamIndex} {dsS dsC : Array IDeclaration} {a₀ a9 : AState} {bs : List UInt8}
+    (hCm : JobM pins dn dsC (some J) IC (freshMem m9) a9) {r : Mem} {a : AState} (j : Word)
+    (hR : ThrAtQ (c1Q (freshMem mS)) pins dn dsS IS a₀ bs (seedMem (bufMem B r j)) a none) :
+    ThrAt pins dn dsC IC a₀ bs (seedMem (bufMem BC r j)) a (some J) := by
+  obtain ⟨X, ⟨a1, ⟨hJR, hx, hp⟩, hSE⟩, hQ, hPB, hag⟩ := hR
+  have hsz : 256 ≤ (r.arr64 CTL).size := by
+    have e1 := hag CTL (by decide)
+    rw [← bufMem_ctl B r j, ← seedMem_ctl_size, e1, hQ.1.size, freshMem_arr, ite_eq_left rfl]
+    simp only [freshCtl, zeros, Array.size_append, size_extract0, Array.size_replicate, truncFrozen_ctl]
+    have := (c1_hdr_seed hB).2
+    omega
+  refine ⟨c1Patch (freshMem m9) X, ⟨a1, ⟨⟨c1_back hfr hext hJR.toJobM hCm hQ, hJR.state,
+    hJR.off, hJR.caches⟩, hx, hp⟩, hSE⟩, hPB, fun t ht => ?_⟩
+  rw [c1_switch hB hC hfr hext r j hsz t ht, c1Patch_arr, c1Patch_arr, hag CTL (by decide), hag t ht]
+
 end views
 
 end L.Checker
