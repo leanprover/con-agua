@@ -113,7 +113,7 @@ header only for mode `6`, `c = 0`, whose jobs run in place; header and images fo
 `c = 1`, whose jobs run on the threads' regions). -/
 -- con-ron: none — the Rust driver `compare_json` (h8S's thaw, h4, hside, hsol, h6, h7), which the twin states as premises
 @[no_expose] def checkC3L : FunDecl := lfn (c) locals (z, cnt) {
-  if c != 0 { z := call cmp_sstash() };
+  z := call cmp_sstash();
   cnt := DECL.u64[0];
   z := call index_to_solution(cnt);
   z := call cmp_restore();
