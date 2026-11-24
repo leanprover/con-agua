@@ -77,15 +77,16 @@ def cmpModeEntry (tab : Tab) (mode : GVar) (l : Label) (w : Word) : Program :=
    movRI .rax (abiNeed tab).toUInt64, i64 (.cmp (.reg (rr .r9)) (oR .rax)), jccL .c abiSetupL,
    movRI .rax w, movMR (mb .r8 (tab.globOff mode)) .rax, jmpL abiSetupL]
 
-/-- The compared run's entries, for the global `mode`. -/
-def cmpStub (tab : Tab) (mode : GVar) : Program :=
-  -- the entries of modes 4, 5, 6, 7: the mode word, then the setup stub
+/-- The entries of modes `4`, `5`, `6`, `7`: the mode word, then the setup stub. -/
+def cmpEntries (tab : Tab) (mode : GVar) : Program :=
   cmpModeEntry tab mode abiStartA4L 4 ++ cmpModeEntry tab mode abiStartA5L 5 ++
-  cmpModeEntry tab mode abiStartA6L 6 ++ cmpModeEntry tab mode abiStartA7L 7 ++
-  -- the two entries: the flag in `r10`
+  cmpModeEntry tab mode abiStartA6L 6 ++ cmpModeEntry tab mode abiStartA7L 7
+
+/-- The two entries (the flag in `r10`) and the front: the region's size, the save area, modes
+`4`, `5`; on to `ca_cmp_thr` for the threaded run. -/
+def cmpFront (tab : Tab) : Program :=
   [.label abiStartCL, movRI .r10 0, jmpL abiCmpFrontL,
    .label abiStartACL, movRI .r10 1,
-  -- the front: the region's size, the save area, modes 4, 5
    .label abiCmpFrontL,
    movRI .rax (drvNeed tab).toUInt64, i64 (.cmp (.reg (rr .r9)) (oR .rax)), jccL .c abiCmpDeclineL,
    movRI .rax (cmpSave tab).toUInt64, i64 (.add (.reg (rr .rax)) (oR .r8)),
@@ -97,8 +98,11 @@ def cmpStub (tab : Tab) (mode : GVar) : Program :=
   cmpArgsS tab ++ [callL abiStartA5L] ++ cmpOkGe ++
   [i64 (.sub (.reg (rr .rax)) (oR .rcx)), movRR .rdx .rax] ++ cmpSaveRax tab ++
   [movMR (mb .rax 48) .rdx,
-   movRM .r11 (mb .rax 56), i64 (.cmp (.reg (rr .r11)) (oI 0)), jccL .nz abiCmpThrL] ++
-  -- the sequential run: mode 6, the solution's jobs, the challenge's jobs, in place
+   movRM .r11 (mb .rax 56), i64 (.cmp (.reg (rr .r11)) (oI 0)), jccL .nz abiCmpThrL]
+
+/-- The sequential run after the front: mode `6`, the solution's jobs, the challenge's jobs, in
+place. -/
+def cmpSeqTail (tab : Tab) : Program :=
   cmpArgsS tab ++ [callL abiStartA6L] ++ cmpOkGe ++
   [i64 (.sub (.reg (rr .rax)) (oR .rcx)), movRR .rdx .rax] ++ cmpSaveRax tab ++
   [movMR (mb .rax 56) .rdx,
@@ -107,18 +111,26 @@ def cmpStub (tab : Tab) (mode : GVar) : Program :=
    movRI .rcx 71757147230292, i64 (.cmp (.reg (rr .rax)) (oR .rcx)), jccL .nz abiCmpDoneL] ++
   cmpSaveRax tab ++
   [movRM .rdx (mb .rax 56), movRI .r10 9, movRI .rsi 0, movRR .r8 .r15, callL abiCheckSML,
-   jmpL abiCmpDoneL,
-  -- the threaded run's entry 1: mode 7, `2^63 + kS + kC`
-   .label abiCmpThrL] ++
+   jmpL abiCmpDoneL]
+
+/-- The threaded run's entry 1 after the front: mode `7`, `2^63 + kS + kC`. -/
+def cmpThrTail (tab : Tab) : Program :=
+  [.label abiCmpThrL] ++
   cmpArgsS tab ++ [callL abiStartA7L] ++ cmpOkGe ++
   [i64 (.sub (.reg (rr .rax)) (oR .rcx)), movRR .rdx .rax] ++ cmpSaveRax tab ++
   [movRM .r11 (mb .rax 48), i64 (.add (.reg (rr .rdx)) (oR .r11)),
-   movRI .rax 9223372036854775808, i64 (.add (.reg (rr .rax)) (oR .rdx)), movRI .rdx 0,
-  -- the exit
-   .label abiCmpDoneL,
+   movRI .rax 9223372036854775808, i64 (.add (.reg (rr .rax)) (oR .rdx)), movRI .rdx 0]
+
+/-- The exit (the caller's `r15` and the return address back) and the decline. -/
+def cmpExit (tab : Tab) : Program :=
+  [.label abiCmpDoneL,
    movRR .rcx .rax, movRI .rax (cmpSave tab).toUInt64, i64 (.add (.reg (rr .rax)) (oR .r15)),
    movRM .rsi (mb .rax 8), movRM .r15 (mb .rax 0), movRR .rax .rcx,
    i64 (.push (oR .rsi)), i64 .ret,
    .label abiCmpDeclineL, movRI .rax 0, movRI .rdx 1, i64 .ret]
+
+/-- The compared run's entries, for the global `mode`. -/
+def cmpStub (tab : Tab) (mode : GVar) : Program :=
+  cmpEntries tab mode ++ cmpFront tab ++ cmpSeqTail tab ++ cmpThrTail tab ++ cmpExit tab
 
 end L.Compiler
