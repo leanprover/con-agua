@@ -348,3 +348,19 @@ order, `checkStreamJ`), `TwinCompareVerdict`, `TwinCompareVerdictPooled`.
   `--jobs=1` and `--jobs=4`: 18/18 agree, UNSOUND/INCOMPLETE/CRASH/TIMEOUT 0. First Init
   self-compare (one run each, machine busy): sequential 29.6 s, 1 043 MB; `--jobs=16` 5.2 s,
   1 206 MB; flat Init 15.2 s, 641 MB (old sequential compare: 29.4 s, 1 259 MB).
+* H6b–H6e: the sequential compared run in place, sorry-free (`Final/Compare.lean`:
+  `checkerFile_compare_accepts(_regs)` with the verdict, `_model`, `_no_False`; `Final/CmpSeqTwin.lean`
+  `cmpAccS_twin`, `cmpErrS_twin`; `Checker/CmpSeq*.lean`). Mode 8 switches to the solution's
+  view by copying index rows, records and words (`check_bs` = `cq_bank_s`; `cq_ctl_s`; flush;
+  `check_jobs`), mode 9 restores the challenge's (`check_bc`); each phase is one `check_jobs`
+  call refined directly. One `vcgen` over the whole of `check_bs` did not finish in 590 s, so the
+  switch was split into four L functions (no behaviour change). `check_jobs`' whole closure (1481
+  functions) never stores to the index, record, solution or pin arrays (`checkerProg_jobsW`).
+* H2c–H2e: the compaction with two headers (`par_compact(c, b)`, `cmp_hdr_s`, `cmp_sstash`),
+  `check_b`'s per-call `seed_reread()`, `check_c3`'s chain (`checkC3_of_stages`, `PostC3`),
+  `F6.csStash`; the integrated regeneration (the asm part modules needed `maxRecDepth`).
+* H7/H7b: one worker region per thread; the boundary needs every frozen id to have the same length
+  under both headers (all job-relation transports go through `MemFrame`, which fixes sizes):
+  extents now read only words both headers share (a compare-mode word, the larger of the two
+  record counts and declaration-pool tops), so the solution's view sees the solution rows too
+  (it never reads them) and its record arrays up to the larger count.
