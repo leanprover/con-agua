@@ -273,4 +273,34 @@ theorem TwinCompareVerdictI.pooled {bC bS : ByteArray} {c : L.Word}
   · exact .inr (.inr ⟨pins, ipins, dsS, recsC, IS, IC, sI, _, hS, PoolJobs.of_seq hJ,
       fun t ht => by simpa using List.mem_range.mp ht, hF⟩)
 
+/-! ## The sequential run: the challenge's jobs continue on the solution's worker -/
+
+/-- **The twin accepts the comparison as the sequential x64 run does**: the stages up to the
+challenge's index (ending in `sI`), then one worker running the solution's jobs in order from
+`sI.worker` (ending in `sJ`), then the challenge's jobs in order with the solution, continuing on
+that worker (from `sJ`). -/
+def TwinComparesAcceptsSeqI (bC bS : ByteArray) : Prop :=
+  ∃ (pins : List NatOpPinSet) (ipins : List INatOpPinSet) (dsS : Array IDeclaration)
+    (recsC : List IDeclaration) (IS IC : IStreamIndex) (sI sJ sK : AState),
+    CmpStagesI bC bS pins ipins dsS recsC IS IC sI ∧
+    checkJobList .verified ipins none IS dsS (List.range dsS.size) sI.worker = .ok (.ok (), sJ) ∧
+    checkJobList .verified ipins (some (solutionOf IS recsC)) IC recsC.toArray
+      (List.range recsC.toArray.size) sJ = .ok (.ok (), sK)
+
+/-- **The sequential run rejects or declines**: a stage fails (`TwinCompareVerdict`), or after
+every stage the solution's jobs in order fail from `sI.worker`, or they accept (ending in `sJ`)
+and the challenge's jobs in order fail from `sJ` with the solution, with an error of class `c`. -/
+def TwinCompareVerdictSeqI (bC bS : ByteArray) (c : L.Word) : Prop :=
+  TwinCompareVerdict bC bS c ∨
+  (∃ (pins : List NatOpPinSet) (ipins : List INatOpPinSet) (dsS : Array IDeclaration)
+    (recsC : List IDeclaration) (IS IC : IStreamIndex) (sI : AState),
+    CmpStagesI bC bS pins ipins dsS recsC IS IC sI ∧
+    L.Arena.TwinFailsV (checkJobList .verified ipins none IS dsS (List.range dsS.size)) sI.worker c) ∨
+  (∃ (pins : List NatOpPinSet) (ipins : List INatOpPinSet) (dsS : Array IDeclaration)
+    (recsC : List IDeclaration) (IS IC : IStreamIndex) (sI sJ : AState),
+    CmpStagesI bC bS pins ipins dsS recsC IS IC sI ∧
+    checkJobList .verified ipins none IS dsS (List.range dsS.size) sI.worker = .ok (.ok (), sJ) ∧
+    L.Arena.TwinFailsV (checkJobList .verified ipins (some (solutionOf IS recsC)) IC recsC.toArray
+      (List.range recsC.toArray.size)) sJ c)
+
 end ConAgua.Final
