@@ -152,10 +152,11 @@ theorem F6.jobM (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) 
       (I : IStreamIndex) (a' : AState),
       Side6 PS m c m2 m3 dsC sG res m4 ∧ buildIndex res.toArray sG = .ok (.ok I, a') ∧
       JobM PS.ipins (dnOf sG.store) res.toArray (some (solutionOf PS.IS res)) I m9 a' ∧
-      StoreWF a'.store ∧ a'.store.scratchOn = false := by
+      StoreWF a'.store ∧ a'.store.scratchOn = false ∧ ∀ t, (m9.arr64 t).size = (m.arr64 t).size := by
   obtain ⟨m6, ⟨m2, m3, dsC, sG, res, m4, m5, h, hMt, hMI, hK, I, a', hI, hB, hFz, hfs, hBK, hfr, -⟩,
     rfl⟩ := h6
-  refine ⟨m2, m3, dsC, sG, res, m4, I, a', h, hI, ?_, hB.drv.state.wf, hB.off⟩
+  refine ⟨m2, m3, dsC, sG, res, m4, I, a', h, hI, ?_, hB.drv.state.wf, hB.off, fun t => by
+    rw [(MemFrame.setCtl m6 224 1).size, hfr.size, hK.frame.size, h.frameM.size]⟩
   have hS := hB.stage
   have hctl : 228 < (m.arr64 CTL).size := by
     rw [hF.sizeAt]
@@ -242,7 +243,7 @@ theorem F6.jobR (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) 
       Side6 PS m c m2 m3 dsC sG res m4 ∧ buildIndex res.toArray sG = .ok (.ok I, a') ∧
       (FlushOK m9 → JobR PS.ipins (dnOf sG.store) res.toArray (some (solutionOf PS.IS res)) I
         (flushMem m9) { a' with caches := Caches.empty }) := by
-  obtain ⟨m2, m3, dsC, sG, res, m4, I, a', h, hI, hJ, hwf, hoff⟩ := F6.jobM hF h6
+  obtain ⟨m2, m3, dsC, sG, res, m4, I, a', h, hI, hJ, hwf, hoff, -⟩ := F6.jobM hF h6
   exact ⟨m2, m3, dsC, sG, res, m4, I, a', h, hI, fun hfok => hJ.flushR hwf hoff hfok⟩
 
 end six
