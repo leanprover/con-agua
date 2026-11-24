@@ -21,12 +21,12 @@ namespace L.Checker
 open L L.Arena ConRon.Arena ConRon.Bridge
 
 section views
-variable {mS m9 : Mem} (hfr : MemFrame csA csC m9 mS)
+variable {mS m9 : Mem} (hfr : MemFrame csAV csC m9 mS)
   (hext : ∀ i < frozen.length, fzExt mS (fzAt i) = fzExt m9 (fzAt i))
 include hfr hext
 
 /-- Off the stream index's arrays, both views cut alike. -/
-theorem c1_trunc_eq {b : TieredArray} (hb : b ∉ csA) (hc : b ≠ CTL) :
+theorem c1_trunc_eq {b : TieredArray} (hb : b ∉ csAV) (hc : b ≠ CTL) :
     (truncFrozen mS).arr64 b = (truncFrozen m9).arr64 b := by
   by_cases hs : b ∈ fzSrcs
   · rw [← frozen_srcs, List.mem_map] at hs
@@ -56,7 +56,7 @@ theorem c1_trunc_size (b : TieredArray) :
   · rw [truncFrozen_other _ _ hs, truncFrozen_other _ _ hs, hfr.size]
 
 /-- **The fresh memories of both views are a frame of the stream index's arrays and words.** -/
-theorem c1_fresh_frame : MemFrame csA csC (freshMem m9) (freshMem mS) := by
+theorem c1_fresh_frame : MemFrame csAV csC (freshMem m9) (freshMem mS) := by
   refine ⟨fun b hb hc => ?_, fun x hx => ?_, fun b => ?_⟩
   · rw [freshMem_arr, freshMem_arr, ite_eq_right hc, ite_eq_right hc]
     split
@@ -86,12 +86,13 @@ theorem c1_back {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} 
     (hQ : c1Q (freshMem mS) X) : JobM pins dn dsC (some J) IC (c1Patch (freshMem m9) X) a := by
   have hF := c1_fresh_frame hfr hext
   have hXs : (X.arr64 CTL).size = ((freshMem m9).arr64 CTL).size := by rw [hQ.1.size, hF.size]
-  have harr : ∀ b ∈ csA, (c1Patch (freshMem m9) X).arr64 b = (freshMem m9).arr64 b := fun b hb => by
+  have harr : ∀ b ∈ csAV, (c1Patch (freshMem m9) X).arr64 b = (freshMem m9).arr64 b := fun b hb => by
     rw [c1Patch_arr, ite_eq_left hb]
   have hD : (c1Patch (freshMem m9) X).arr64 L.Front.DECL = (freshMem m9).arr64 L.Front.DECL := harr _ (by decide)
   have hP : (c1Patch (freshMem m9) X).arr64 L.Front.DLP = (freshMem m9).arr64 L.Front.DLP := harr _ (by decide)
   have hV : CsViewC (freshMem m9) X (c1Patch (freshMem m9) X) := by
-    refine ⟨⟨fun b hb hc => ?_, fun x hx => ?_, fun b => ?_⟩, fun b hb => ?_, fun i _ => by rw [hD],
+    refine ⟨⟨fun b hb hc => ?_, fun x hx => ?_, fun b => ?_⟩, fun b hb => harr b (List.mem_append_right _ hb),
+      fun b hb => ?_, fun i _ => by rw [hD],
       fun i _ => by rw [hP], by rw [hD], by rw [hP], fun x hx => ?_⟩
     · rw [c1Patch_arr, ite_eq_right hb, ite_eq_right hc]
     · rw [c1Patch_arr, ite_eq_right (by decide), ite_eq_left rfl, c1_rdW, c1_rdW, getD_c1CtlP]
@@ -104,7 +105,7 @@ theorem c1_back {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} 
         · subst ‹b = CTL›; rw [size_c1CtlP]
         · rfl
     · simp only [IdxArr, Bool.and_eq_true, beq_iff_eq, Bool.or_eq_true, decide_eq_true_eq] at hb
-      exact harr b (csA_of_idx hb.1 hb.2)
+      exact harr b (csA_sub_csAV (csA_of_idx hb.1 hb.2))
     · rw [c1Patch_arr, ite_eq_right (by decide), ite_eq_left rfl, c1_rdW, c1_rdW, getD_c1CtlP]
       have := (csC_iff x).mp hx
       split
@@ -114,11 +115,14 @@ theorem c1_back {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} 
   have n225 : (225 : Word) ∉ cqC := cq_not_cqC (.inl (cq_not_cdC (by decide)))
   have n226 : (226 : Word) ∉ cqC := cq_not_cqC (.inl (cq_not_cdC (by decide)))
   have hK : CsKeep (freshMem m9) X := by
-    refine ⟨fun b hb => ?_, ?_, ?_, fun i v hv => ?_, ?_⟩
+    refine ⟨fun b hb hr => ?_, ?_, ?_, fun i v hv => ?_, ?_⟩
     · have ha := solArrs_arr hb
       have hc : b ≠ CTL := fun e => by subst e; revert ha; decide
       rw [hQ.1.arr b (cq_not_cqA (.inl fun h => cdA_sol h hb)) hc,
-        hF.arr b (fun h => by have := csA_arr h; omega) hc]
+        hF.arr b (fun h => by
+          rcases List.mem_append.mp h with h | h
+          · have := csA_arr h; omega
+          · exact hr h) hc]
     · show rdW (X.arr64 CTL) 225 = rdW ((freshMem m9).arr64 CTL) 225
       rw [hQ.1.ctl 225 n225, hF.ctl 225 (by decide)]
     · show rdW (X.arr64 CTL) 226 = rdW ((freshMem m9).arr64 CTL) 226

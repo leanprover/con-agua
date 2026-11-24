@@ -48,6 +48,30 @@ theorem csAS_arr {b : TieredArray} (h : b ∈ csAS) : b.hi = false ∧
 
 theorem csA_sub_csAS {b : TieredArray} (h : b ∈ csA) : b ∈ csAS := List.mem_append_left _ h
 
+/-- The solution's index rows: header S shows the challenge's `EIX*`/`TIX*` there (the swap). -/
+def solRowsS : List TieredArray := [SIXA, SIXS, SIXN, STXA, STXS, STXN]
+
+/-- The arrays header S's view replaces: `csA` and the swapped solution's rows. -/
+def csAV : List TieredArray := csA ++ solRowsS
+
+/-- `csAS` and the swapped solution's rows. -/
+def csAX : List TieredArray := csAS ++ solRowsS
+
+theorem csAX_arr {b : TieredArray} (h : b ∈ csAX) : b.hi = false ∧
+    (b.arr = 67 ∨ b.arr = 68 ∨ (129 ≤ b.arr ∧ b.arr ≤ 137) ∨ (210 ≤ b.arr ∧ b.arr ≤ 215) ∨
+      (223 ≤ b.arr ∧ b.arr ≤ 236)) := by
+  rcases List.mem_append.mp h with h | h
+  · have := csAS_arr h; exact ⟨this.1, by omega⟩
+  · simp only [solRowsS, List.mem_cons, List.not_mem_nil, or_false] at h
+    rcases h with rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+
+theorem csAV_sub_csAX {b : TieredArray} (h : b ∈ csAV) : b ∈ csAX := by
+  rcases List.mem_append.mp h with h | h
+  · exact List.mem_append_left _ (csA_sub_csAS h)
+  · exact List.mem_append_right _ h
+
+theorem csA_sub_csAV {b : TieredArray} (h : b ∈ csA) : b ∈ csAV := List.mem_append_left _ h
+
 theorem csC_val {x : Word} (h : x ∈ csC) : x.toNat = 128 ∨ (162 ≤ x.toNat ∧ x.toNat ≤ 173) ∨ x.toNat = 224 := by
   simp only [csC, List.mem_cons, List.not_mem_nil, or_false] at h
   rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
@@ -224,9 +248,9 @@ variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds ds'
   {I I' : IStreamIndex} {a : AState}
 
 /-- **The jobs' memory half across a swap of the stream index, at any solution** (`JobM.csSwap`
-with the new memory's solution `J'` given). -/
-theorem _root_.L.Arena.JobM.csSwapJ {J J' : Option ISolution} {t t' : Mem} (h : JobM pins dn ds J I t a)
-    (hf : MemFrame csAS csC t t') (hI : IndexR t' I') (hD : DeclsF (t'.arr64 DECL) (t'.arr64 DLP) ds')
+with the new memory's solution `J'` given; the swapped solution's rows may differ too). -/
+theorem _root_.L.Arena.JobM.csSwapX {J J' : Option ISolution} {t t' : Mem} (h : JobM pins dn ds J I t a)
+    (hf : MemFrame csAX csC t t') (hI : IndexR t' I') (hD : DeclsF (t'.arr64 DECL) (t'.arr64 DLP) ds')
     (hfz : FrozenR t' I') (hfs : I'.firsts.size = ds'.size) (hs : JSol J' t') :
     JobM pins dn ds' J' I' t' a := by
   have hE : t'.arr64 EREC = t.arr64 EREC := hf.arr _ (by decide) (by decide)
@@ -239,19 +263,19 @@ theorem _root_.L.Arena.JobM.csSwapJ {J J' : Option ISolution} {t t' : Mem} (h : 
       unfold tierA otxArr; generalize (u &&& 1 != 0) = b
       cases b <;> split <;> (try split) <;> decide
     have e1 : ∀ u, t'.arr64 (tierA (oixArr (rowTag w)) u) = t.arr64 (tierA (oixArr (rowTag w)) u) :=
-      fun u => hf.arr _ (fun hm => by have := csAS_arr hm; have := hA u; omega)
+      fun u => hf.arr _ (fun hm => by have := csAX_arr hm; have := hA u; omega)
         (fun e => by have := hA u; rw [e] at this; revert this; decide)
     have e2 : ∀ u, t'.arr64 (tierA (otxArr (rowTag w)) u) = t.arr64 (tierA (otxArr (rowTag w)) u) :=
-      fun u => hf.arr _ (fun hm => by have := csAS_arr hm; have := hB u; omega)
+      fun u => hf.arr _ (fun hm => by have := csAX_arr hm; have := hB u; omega)
         (fun e => by have := hB u; rw [e] at this; revert this; decide)
     have e3 : ownRow t' w = ownRow t w := by simp only [ownRow, e1]
     simp only [stampW, hf.ctl 133 (by decide), e3, e2]
     exact h.below w hw
-  have hAh : ∀ b ∈ csAS, InHigh b := fun b hb => by have := csAS_arr hb; exact ⟨this.1, by omega⟩
+  have hAh : ∀ b ∈ csAX, InHigh b := fun b hb => by have := csAX_arr hb; exact ⟨this.1, by omega⟩
   have hCh : ∀ x ∈ csC, 64 ≤ x.toNat := fun x hx => by have := csC_val hx; omega
   exact ⟨arenaD_frame_hi h.arena hf hAh hCh,
-    h.core.frame (fun b hb => by have := csAS_arr hb; omega) (fun x hx => by have := csC_val hx; omega) hf,
-    h.pinsR.frame (fun b hb => by have := csAS_arr hb; omega) hf, h.mode.frame hf (by decide) (by decide),
+    h.core.frame (fun b hb => by have := csAX_arr hb; omega) (fun x hx => by have := csC_val hx; omega) hf,
+    h.pinsR.frame (fun b hb => by have := csAX_arr hb; omega) hf, h.mode.frame hf (by decide) (by decide),
     hI, hbelow,
     by simp only [stampW, hf.ctl 133 (by decide)]; exact h.stamp,
     hD,
@@ -264,11 +288,19 @@ theorem _root_.L.Arena.JobM.csSwapJ {J J' : Option ISolution} {t t' : Mem} (h : 
         ⟨by decide, by decide, by decide⟩ (by decide)
         ⟨by decide, by decide, by decide⟩ (by decide) (by decide), h.mem.dnN⟩,
     by rw [pinW_frame hf (by decide)]; exact h.flag,
-    h.memos.frame hf (fun b hb => by have := csAS_arr hb; refine ⟨?_, ?_, ?_⟩ <;>
+    h.memos.frame hf (fun b hb => by have := csAX_arr hb; refine ⟨?_, ?_, ?_⟩ <;>
         (try (intro e; subst e; revert this; decide)) <;> omega)
       (fun x hx => by have := csC_val hx; omega),
     hfs, hfz, hs⟩
 
+
+/-- **The jobs' memory half across a swap of the stream index, at any solution** (`JobM.csSwapX`
+over `csAS`). -/
+theorem _root_.L.Arena.JobM.csSwapJ {J J' : Option ISolution} {t t' : Mem} (h : JobM pins dn ds J I t a)
+    (hf : MemFrame csAS csC t t') (hI : IndexR t' I') (hD : DeclsF (t'.arr64 DECL) (t'.arr64 DLP) ds')
+    (hfz : FrozenR t' I') (hfs : I'.firsts.size = ds'.size) (hs : JSol J' t') :
+    JobM pins dn ds' J' I' t' a :=
+  h.csSwapX (hf.mono (fun _ h => List.mem_append_left _ h) (fun _ h => h)) hI hD hfz hfs hs
 end
 
 /-- **Header C's view after the solution's jobs** `mC`: the memory `mS` the solution's jobs left
@@ -276,7 +308,8 @@ but in the stream index's arrays and words (`csA`, `csC`), which are the challen
 `m9`'s again (restored from copies, or a header's images): the stream index's arrays exactly, the
 records and the declaration pool in their used words (the jobs may write past them). -/
 structure CsViewC (m9 mS mC : Mem) : Prop where
-  frame : MemFrame csA csC mS mC
+  frame : MemFrame csAV csC mS mC
+  rows : ∀ b ∈ solRowsS, mC.arr64 b = m9.arr64 b
   idx : ∀ b, IdxArr b = true → mC.arr64 b = m9.arr64 b
   decl : ∀ j, j < 1 + 8 * (rdW (m9.arr64 L.Front.DECL) 0).toNat →
     (mC.arr64 L.Front.DECL)[j]? = (m9.arr64 L.Front.DECL)[j]?
@@ -289,7 +322,7 @@ structure CsViewC (m9 mS mC : Mem) : Prop where
 /-- **What the solution's jobs keep of the challenge's frozen memory** `m9`: the solution's rows
 and words, the record pool (it only grew: `checkJobs_refX`), and the walks' memos. -/
 structure CsKeep (m9 mS : Mem) : Prop where
-  sol : ∀ b ∈ solArrs, mS.arr64 b = m9.arr64 b
+  sol : ∀ b ∈ solArrs, b ∉ solRowsS → mS.arr64 b = m9.arr64 b
   snext : rdW (mS.arr64 CTL) SNEXTC = rdW (m9.arr64 CTL) SNEXTC
   scnt : rdW (mS.arr64 CTL) SCNTC = rdW (m9.arr64 CTL) SCNTC
   grow : ArrExt (erecP m9) (erecP mS)
@@ -315,9 +348,14 @@ theorem _root_.L.Arena.JobM.csBack {J : ISolution} {IS IC : IStreamIndex} {dsS d
     hC.idx.grow (fun b h0 h1 => hV.idx b (by simp only [IdxArr, h0]; grind)) (hV.ctl 128 (by decide)) hx
   have hsol : SolR mC J := hC.jsol.sol.2.keepX
     (fun b hb => by
-      rw [hf.arr b (fun hm => by have := csA_arr hm; have := solArrs_arr hb; omega)
-        (fun e => by subst e; revert hb; decide)]
-      exact hK.sol b hb)
+      by_cases hr : b ∈ solRowsS
+      · exact hV.rows b hr
+      · rw [hf.arr b (fun hm => by
+            rcases List.mem_append.mp hm with hm | hm
+            · have := csA_arr hm; have := solArrs_arr hb; omega
+            · exact hr hm)
+          (fun e => by subst e; revert hb; decide)]
+        exact hK.sol b hb hr)
     (fun x hx' => by
       simp only [solCtl, List.mem_cons, List.not_mem_nil, or_false] at hx'
       rcases hx' with rfl | rfl | rfl
@@ -332,7 +370,7 @@ theorem _root_.L.Arena.JobM.csBack {J : ISolution} {IS IC : IStreamIndex} {dsS d
     DeclsF.agree hd (fun j hj => hV.decl j (by rw [← e0, hd.count]; exact hj))
       (fun j hj => hV.dlp j (by rw [← e0]; exact hj)) (by rw [hV.dsz]; exact hd.dsize)
       (by rw [hV.psz]; exact hd.psize) (by rw [hV.dsz]; exact hd.room) (by rw [hV.psz]; exact hd.ptop)
-  refine hS.csSwapJ (hf.mono (fun _ h => csA_sub_csAS h) (fun _ h => h)) hI hD
+  refine hS.csSwapX (hf.mono (fun _ h => csAV_sub_csAX h) (fun _ h => h)) hI hD
     (hC.frozen.congr fun x hx' => hV.ctl x (by
       simp only [frozenCtl, csC, List.mem_cons, List.not_mem_nil, or_false] at hx' ⊢
       rcases hx' with h | h | h | h | h | h | h | h | h | h | h | h <;> simp [h]))

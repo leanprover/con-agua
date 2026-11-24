@@ -12,9 +12,9 @@ import ConAgua.Arena.FreezeTruncBase
 
 A thread runs its solution calls on `bufMem B r j` (header S, showing `mS`) and then its challenge
 calls on `bufMem BC r j` (header C, showing `m9`), on the same region `r`. With both headers of the
-same extents (`hext`) and `mS` a frame of `m9` off the stream index's arrays and words (`csA`,
+same extents (`hext`) and `mS` a frame of `m9` off the stream index's arrays and words (`csAV`,
 `csC`), the memory after `check_b`'s first block and re-read under header C is the one under
-header S with `csA` and the words `csC` of `CTL` replaced by `freshMem m9`'s (`c1Patch`):
+header S with `csAV` and the words `csC` of `CTL` replaced by `freshMem m9`'s (`c1Patch`):
 `c1_switch`.
 -/
 
@@ -25,9 +25,9 @@ open L L.Arena
 /-- `c` with the seed words `rrWs` replaced by `d`'s. -/
 def c1CtlP (c d : Array Word) : Array Word := c.mapIdx fun i v => if i ∈ rrWs then d.getD i 0 else v
 
-/-- **`X` with the stream index's arrays `csA` and `CTL`'s words `csC` replaced by `C`'s.** -/
+/-- **`X` with the stream index's arrays `csAV` and `CTL`'s words `csC` replaced by `C`'s.** -/
 def c1Patch (C X : Mem) : Mem :=
-  { X with words := fun s => if s ∈ csA then C.arr64 s else if s = CTL then c1CtlP (X.arr64 CTL) (C.arr64 CTL)
+  { X with words := fun s => if s ∈ csAV then C.arr64 s else if s = CTL then c1CtlP (X.arr64 CTL) (C.arr64 CTL)
       else X.arr64 s }
 
 theorem rrWs_iff (k : Nat) : k ∈ rrWs ↔ k = 128 ∨ (162 ≤ k ∧ k < 174) ∨ k = 224 := by
@@ -57,7 +57,7 @@ theorem getD_c1CtlP (c d : Array Word) (k : Nat) :
 theorem size_c1CtlP (c d : Array Word) : (c1CtlP c d).size = c.size := by simp [c1CtlP]
 
 theorem c1Patch_arr (C X : Mem) (s : TieredArray) : (c1Patch C X).arr64 s =
-    if s ∈ csA then C.arr64 s else if s = CTL then c1CtlP (X.arr64 CTL) (C.arr64 CTL) else X.arr64 s := rfl
+    if s ∈ csAV then C.arr64 s else if s = CTL then c1CtlP (X.arr64 CTL) (C.arr64 CTL) else X.arr64 s := rfl
 
 /-- The re-read keeps `CTL`'s words but the seed's. -/
 theorem rereadMem_off (x : Mem) {k : Nat} (hk : k ∉ rrWs) :
@@ -130,7 +130,7 @@ theorem c1_fzAt_src {i : Nat} (hi : i < frozen.length) (h1 : 1 ≤ i) : (fzAt i)
   have := List.all_eq_true.mp frozen_src_self _ hmem
   simpa using this
 
-theorem csA_not_owned : ∀ b ∈ csA, b ∉ parOwnedL := by decide
+theorem csA_not_owned : ∀ b ∈ csAV, b ∉ parOwnedL := by decide
 
 theorem getD_of_rdW {a b : Array Word} {k : Nat} (hk : k < 2 ^ 64)
     (h : rdW a (UInt64.ofNat k) = rdW b (UInt64.ofNat k)) : a.getD k 0 = b.getD k 0 := by
@@ -140,13 +140,13 @@ theorem getD_of_rdW {a b : Array Word} {k : Nat} (hk : k < 2 ^ 64)
 
 /-- **The switch from header S to header C on one region.** -/
 theorem c1_switch {B BC : Array Word} {mS m9 : Mem} (hB : HdrView B mS) (hC : HdrView BC m9)
-    (hfr : MemFrame csA csC m9 mS) (hext : ∀ i < frozen.length, fzExt mS (fzAt i) = fzExt m9 (fzAt i))
+    (hfr : MemFrame csAV csC m9 mS) (hext : ∀ i < frozen.length, fzExt mS (fzAt i) = fzExt m9 (fzAt i))
     (r : Mem) (j : Word) (hsz : 256 ≤ (r.arr64 CTL).size) :
     ∀ t, thrS t = true →
       (seedMem (bufMem BC r j)).arr64 t = (c1Patch (freshMem m9) (seedMem (bufMem B r j))).arr64 t := by
   intro t ht
   rw [c1Patch_arr]
-  by_cases hA : t ∈ csA
+  by_cases hA : t ∈ csAV
   · rw [ite_eq_left hA]
     rcases thrS_cases ht with ⟨k, hk, h1, rfl⟩ | ho
     · obtain ⟨-, hz, hc⟩ := frozen_facts hk h1

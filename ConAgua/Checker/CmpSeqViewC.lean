@@ -314,6 +314,21 @@ theorem cq_stash_not_cqA {b : TieredArray} (h : cqStash b = true) : b ∉ cqA :=
 theorem cq_idx_not_cqA {b : TieredArray} (h : IdxArr b = true) : b ∉ cqA :=
   cq_not_cqA (.inl (cq_not_cdA (.inl h)))
 
+/-- **The solution's rows after the solution's jobs** are the frozen memory's (mode `8`'s copies
+and the jobs' stores avoid them). -/
+theorem cqS_sol {m9 mS : Mem} (hJ : MemFrame cqA cqC (cqSM m9) mS) :
+    ∀ b ∈ solArrs, mS.arr64 b = m9.arr64 b := by
+  have fS := cqS_frame m9
+  have f2 := flushMem_frame (cqCtlSM (cqBankSM m9))
+  have hJ' : MemFrame cqA cqC (flushMem (cqCtlSM (cqBankSM m9))) mS := hJ
+  have nS : ∀ b ∈ solArrs, b ∉ cqA := fun b hb => cq_not_cqA (.inl (cq_not_cdA (.inr (.inr (by
+    have := solArrs_arr hb; simp only [SolArr, this.2.2, beq_self_eq_true, Bool.true_and, Bool.and_eq_true,
+      decide_eq_true_eq]; omega)))))
+  intro b hb
+  have hc : b ≠ CTL := fun e => by subst e; revert hb; decide
+  rw [hJ'.arr b (nS b hb) hc, f2.arr b (by simp) hc,
+    fS.arr b (fun hm => by have := csAS_arr hm; have := solArrs_arr hb; omega) hc]
+
 /-- **Mode `9`'s switch restores the challenge's view** (`CsViewC`) after the solution's jobs, which
 stored only to the flag-`0` write set (`cq_checkJobs_frame0`) from mode `8`'s memory. -/
 theorem cqC_view {m9 mS : Mem} (hR : CqRowsSOK m9) (hT : CqTailSOK (cqRowsS m9))
@@ -345,7 +360,16 @@ theorem cqC_view {m9 mS : Mem} (hR : CqRowsSOK m9) (hT : CqTailSOK (cqRowsS m9))
     rw [cqCtlCM_arr _ _ h3]
     exact (sv h hc h1 h2 hk).back (hH.congr (eSB _ (cq_idx_not_cqA hb) h3 h4) (eK _ hk)) hp (hsz _)
   have bF := (cqBankCM_frame csC mS)
-  refine ⟨bF.trans ((cqCtlCM_frame _).mono (by simp) (fun _ h => h)), fun b hb => ?_, fun j hj => ?_,
+  have hfr : MemFrame csA csC mS (cqCtlCM (cqBankCM mS)) := bF.trans ((cqCtlCM_frame _).mono (by simp) (fun _ h => h))
+  have hrows : ∀ b ∈ solRowsS, (cqCtlCM (cqBankCM mS)).arr64 b = m9.arr64 b := by
+    intro b hb
+    have hsa : b ∈ solArrs := by
+      simp only [solRowsS, List.mem_cons, List.not_mem_nil, or_false] at hb
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+    have ha := solArrs_arr hsa
+    rw [hfr.arr b (fun hm => by have := csA_arr hm; omega) (fun e => by subst e; revert hsa; decide),
+      cqS_sol hJ b hsa]
+  refine ⟨hfr.mono (fun _ h => csA_sub_csAV h) (fun _ h => h), hrows, fun b hb => ?_, fun j hj => ?_,
     fun j hj => ?_, ?_, ?_, fun x hx => ?_⟩
   · obtain ⟨n, hi⟩ := b
     simp only [IdxArr, Bool.and_eq_true, beq_iff_eq, Bool.or_eq_true, decide_eq_true_eq] at hb
@@ -424,7 +448,7 @@ theorem cqS_keep {m9 mS : Mem} (hJ : MemFrame cqA cqC (cqSM m9) mS)
         show rdW ((flushMem (cqCtlSM (cqBankSM m9))).arr64 CTL) x = _
         rcases hx with rfl | rfl <;> rw [f2.ctl _ (by decide), fS.ctl _ (by decide)]
     exact erecP_congr' (e1 _ (by decide) (by decide)) (e1 _ (by decide) (by decide)) (e2 _ (.inl rfl)) (e2 _ (.inr rfl))
-  refine ⟨eS, eC _ (cq_not_cqC (.inl (cq_not_cdC (by decide)))) (by decide) (by decide),
+  refine ⟨fun b hb _ => eS b hb, eC _ (cq_not_cqC (.inl (cq_not_cdC (by decide)))) (by decide) (by decide),
     eC _ (cq_not_cqC (.inl (cq_not_cdC (by decide)))) (by decide) (by decide), hE ▸ hx, ?_⟩
   exact ((hW.frame fS (by decide) (by decide) (by decide) (by decide)).frame f2 (by simp) (by simp)
     (by decide) (by decide)).frame hJ' (cq_not_cqA (.inr (.inl rfl))) (cq_not_cqA (.inr (.inr (.inl rfl))))
