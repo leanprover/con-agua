@@ -225,21 +225,23 @@ solution's jobs, from the challenge's index state with the solution's index
 in place) at the start, header C (the challenge's jobs) at the offset in
 header S's word `5`. It returns `2^63 + kS + kC`. Then the threads run the flat
 threaded mode's loop over all `kS + kC` job indices: `ca_check_b` sends an index
-below `kS` (header S's word `2`) to header S on the first half of the thread's
-region and every other one, less `kS`, to header C on the second half.
-[`checkerFile_compare_threads_accept`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CmpThreads.lean#L173-L177)
+below `kS` (header S's word `2`) to header S and every other one, less `kS`, to
+header C, both on the thread's one region: a thread claims its solution jobs
+first, and its challenge jobs continue on the region as those left it.
+[`checkerFile_compare_threads_accept`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CmpThreads.lean#L175-L179)
 says that if the harness behaves as
-[`CmpThreadsRun`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CmpThreads.lean#L53-L62) says (§2.3), and
-every call accepts, the twin's compared run accepts with both check phases as
-pools from the challenge's index state
-([`TwinComparesAcceptsPooledI`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CompareTwinI.lean#L86-L101)),
+[`CmpThreadsRun`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CmpThreads.lean#L52-L61) says (§2.3), and
+every call accepts, the twin accepts the comparison as the threads run it: the
+stages up to the challenge's index state, then each worker its solution jobs
+from there and, continuing, its challenge jobs
+([`TwinComparesAcceptsThr`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CompareTwinI.lean#L324-L328)),
 with the model and no-`False` corollaries as above
 (`checkerFile_compare_threads_model`, `checkerFile_compare_threads_no_False`).
 `checkerFile_compare_threads_verdict` covers a failing threaded compared run:
 if the harness behaves as
-[`CmpThreadsFail`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CmpThreadsVerdict.lean#L77-L82) says and the
-reported code has class `1` or `2`, the twin's pooled compared run fails with
-that class (`TwinCompareVerdictPooledI`).
+[`CmpThreadsFail`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CmpThreadsVerdict.lean#L77-L81) says and the
+reported code has class `1` or `2`, the twin's comparison, run as the threads
+run it, fails with that class (`TwinCompareVerdictThr`).
 
 `TwinAccepts` is not trivially true: given a set-theory model, some input is
 not accepted
@@ -335,14 +337,14 @@ run and accepted. Nothing is assumed about the claiming covering every index.
 
 **The threaded compared run** (`--jobs=N --compare`) has its own set, the
 fields of
-[`CmpThreadsRun`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CmpThreads.lean#L53-L62)
+[`CmpThreadsRun`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CmpThreads.lean#L52-L61)
 ([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CmpThreads.lean#L28-L34)): exactly
 `ThreadsRun`'s, with the compared entry 1 (`ca_start_ac`, called as `CmpCall`
 says) in place of `ca_start_a`. The buffer, the threads' regions, the claim
 counter and the reported failure are as in the flat threaded run; which job
 index belongs to which phase, and which half of a thread's region it uses, is
 entry 2's proved code, not the harness's. Its verdict theorem's set,
-[`CmpThreadsFail`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CmpThreadsVerdict.lean#L77-L82), is
+[`CmpThreadsFail`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CmpThreadsVerdict.lean#L77-L81), is
 `ThreadsFail`'s with the compared entry 1, and with the failing thread's claims
 increasing up to the failing call.
 

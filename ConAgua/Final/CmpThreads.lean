@@ -4,6 +4,7 @@ public import ConAgua.Final.CpThreads
 public import ConAgua.Final.CmpEntry1
 public import ConAgua.Final.CmpAbi
 public import ConAgua.Final.CompareTwinI
+import ConAgua.Final.CompareTwinThr
 public import ConAgua.Checker.CmpSPhaseThr
 import ConAgua.Final.DrvFinal
 import ConAgua.Final.BufAbi
@@ -21,10 +22,12 @@ as `ca_start_a`'s input, the solution's on the stack: `CmpCall`), which leaves o
 with two headers in `OUT` and returns `2^63 + kS + kC`; then the threads claim the job indices
 `0, …, kS + kC - 1` and call `ca_check_b` on each, exactly as in the flat threaded run
 (`ThreadsAcc`): entry 2 maps the indices below `kS` (the buffer's word `2`) to the solution's
-jobs (header S) and the others to the challenge's jobs (header C, at the buffer's word `5`), each
-phase on its own half of the thread's region. If every call reports accept, the twin's pooled
-comparison accepts, both phases' jobs from the challenge's index state
-(`TwinComparesAcceptsPooledI bC bS`).
+jobs (header S) and the others to the challenge's jobs (header C, at the buffer's word `5`), on
+the thread's one region: a thread's solution jobs come first (its claims increase), then its
+challenge jobs continue on the region as they left it. If every call reports accept, the twin
+accepts the comparison as the threaded run does (`TwinComparesAcceptsThr bC bS`: the stages up to
+the challenge's index state, then each worker its solution jobs from there and, continuing, its
+challenge jobs).
 
 **What the theorem trusts of the harness** (the hypotheses of `CmpThreadsRun`; they are
 `ThreadsRun`'s, `Final/ThreadsFinal.lean`, with the compared entry 1, and what
@@ -82,43 +85,61 @@ theorem cp_add_lt {j kS c : Word} (h : j < c) (hnov : kS.toNat + c.toNat < 2 ^ 6
   rw [UInt64.toNat_add, UInt64.toNat_add, Nat.mod_eq_of_lt hnov, Nat.mod_eq_of_lt hj]
   omega
 
+/-! ## Stand-ins (to be proved) -/
+
+/-- **Stand-in (L level, lane compare2 H7)**: the threads over both headers, each a fresh region
+running its solution calls over header S (`B`, first call at `mS`'s fresh memory) and then,
+continuing from the memory they left (`runsEnd`), its challenge calls over header C (`BC`),
+together claiming every job of each phase, each phase's claims increasing in each thread: the
+twin accepts the comparison as the threaded run does. -/
+theorem c1Thr_accepts_standin {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS bC bS)
+    {m₇ m : Mem} (hF : FoldOn bS pb (abiSz checkerTab) PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m)
+    {c : Word} {m9 mS : Mem} (h6 : F6 PS m c m9) (hb9 : m9.bytes = m.bytes) (hV : CsViewS m m9 mS)
+    (B : Array Word) (hBS : CsFirst B mS) (khi : Word) (hk : khi.toNat = PS.dsS.size)
+    (BC : Array Word) (hBC : CsFirst BC m9)
+    (ths : List (Mem × List (Word × Nat × Mem) × List (Word × Nat × Mem)))
+    (hth : ∀ t ∈ ths, (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (mS.arr64 b).size) ∧ t.1.glob INIT = 0 ∧
+      ThreadRuns B t.1 t.2.1 ∧ (∀ c' ∈ t.2.1, c'.1 < khi) ∧
+      ThreadRuns BC (runsEnd t.1 t.2.1) t.2.2 ∧ ∀ c' ∈ t.2.2, c'.1 < c)
+    (hcovS : ∀ j : Word, j < khi → ∃ t ∈ ths, ∃ c' ∈ t.2.1, c'.1 = j)
+    (hcovC : ∀ j : Word, j < c → ∃ t ∈ ths, ∃ c' ∈ t.2.2, c'.1 = j)
+    (hincS : ∀ t ∈ ths, (t.2.1.map (·.1)).Pairwise (· < ·))
+    (hincC : ∀ t ∈ ths, (t.2.2.map (·.1)).Pairwise (· < ·)) :
+    TwinComparesAcceptsThr bC bS := by
+  sorry
+
 /-! ## The theorem -/
 
 set_option linter.constructorNameAsVariable false in
-/-- **The compared threads' accept is the twin's pooled accept from the challenge's index state**,
-for the committed file `checker.s`: the trusted threaded harness runs as `CmpThreadsRun` says. And
-every call returns with the caller's registers. -/
-theorem cmpThreadsRun_twinPooledI_regs [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+/-- **The compared threads' accept is the twin's threaded accept**, for the committed file
+`checker.s`: the trusted threaded harness runs as `CmpThreadsRun` says. And every call returns
+with the caller's registers. -/
+theorem cmpThreadsRun_twinThr_regs [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64) (sa : Word)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
-    (hR : CmpThreadsRun bC bS pb sa dm₀ ra₀ st₀ B ths) : TwinComparesAcceptsPooledI bC bS ∧
+    (hR : CmpThreadsRun bC bS pb sa dm₀ ra₀ st₀ B ths) : TwinComparesAcceptsThr bC bS ∧
       RegsRestored dm₀.regs st₀.data.regs ∧
       ∀ t ∈ ths, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs := by
-  obtain ⟨hRR₀, hpb, PS, m₇, m, c, m9, mS, hF, h6, hb9, hV, hsz, hS, hfS, hk2S, hL5, hLB, hC, hfC, hk, hnov⟩ :=
+  obtain ⟨hRR₀, hpb, PS, m₇, m, c, m9, mS, hF, h6, hb9, hV, hsz, hS, hfS, hk2S, hL5, -, hC, hfC, hk, hnov⟩ :=
     cmpEntry1_out k0 hcode bC bS pb h64 sa dm₀ ra₀ st₀ hR.call₀ hR.ret₀ hR.rdx₀ hR.rax₀ B hR.bufw hR.buflen
   have hL0 : (B.getD 5 0).toNat ≠ 0 := fun h => hL5 (UInt64.toNat_inj.mp (by rw [h]; rfl))
-  have hthr := cpThreadsAcc_runs k0 hcode dm₀ st₀ B ths hR.toThreadsAcc hS _ rfl hL0 hLB hC (B.getD 2 0) c rfl
+  have hthr := cpThreadsAcc_runs k0 hcode dm₀ st₀ B ths hR.toThreadsAcc hS _ rfl hL0 hC (B.getD 2 0) c rfl
     hk hnov
   obtain ⟨fS, hf'⟩ := Classical.axiomOfChoice hthr
   obtain ⟨fC, hf⟩ := Classical.axiomOfChoice hf'
   refine ⟨?_, hRR₀, fun t ht i hi => (hf t ht).2.2.2.2.2.2.2 i hi⟩
-  refine cmpThreads_twinPooledI hpb PS hF h6 hb9 hV B hfS (B.getD 2 0) hk2S
-    (ths.map fun t => (zeroMem checkerTab, fS t)) (fun t' ht' => ?_) (fun j hj => ?_) (fun t' ht' => ?_)
+  refine c1Thr_accepts_standin hpb PS hF h6 hb9 hV B hfS (B.getD 2 0) hk2S
     (B.extract (B.getD 5 0).toNat B.size) hfC
-    (ths.map fun t => (zeroMem checkerTab, fC t)) (fun t' ht' => ?_) (fun j hj => ?_) (fun t' ht' => ?_)
+    (ths.map fun t => (zeroMem checkerTab, fS t, fC t)) (fun t' ht' => ?_) (fun j hj => ?_) (fun j hj => ?_)
+    (fun t' ht' => ?_) (fun t' ht' => ?_)
   · obtain ⟨t, ht, rfl⟩ := List.mem_map.mp ht'
-    obtain ⟨h1, h2, -⟩ := hf t ht
-    exact ⟨cp_zeroOwned fun b hb => (hsz b hb).1, rfl, h1, h2⟩
+    obtain ⟨h1, h2, -, h4, h5, -⟩ := hf t ht
+    exact ⟨cp_zeroOwned fun b hb => (hsz b hb).1, rfl, h1, h2, h4, h5⟩
   · obtain ⟨t, ht, i, hi, hj'⟩ := hR.cover j (by rw [hk]; exact cp_lt_add hj hnov)
     rcases (hf t ht).2.2.2.2.2.2.1 i hi with ⟨-, x, hx, hxj⟩ | ⟨hge, -⟩
     · exact ⟨_, List.mem_map.mpr ⟨t, ht, rfl⟩, x, hx, by rw [hxj, hj']⟩
     · rw [hj'] at hge
       exact absurd hj (UInt64.not_lt.mpr hge)
-  · obtain ⟨t, ht, rfl⟩ := List.mem_map.mp ht'
-    exact (hf t ht).2.2.1
-  · obtain ⟨t, ht, rfl⟩ := List.mem_map.mp ht'
-    obtain ⟨-, -, -, h1, h2, -⟩ := hf t ht
-    exact ⟨cp_zeroOwned fun b hb => (hsz b hb).2, rfl, h1, h2⟩
   · obtain ⟨t, ht, i, hi, hj'⟩ := hR.cover (B.getD 2 0 + j) (by rw [hk]; exact cp_add_lt hj hnov)
     rcases (hf t ht).2.2.2.2.2.2.1 i hi with ⟨hlt, -⟩ | ⟨-, x, hx, hxj⟩
     · rw [hj'] at hlt
@@ -129,16 +150,18 @@ theorem cmpThreadsRun_twinPooledI_regs [Host] (k0 : Nat) (hcode : Code checkerFi
       omega
     · exact ⟨_, List.mem_map.mpr ⟨t, ht, rfl⟩, x, hx, by rw [hxj, hj', UInt64.add_comm, UInt64.add_sub_cancel]⟩
   · obtain ⟨t, ht, rfl⟩ := List.mem_map.mp ht'
+    exact (hf t ht).2.2.1
+  · obtain ⟨t, ht, rfl⟩ := List.mem_map.mp ht'
     exact (hf t ht).2.2.2.2.2.1
 
 /-! ## The final statements -/
 
-/-- **The compared threads' accept** (`TwinComparesAcceptsPooledI`). -/
+/-- **The compared threads' accept** (`TwinComparesAcceptsThr`). -/
 theorem checkerFile_compare_threads_accept [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64) (sa : Word)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
-    (hR : CmpThreadsRun bC bS pb sa dm₀ ra₀ st₀ B ths) : TwinComparesAcceptsPooledI bC bS :=
-  (cmpThreadsRun_twinPooledI_regs k0 hcode bC bS pb h64 sa dm₀ ra₀ st₀ B ths hR).1
+    (hR : CmpThreadsRun bC bS pb sa dm₀ ra₀ st₀ B ths) : TwinComparesAcceptsThr bC bS :=
+  (cmpThreadsRun_twinThr_regs k0 hcode bC bS pb h64 sa dm₀ ra₀ st₀ B ths hR).1
 
 /-- **The compared threads' registers**: entry 1 and every `ca_check_b` call return with the
 caller's callee-saved registers. -/
@@ -147,7 +170,7 @@ theorem checkerFile_compare_threads_regs [Host] (k0 : Nat) (hcode : Code checker
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
     (hR : CmpThreadsRun bC bS pb sa dm₀ ra₀ st₀ B ths) :
     RegsRestored dm₀.regs st₀.data.regs ∧ ∀ t ∈ ths, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs :=
-  (cmpThreadsRun_twinPooledI_regs k0 hcode bC bS pb h64 sa dm₀ ra₀ st₀ B ths hR).2
+  (cmpThreadsRun_twinThr_regs k0 hcode bC bS pb h64 sa dm₀ ra₀ st₀ B ths hR).2
 
 /-- **An accepting compared threaded run's challenge has a model** (relative to set theory). -/
 theorem checkerFile_compare_threads_model (V : Type w) [ConLeche.SetTheory V] [Host] (k0 : Nat)
@@ -158,7 +181,7 @@ theorem checkerFile_compare_threads_model (V : Type w) [ConLeche.SetTheory V] [H
       ConLeche.Frontend.parseChunks [bC] = .ok rcC ∧
       Nonempty (ConLeche.Model V (ConLeche.streamEnv
         ((ConLeche.Frontend.preparePrelude preC rcC.decls).toList.map ConLeche.Cached.sideRecord))) :=
-  twinComparesAcceptsPooledI_model V
+  twinComparesAcceptsThr_model V
     (checkerFile_compare_threads_accept k0 hcode bC bS pb h64 sa dm₀ ra₀ st₀ B ths hR)
 
 /-- **No compared threaded run accepts a challenge with a theorem of type `False`** (relative to set
@@ -166,9 +189,9 @@ theory). -/
 theorem checkerFile_compare_threads_no_False (V : Type w) [ConLeche.SetTheory V] [Host] (k0 : Nat)
     (hcode : Code checkerFile k0) (bC bS pb : ByteArray) (hfalse : ConLeche.jsonWithTheoremFalse [bC])
     (h64 : System.Platform.numBits = 64) (sa : Word)
-    (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM) :
-    ¬ CmpThreadsRun bC bS pb sa dm₀ ra₀ st₀ B ths := fun hR =>
-  twinComparesAcceptsPooledI_no_False V hfalse
+    (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
+    (hR : CmpThreadsRun bC bS pb sa dm₀ ra₀ st₀ B ths) : False :=
+  twinComparesAcceptsThr_no_False V hfalse
     (checkerFile_compare_threads_accept k0 hcode bC bS pb h64 sa dm₀ ra₀ st₀ B ths hR)
 
 end ConAgua.Final

@@ -176,9 +176,9 @@ static uint8_t *read_input(const char *path, uint64_t *n, int *mapped) {
    which is never an accept (route A). N threads then each map their own zero region and claim
    job indices from one atomic counter, calling `ca_check_b(buf, len, j, region, region_len)` for
    each claimed j, one call after the other on the region as the previous call left it. The
-   region is ca_worker_size bytes, twice that if the buffer's word 5 is nonzero (a compared run's
-   buffer has two job phases, and entry 2 runs each phase on its own part of the region; which
-   job is in which phase is entry 2's business, not the harness's).
+   region is ca_worker_size bytes (a compared run's buffer has two job phases; which job is in
+   which phase is entry 2's business, not the harness's: a thread's calls of both phases run on
+   its one region).
 
    Concurrency: the threads share only the read-only buffer, the claim counter (fetch_add hands
    out each of 0, 1, 2, ... once, in order, so each thread's claims increase: `ThreadsRun`'s
@@ -190,7 +190,6 @@ static uint8_t *read_input(const char *path, uint64_t *n, int *mapped) {
    has been run, and accepted, when the threads are joined (`ThreadFail`'s `below`). */
 static const uint64_t *g_buf;   /* the frozen buffer */
 static uint64_t g_len, g_k;     /* its length in words; the number of jobs */
-static uint64_t g_wsize;        /* each thread's region size */
 static uint64_t g_next;         /* the claim counter */
 static int g_stop;              /* set after a failure: the other threads stop claiming */
 
@@ -200,15 +199,14 @@ typedef struct { uint64_t j; ca_res r; } slot_t;
 /* One thread: claims jobs until the counter passes k or a call fails. */
 static void *worker(void *arg) {
   slot_t *res = arg;
-  uint8_t *region = mmap(0, g_wsize, PROT_READ | PROT_WRITE,
+  uint8_t *region = mmap(0, ca_worker_size, PROT_READ | PROT_WRITE,
                          MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
   if (region == MAP_FAILED) fail("mmap", strerror(errno));
-  for (uint64_t o = 0; o < g_wsize; o += ca_worker_size)  /* the owned arrays' slots */
-    advise_huge(region + o + 2 * ca_slot, ca_worker_size / ca_slot - 2);
+  advise_huge(region + 2 * ca_slot, ca_worker_size / ca_slot - 2);  /* the owned arrays' slots */
   while (!__atomic_load_n(&g_stop, __ATOMIC_RELAXED)) {
     uint64_t j = __atomic_fetch_add(&g_next, 1, __ATOMIC_RELAXED);
     if (j >= g_k) break;
-    ca_res r = ca_check_b(g_buf, g_len, j, region, g_wsize);
+    ca_res r = ca_check_b(g_buf, g_len, j, region, ca_worker_size);
     if (!accepted(r)) {
       *res = (slot_t){j, r};
       __atomic_store_n(&g_stop, 1, __ATOMIC_RELAXED);
@@ -249,7 +247,6 @@ static int run_jobs(int jobs, uint8_t *in, uint64_t in_len, uint8_t *s, uint64_t
   if (in_mapped) munmap(in, in_len); else free(in);
   if (s) { if (s_mapped) munmap(s, s_len); else free(s); }
   g_buf = out; g_len = len; g_k = r.rax - (1ull << 63); g_next = 0; g_stop = 0;
-  g_wsize = out[5] ? 2 * ca_worker_size : ca_worker_size;
   pthread_t *th = calloc(jobs, sizeof *th);
   slot_t *res = calloc(jobs, sizeof *res);
   if (!th || !res) fail("calloc", strerror(errno));

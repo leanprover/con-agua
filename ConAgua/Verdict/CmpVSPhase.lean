@@ -184,8 +184,8 @@ theorem cmpV_tjobCI {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS
 (the error half of `cmpThreadsS_poolI`): a thread over header S's view (`CsViewS`, a buffer `B`
 whose first call is `mS`'s fresh memory) with a fresh region `r₀` ran its calls `cs` (each below
 `j`) and its call on `j < khi` (`khi` the solution's record count) failed with `e` of class other
-than `0`; the threads `ths` ran every index below `j`: `TwinCompareVerdictPooledI`'s second
-disjunct. -/
+than `0`; the threads `ths` ran every index below `j`: `TwinCompareVerdictThr`'s (and
+`TwinCompareVerdictPooledI`'s) second disjunct. -/
 theorem cmpV_tjobSI {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS bC bS) {m₇ m : Mem}
     (hF : FoldOn bS pb (abiSz checkerTab) PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m)
     {c : Word} {m9 mS : Mem} (h6 : F6 PS m c m9) (hb9 : m9.bytes = m.bytes)
@@ -203,7 +203,7 @@ theorem cmpV_tjobSI {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS
       ThreadRuns B t.1 t.2 ∧ ∀ c' ∈ t.2, c'.1 < khi)
     (hinc : ∀ t ∈ ths, (t.2.map (·.1)).Pairwise (· < ·))
     (hbelow : ∀ i : Word, i < j → ∃ t ∈ ths, ∃ c' ∈ t.2, c'.1 = i) :
-    TwinCompareVerdictPooledI bC bS e.cls := by
+    TwinCompareVerdictThr bC bS e.cls := by
   obtain ⟨hJM9, hwf, hoff, -⟩ := F6.jobMAt hF h6 h hI
   have hJM : JobM PS.ipins (dnOf sG.store) PS.dsS none PS.IS mS a' :=
     hJM9.csViewS (J := solutionOf PS.IS res) hV hF.build.idx hF.frozen hF.build.decls hF.fsize
