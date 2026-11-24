@@ -4,6 +4,7 @@ public import ConAgua.Final.CpThreads
 public import ConAgua.Final.CmpEntry1
 public import ConAgua.Final.CmpAbi
 public import ConAgua.Final.CompareTwinI
+import ConAgua.Final.CompareTwinThr
 public import ConAgua.Checker.CmpSPhaseThr
 import ConAgua.Final.DrvFinal
 import ConAgua.Final.BufAbi
@@ -105,22 +106,6 @@ theorem c1Thr_accepts_standin {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (P
     (hincS : ∀ t ∈ ths, (t.2.1.map (·.1)).Pairwise (· < ·))
     (hincC : ∀ t ∈ ths, (t.2.2.map (·.1)).Pairwise (· < ·)) :
     TwinComparesAcceptsThr bC bS := by
-  sorry
-
-/-- **Stand-in (H5)**: the challenge of a comparison the twin accepts as the threaded run does has
-a model. -/
-theorem twinComparesAcceptsThr_model (V : Type w) [ConLeche.SetTheory V] {bC bS : ByteArray}
-    (h : TwinComparesAcceptsThr bC bS) :
-    ∃ (rcC : ConLeche.Frontend.ParseResultD) (preC : ConLeche.Frontend.PreludeIx),
-      ConLeche.Frontend.parseChunks [bC] = .ok rcC ∧
-      Nonempty (ConLeche.Model V (ConLeche.streamEnv
-        ((ConLeche.Frontend.preparePrelude preC rcC.decls).toList.map ConLeche.Cached.sideRecord))) := by
-  sorry
-
-/-- **Stand-in (H5)**: no `False` in the challenge of a comparison the twin accepts as the threaded
-run does. -/
-theorem twinComparesAcceptsThr_no_False (V : Type w) [ConLeche.SetTheory V] {bC bS : ByteArray}
-    (hfalse : ConLeche.jsonWithTheoremFalse [bC]) (h : TwinComparesAcceptsThr bC bS) : False := by
   sorry
 
 /-! ## The theorem -/
