@@ -164,7 +164,6 @@ public import ConAgua.Checker.CmpSeqCheck
 public import ConAgua.Checker.CmpSeqViewS
 public import ConAgua.Checker.CmpSeqViewC
 public import ConAgua.Checker.CmpSeqRun
-public import ConAgua.Arena.JobStartX
 public import ConAgua.Checker.CmpSeqChain
 public import ConAgua.Checker.CmpSeqJobs
 public import ConAgua.Checker.CmpSeqErr
