@@ -264,4 +264,15 @@ theorem truncFrozen_dlp (m : Mem) : (truncFrozen m).arr64 L.Front.DLP =
     (z := ⟨L.Front.DLP, .bin .add (fzC 1) (.ld64 L.Front.DLP (fzC 0))⟩) (by rw [frozen_drop1]; simp)
   rw [this]; simp only [fzExt, fzC, Expr.pval, BinOp.eval, rd64, rdW, Array.getD_eq_getD_getElem?]; rfl
 
+/-- **A solution row** (`SIX*`, `STX*`, `MAT*`) with the flag `CTL[224] = 1`: its prefix of
+`2 · CTL[k]` words. -/
+theorem truncFrozen_sol (m : Mem) {a : ArrId} {k : Nat} (h : (a, ⟨a, fzSolExt k⟩) ∈ frozen.drop 1)
+    (hf : rdW (m.arr64 CTL) 224 = 1) :
+    (truncFrozen m).arr64 a = (m.arr64 a).extract 0 (2 * rdW (m.arr64 CTL) (UInt64.ofNat k)).toNat := by
+  rw [truncFrozen_mem m h]
+  simp only [fzExt, fzSolExt, fzCtl, fzC, Expr.pval, BinOp.eval, rd64, rdW,
+    Array.getD_eq_getD_getElem?] at hf ⊢
+  have e : (Nat.toUInt64 224).toNat = (224 : Word).toNat := rfl
+  rw [e, hf, UInt64.one_mul]; rfl
+
 end L.Arena
