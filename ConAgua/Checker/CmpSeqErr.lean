@@ -90,10 +90,12 @@ jobs' `check_jobs(PLO, PHI)` call on `cqSM N`. -/
 theorem cq_check8_err {p : Prog} (hQ : CqSeqProg p) {W N : Mem}
     (hAg : Agree phaseBPa (fun _ => false) W N) (hmode : W.glob MODE = 8)
     {n : Nat} (hN : n ≤ 2 ^ 62) {e : Err} (hrun : L.run p n "check" [] W = .error e) :
-    e.cls = 0 ∨ ∃ k, k ≤ 2 ^ 62 ∧ callE p k "check_jobs" [(cqSM N).glob PLO, (cqSM N).glob PHI] (cqSM N) = .error e := by
+    e.cls = 0 ∨ (CqRowsSOK N ∧ CqTailSOK (cqRowsS N) ∧ CqCtlSOK (cqBankSM N) ∧ FlushOK (cqCtlSM (cqBankSM N)) ∧
+      ∃ k, k ≤ 2 ^ 62 ∧ callE p k "check_jobs" [(cqSM N).glob PLO, (cqSM N).glob PHI] (cqSM N) = .error e) := by
   obtain ⟨fs, hfs, -, hrd⟩ := hQ.reads
   refine cq_run_err hQ.check (fun e => e.cls = 0 ∨
-      ∃ k, k ≤ 2 ^ 62 ∧ callE p k "check_jobs" [(cqSM N).glob PLO, (cqSM N).glob PHI] (cqSM N) = .error e)
+      (CqRowsSOK N ∧ CqTailSOK (cqRowsS N) ∧ CqCtlSOK (cqBankSM N) ∧ FlushOK (cqCtlSM (cqBankSM N)) ∧
+      ∃ k, k ≤ 2 ^ 62 ∧ callE p k "check_jobs" [(cqSM N).glob PLO, (cqSM N).glob PHI] (cqSM N) = .error e))
     (fun _ h => .inl h) (fun n s₁ hn => ?_)
     (fun n s₁ _ => M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ _ _ h => by
       rw [hmode] at h; cases h) (.inl hmode) hrun
@@ -109,18 +111,20 @@ theorem cq_check8_err {p : Prog} (hQ : CqSeqProg p) {W N : Mem}
     exact .inl h0
   | succ k =>
     rcases M.of_run_err (P := fun x => x = ⟨N, s.loc⟩) rfl h2
-      (checkBS_spec hQ.bs k (hQ.bankS k) (hQ.ctlS k) (hQ.flush k) ⟨N, s.loc⟩) with h | h
+      (checkBS_spec hQ.bs k (hQ.bankS k) (hQ.ctlS k) (hQ.flush k) ⟨N, s.loc⟩) with h | ⟨h1, h2, h3, h4, h⟩
     · exact .inl h
-    · dsimp only at h; exact .inr ⟨k, by omega, h⟩
+    · dsimp only at h; exact .inr ⟨h1, h2, h3, h4, k, by omega, h⟩
 
 /-- **Mode `9` failing in place** (`cq_check8_err` for `check_bc`, on `cqCM N`). -/
 theorem cq_check9_err {p : Prog} (hQ : CqSeqProg p) {W N : Mem}
     (hAg : Agree phaseBPa (fun _ => false) W N) (hmode : W.glob MODE = 9)
     {n : Nat} (hN : n ≤ 2 ^ 62) {e : Err} (hrun : L.run p n "check" [] W = .error e) :
-    e.cls = 0 ∨ ∃ k, k ≤ 2 ^ 62 ∧ callE p k "check_jobs" [(cqCM N).glob PLO, (cqCM N).glob PHI] (cqCM N) = .error e := by
+    e.cls = 0 ∨ (CqCtlCOK (cqBankCM N) ∧ FlushOK (cqCtlCM (cqBankCM N)) ∧
+      ∃ k, k ≤ 2 ^ 62 ∧ callE p k "check_jobs" [(cqCM N).glob PLO, (cqCM N).glob PHI] (cqCM N) = .error e) := by
   obtain ⟨fs, -, hfs, hrd⟩ := hQ.reads
   refine cq_run_err hQ.check (fun e => e.cls = 0 ∨
-      ∃ k, k ≤ 2 ^ 62 ∧ callE p k "check_jobs" [(cqCM N).glob PLO, (cqCM N).glob PHI] (cqCM N) = .error e)
+      (CqCtlCOK (cqBankCM N) ∧ FlushOK (cqCtlCM (cqBankCM N)) ∧
+      ∃ k, k ≤ 2 ^ 62 ∧ callE p k "check_jobs" [(cqCM N).glob PLO, (cqCM N).glob PHI] (cqCM N) = .error e))
     (fun _ h => .inl h)
     (fun n s₁ _ => M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ _ _ h => by
       rw [hmode] at h; cases h) (fun n s₁ hn => ?_) (.inr hmode) hrun
@@ -136,8 +140,8 @@ theorem cq_check9_err {p : Prog} (hQ : CqSeqProg p) {W N : Mem}
     exact .inl h0
   | succ k =>
     rcases M.of_run_err (P := fun x => x = ⟨N, s.loc⟩) rfl h2
-      (checkBC_spec hQ.bc k (hQ.bankC k) (hQ.ctlC k) (hQ.flush k) ⟨N, s.loc⟩) with h | h
+      (checkBC_spec hQ.bc k (hQ.bankC k) (hQ.ctlC k) (hQ.flush k) ⟨N, s.loc⟩) with h | ⟨h1, h2, h⟩
     · exact .inl h
-    · dsimp only at h; exact .inr ⟨k, by omega, h⟩
+    · dsimp only at h; exact .inr ⟨h1, h2, k, by omega, h⟩
 
 end L.Checker

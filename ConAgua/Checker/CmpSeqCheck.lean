@@ -44,8 +44,9 @@ theorem checkBS_spec {p : Prog} (hp : p.lookup "check_bs" = some checkBSL) (n : 
       ¬ rdW ((cqSM s₀.mem).arr64 DECL) 0 < (cqSM s₀.mem).glob PHI ∧
       ¬ (cqSM s₀.mem).glob PHI < (cqSM s₀.mem).glob PLO ∧
       ∃ r', callE p n "check_jobs" [(cqSM s₀.mem).glob PLO, (cqSM s₀.mem).glob PHI] (cqSM s₀.mem) = .ok (r', s'.mem);
-     fun e => e.cls = 0 ∨
-      callE p n "check_jobs" [(cqSM s₀.mem).glob PLO, (cqSM s₀.mem).glob PHI] (cqSM s₀.mem) = .error e⦄ := by
+     fun e => e.cls = 0 ∨ (CqRowsSOK s₀.mem ∧ CqTailSOK (cqRowsS s₀.mem) ∧
+      CqCtlSOK (cqBankSM s₀.mem) ∧ FlushOK (cqCtlSM (cqBankSM s₀.mem)) ∧
+      callE p n "check_jobs" [(cqSM s₀.mem).glob PLO, (cqSM s₀.mem).glob PHI] (cqSM s₀.mem) = .error e)⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, checkBSL]
   have hJ := fun (x y : Word) => callE_spec p n "check_jobs" [x, y]
@@ -54,8 +55,8 @@ theorem checkBS_spec {p : Prog} (hp : p.lookup "check_bs" = some checkBSL) (n : 
   all_goals clear hB hC hF hJ hp
   all_goals subst_vars
   all_goals simp_all only [L.St.setLocs_mem, cqSM, Cmp.eval, decide_eq_true_eq,
-    cq_getElem_rdW, LocEq, Err.cls, true_or, or_true, not_false_eq_true]
-  all_goals first | rfl | exact Or.inl rfl | exact ⟨_, rfl⟩ | fail
+    cq_getElem_rdW, LocEq, Err.cls, true_or, not_false_eq_true]
+  all_goals first | rfl | exact Or.inl rfl | exact ⟨_, rfl⟩ | exact Or.inr (by simp) | fail
 /-- The memory `check_bc` runs the challenge's jobs on: its view restored, caches flushed. -/
 def cqCM (m : Mem) : Mem := flushMem (cqCtlCM (cqBankCM m))
 
@@ -74,8 +75,8 @@ theorem checkBC_spec {p : Prog} (hp : p.lookup "check_bc" = some checkBCL) (n : 
       ¬ rdW ((cqCM s₀.mem).arr64 DECL) 0 < (cqCM s₀.mem).glob PHI ∧
       ¬ (cqCM s₀.mem).glob PHI < (cqCM s₀.mem).glob PLO ∧
       ∃ r', callE p n "check_jobs" [(cqCM s₀.mem).glob PLO, (cqCM s₀.mem).glob PHI] (cqCM s₀.mem) = .ok (r', s'.mem);
-     fun e => e.cls = 0 ∨
-      callE p n "check_jobs" [(cqCM s₀.mem).glob PLO, (cqCM s₀.mem).glob PHI] (cqCM s₀.mem) = .error e⦄ := by
+     fun e => e.cls = 0 ∨ (CqCtlCOK (cqBankCM s₀.mem) ∧ FlushOK (cqCtlCM (cqBankCM s₀.mem)) ∧
+      callE p n "check_jobs" [(cqCM s₀.mem).glob PLO, (cqCM s₀.mem).glob PHI] (cqCM s₀.mem) = .error e)⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, checkBCL]
   have hJ := fun (x y : Word) => callE_spec p n "check_jobs" [x, y]
@@ -84,7 +85,7 @@ theorem checkBC_spec {p : Prog} (hp : p.lookup "check_bc" = some checkBCL) (n : 
   all_goals clear hB hC hF hJ hp
   all_goals subst_vars
   all_goals simp_all only [L.St.setLocs_mem, cqCM, Cmp.eval, decide_eq_true_eq,
-    cq_getElem_rdW, LocEq, Err.cls, true_or, or_true, not_false_eq_true]
-  all_goals first | rfl | exact Or.inl rfl | exact ⟨_, rfl⟩
+    cq_getElem_rdW, LocEq, Err.cls, true_or, not_false_eq_true]
+  all_goals first | rfl | exact Or.inl rfl | exact ⟨_, rfl⟩ | exact Or.inr (by simp)
 
 end L.Checker
