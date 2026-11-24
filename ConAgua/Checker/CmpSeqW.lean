@@ -227,4 +227,179 @@ theorem cq_jobs_keep {n : Nat} {vs : List Word} {m m' : Mem} {rs : List Word}
   have ⟨_, hF, _, hc⟩ := checkerProg_jobsW
   run_memFrame hc hF h
 
+/-! ## With the flag off: the walks' memos kept
+
+`record_job` dispatches on the flag `CTL[224]`: with the flag `0` it calls `check_decl`, never
+`check_record_sol`, whose closure alone stores to the walks' memos (`NDM`, `CSM`, `CTL[220‥223]`).
+So the solution's jobs (`J = none`) keep them (`cq_checkJobsE_frame0`): what the challenge's jobs,
+run after them in place, need of the memos (`WalkMem`). -/
+
+/-- The callees of `record_job` on the flag-`0` path and their closures: `cqJobFns` without the
+jobs' loop, `record_job` and `check_record_sol`'s own closure. -/
+def cqCrsOnly : List FnName :=
+  ["check_jobs", "record_job", "check_record_sol", "builtin_axiom_name", "check_justified",
+   "cone_entry", "cone_go", "cone_push", "copy_b", "cs_clear", "cs_find", "cs_put", "entry_needs",
+   "is_stmt_kind", "justifiable", "justify_why", "levels_renaming", "lit_needs", "mates_get",
+   "nd_clear", "nd_find", "nd_put", "needs_const", "needs_expr", "needs_exprs", "needs_go",
+   "needs_name", "needs_names", "needs_names_iw", "needs_reset", "needs_rule", "needs_rules",
+   "needs_table", "pin_footprint", "pin_footprint_nat", "pin_footprint_reduce", "rec_names",
+   "refines_b", "same_cv_up_to_levels", "sol_find", "sol_find_table", "sol_row_get", "sol_tbl_get",
+   "tbl_beq_p", "tbl_eq"]
+
+/-- `record_job`'s callees on the flag-`0` path (first) and their closures. -/
+def cqF0 : List FnName :=
+  ["scratch_enter", "iw_reset", "from_le", "and_pin_ok", "check_decl", "scratch_drop"] ++
+    cqJobFns.filter fun f => !cqCrsOnly.contains f
+
+names_tree cqF0Tree : cqF0
+
+/-- The flag-`0` jobs' arrays: `cdA` but the walks' memos. -/
+def cqA : List TieredArray := cdA.filter fun b => b != (NDM : TieredArray) && b != (CSM : TieredArray)
+
+/-- The flag-`0` jobs' `CTL` words: `cdC` but the walks' memos' words `220‥223`. -/
+def cqC : List Word := cdC.filter fun x => decide (x.toNat < 220) || decide (223 < x.toNat)
+
+def cqPa (b : TieredArray) : Bool := cdPa b && b != (NDM : TieredArray) && b != (CSM : TieredArray)
+def cqPc (x : Word) : Bool := cdPc x && (decide (x.toNat < 220) || decide (223 < x.toNat))
+
+theorem cqPa_mem (b : TieredArray) (h : cqPa b = true) : b ∈ cqA := by
+  simp only [cqPa, Bool.and_eq_true] at h
+  exact List.mem_filter.mpr ⟨cdPa_mem b h.1.1, by simp only [Bool.and_eq_true]; exact ⟨h.1.2, h.2⟩⟩
+
+theorem cqPc_mem (x : Word) (h : cqPc x = true) : x ∈ cqC := by
+  simp only [cqPc, Bool.and_eq_true] at h
+  exact List.mem_filter.mpr ⟨cdPc_mem x h.1, h.2⟩
+
+/-- Every function of the checker passes the flag-`0` jobs' per-function check. -/
+prog_all checkerProg_cqF0Chk : checkerProg (wsChk CTL cqPa cqPc cqF0Tree)
+
+/-- **The flag-`0` jobs' callees' write set.** -/
+theorem checkerProg_cqF0W : closedA checkerProg cqA cqC cqF0 = true :=
+  closedW_of_all cqF0Tree.eq cqPa_mem cqPc_mem checkerProg_cqF0Chk
+
+theorem cq_not_cqC {x : Word} (h : x ∉ cdC ∨ (220 ≤ x.toNat ∧ x.toNat ≤ 223)) : x ∉ cqC := fun hm => by
+  have := List.mem_filter.mp hm
+  rcases h with h | h
+  · exact h this.1
+  · have h2 := this.2; simp only [Bool.or_eq_true, decide_eq_true_eq] at h2; omega
+
+theorem cq_not_cqA {b : TieredArray} (h : b ∉ cdA ∨ b = (NDM : TieredArray) ∨ b = (CSM : TieredArray)) :
+    b ∉ cqA := fun hm => by
+  have := List.mem_filter.mp hm
+  rcases h with h | rfl | rfl
+  · exact h this.1
+  · simp at this
+  · simp at this
+
+theorem cq_ctl_mem {x : Word} (h : cqPc x = true) : x ∈ cqC := cqPc_mem x h
+
+/-- A call of a function of a closed set is a frame of the set's write set. -/
+theorem cq_callE_frame {p : Prog} {A : List TieredArray} {C : List Word} {F : List FnName}
+    (hcl : closedA p A C F = true) {f : FnName} (hf : f ∈ F) {n : Nat} {vs : List Word}
+    {m m' : Mem} {r : List Word} (h : callE p n f vs m = .ok (r, m')) : MemFrame A C m m' := by
+  obtain ⟨s, hs, hfr, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (invoke_memFrame hcl n hf vs ⟨m, Locals.init []⟩) (callW_of_callE h)
+  rw [hs] at hfr; exact hfr
+
+theorem cq_setCtl_frame {x : Word} (hx : cqPc x = true) (m : Mem) (v : Word) :
+    MemFrame cqA cqC m (m.set64 CTL x v) :=
+  (MemFrame.setCtl m x v).mono (by simp) (fun y hy => by
+    simp only [List.mem_singleton] at hy; subst hy; exact cqPc_mem _ hx)
+
+/-- **`record_job` with the flag off stores only to the flag-`0` write set.** -/
+theorem cq_recordJobE_frame0 {p : Prog} (hcl : closedA p cqA cqC cqF0 = true) {n : Nat} {m m' : Mem}
+    {k r : Word} (h : recordJobE p n m k = .ok (r, m')) (h224 : rdW (m.arr64 CTL) 224 = 0) :
+    MemFrame cqA cqC m m' := by
+  have n224 : (224 : Word) ∉ cqC := cq_not_cqC (.inl (cq_not_cdC (by decide)))
+  have mem : ∀ f, f ∈ ["scratch_enter", "iw_reset", "from_le", "and_pin_ok", "check_decl",
+      "scratch_drop"] → f ∈ cqF0 := fun f hf => List.mem_append_left _ hf
+  rcases n with _ | n
+  · simp [recordJobE] at h
+  simp only [recordJobE] at h
+  rcases c1 : callE p n "scratch_enter" [] m with e | ⟨r1, m1⟩
+  · rw [c1] at h; simp [recordJobE.k_scratch_enter] at h
+  rw [c1] at h; simp only [recordJobE.k_scratch_enter] at h
+  have f1 := (cq_callE_frame hcl (mem _ (by simp)) c1).trans (cq_setCtl_frame (x := 130) (by decide) m1 0)
+  generalize m1.set64 CTL 130 0 = m1' at h f1
+  rcases c2 : callE p n "iw_reset" [] m1' with e | ⟨r2, m2⟩
+  · rw [c2] at h; simp [recordJobE.k_iw_reset] at h
+  rw [c2] at h; simp only [recordJobE.k_iw_reset] at h
+  have f2 := f1.trans (cq_callE_frame hcl (mem _ (by simp)) c2)
+  split at h; · cases h
+  split at h; · cases h
+  have f3 : MemFrame cqA cqC m (((m2.set64 CTL 133 (rdW (m2.arr64 CTL) 133 + 1)).set64 CTL 134
+      (rdW ((m2.set64 CTL 133 (rdW (m2.arr64 CTL) 133 + 1)).arr64 FIRSTS) k)).set64 CTL 135 k) :=
+    ((f2.trans (cq_setCtl_frame (x := 133) (by decide) _ _)).trans
+      (cq_setCtl_frame (x := 134) (by decide) _ _)).trans (cq_setCtl_frame (x := 135) (by decide) _ _)
+  generalize (((m2.set64 CTL 133 (rdW (m2.arr64 CTL) 133 + 1)).set64 CTL 134
+    (rdW ((m2.set64 CTL 133 (rdW (m2.arr64 CTL) 133 + 1)).arr64 FIRSTS) k)).set64 CTL 135 k) = m3 at h f3
+  generalize rdW ((m2.set64 CTL 133 (rdW (m2.arr64 CTL) 133 + 1)).arr64 FIRSTS) k = c at h
+  rcases c4 : callE p n "from_le" [rdW (m3.arr64 CTL) 172, c] m3 with e | ⟨r4, m4⟩
+  · rw [c4] at h; simp [recordJobE.k_from_le] at h
+  rw [c4] at h; simp only [recordJobE.k_from_le] at h
+  have f4 := (f3.trans (cq_callE_frame hcl (mem _ (by simp)) c4)).trans (cq_setCtl_frame (x := 160) (by decide) m4 (r4.headD 0))
+  generalize m4.set64 CTL 160 (r4.headD 0) = m4' at h f4
+  rcases c5 : callE p n "from_le" [rdW (m4'.arr64 CTL) 173, c] m4' with e | ⟨r5, m5⟩
+  · rw [c5] at h; simp [recordJobE.k_from_le_2] at h
+  rw [c5] at h; simp only [recordJobE.k_from_le_2] at h
+  have f5 := (f4.trans (cq_callE_frame hcl (mem _ (by simp)) c5)).trans (cq_setCtl_frame (x := 161) (by decide) m5 (r5.headD 0))
+  generalize m5.set64 CTL 161 (r5.headD 0) = m5' at h f5
+  rcases c6 : callE p n "and_pin_ok" [k] m5' with e | ⟨r6, m6⟩
+  · rw [c6] at h; simp [recordJobE.k_and_pin_ok] at h
+  rw [c6] at h; simp only [recordJobE.k_and_pin_ok] at h
+  have f6 := f5.trans (cq_callE_frame hcl (mem _ (by simp)) c6)
+  split at h; · cases h
+  have e224 : rdW (m6.arr64 CTL) 224 = 0 := by rw [f6.ctl 224 n224]; exact h224
+  rw [ite_cond_eq_false _ _ (by simp [e224])] at h
+  rcases c7 : callE p n "check_decl" [k, 0] m6 with e | ⟨r7, m7⟩
+  · rw [c7] at h; simp [recordJobE.k_check_record_sol] at h
+  rw [c7] at h; simp only [recordJobE.k_check_record_sol, recordJobE.j1] at h
+  have f7 := f6.trans (cq_callE_frame hcl (mem _ (by simp)) c7)
+  rcases c8 : callE p n "scratch_drop" [] m7 with e | ⟨r8, m8⟩
+  · rw [c8] at h; simp [recordJobE.k_scratch_drop] at h
+  rw [c8] at h; simp only [recordJobE.k_scratch_drop, Except.ok.injEq, Prod.mk.injEq] at h
+  obtain ⟨-, rfl⟩ := h
+  exact (f7.trans (cq_callE_frame hcl (mem _ (by simp)) c8)).trans (cq_setCtl_frame (x := 130) (by decide) m8 0)
+
+/-- **`check_jobs`' loop with the flag off stores only to the flag-`0` write set** (the flag is
+not in it, so every job of the loop runs with it off). -/
+theorem cq_checkJobsLoop_frame0 {p : Prog} (hcl : closedA p cqA cqC cqF0 = true)
+    (hrj : p.lookup "record_job" = some recordJobL) :
+    ∀ (n : Nat) (m : Mem) (j hi : Word) (m' : Mem), checkJobsE.loop1 p n m j hi = .ok m' →
+      rdW (m.arr64 CTL) 224 = 0 → MemFrame cqA cqC m m' := by
+  have n224 : (224 : Word) ∉ cqC := cq_not_cqC (.inl (cq_not_cdC (by decide)))
+  intro n
+  induction n with
+  | zero => intro m j hi m' h; rw [checkJobsE.loop1.eq_1] at h; cases h
+  | succ n ih =>
+    intro m j hi m' h h224
+    by_cases g : j < hi
+    · rw [checkJobsE.loop1.arm1 _ _ _ _ _ g] at h
+      rcases c : callE p n "record_job" [j] m with e | ⟨r, m1⟩
+      · rw [c, checkJobsE.k_record_job.none] at h; cases h
+      rw [c, checkJobsE.k_record_job.arm1] at h
+      obtain ⟨s', hs', -, hE⟩ := triple_of_callE (recordJob_specE p hrj n ⟨m, Locals.init []⟩ j) c
+      rw [hs'] at hE
+      have f1 := cq_recordJobE_frame0 hcl hE h224
+      exact f1.trans (ih m1 (j + 1) hi m' h (by rw [f1.ctl 224 n224]; exact h224))
+    · rw [checkJobsE.loop1.arm2 _ _ _ _ _ g] at h; cases h; exact MemFrame.refl _ _ _
+
+/-- **A run of `check_jobs` with the flag off stores only to the flag-`0` write set**: it keeps
+the walks' memos (`NDM`, `CSM`, `CTL[220‥223]`) besides what `cq_jobs_keep` keeps. -/
+theorem cq_checkJobs_frame0 {p : Prog} (hcl : closedA p cqA cqC cqF0 = true)
+    (hrj : p.lookup "record_job" = some recordJobL) (hcj : p.lookup "check_jobs" = some checkJobsL)
+    {n : Nat} {j hi : Word} {m m' : Mem} {r : List Word}
+    (h : callE p n "check_jobs" [j, hi] m = .ok (r, m')) (h224 : rdW (m.arr64 CTL) 224 = 0) :
+    MemFrame cqA cqC m m' := by
+  obtain ⟨s', hs', -, hE⟩ := triple_of_callE (checkJobs_specE p hcj n ⟨m, Locals.init []⟩ j hi) h
+  rw [hs'] at hE
+  rcases n with _ | n
+  · simp [checkJobsE] at hE
+  simp only [checkJobsE] at hE
+  rcases c : checkJobsE.loop1 p (n + 1) m j hi with e | m1
+  · rw [c] at hE; simp [checkJobsE.k_loop1] at hE
+  rw [c] at hE; simp only [checkJobsE.k_loop1, Except.ok.injEq, Prod.mk.injEq] at hE
+  rw [← hE.2]
+  exact cq_checkJobsLoop_frame0 hcl hrj _ _ _ _ _ c h224
+
 end L.Checker
