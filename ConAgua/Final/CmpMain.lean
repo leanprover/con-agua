@@ -241,6 +241,106 @@ theorem cmp_buf_words (hok : abiTabOk tab = true) {hdrf ctlf : ArrId} {hw : Nat}
   rw [this]
   simp only [cmpBuf, Array.getElem_extract, Nat.zero_add]
 
+
+/-- **The front's third call** (`cmpArgsS`, then `call lab`, nine directives at `i`; the mode entry's
+seven directives at `e`, the mode word `w`): on the region holding mode `5`'s final memory `m5` (the
+solution's bytes as the input), the run of `check` from `m5` with the mode word `w`. -/
+theorem cmp_modeR (q p : Prog) (hq : Refines q p) (hok : abiTabOk tab = true)
+    {X : AsmTab} (hAX : AsmOkT q tab X) (hio : abiIO tab = true)
+    (hwf : Prog.wf tab q = true) (hng : mode.id < tab.ng) (k0 : Nat)
+    (hcR : Code (abiStub tab ++ compileProgX X tab q "check") k0)
+    (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+    {Kc : Nat} (hC : Code (cmpStubL tab mode) Kc) (i e : Nat) (w : Word) (lab : Label)
+    (hblk : ∀ t (_ : t < 9), (cmpStubL tab mode)[i + t]? = (cmpArgsS tab ++ [callL lab])[t]?)
+    (hen : ∀ t (_ : t < 7), (cmpStubL tab mode)[e + t]? =
+      [.label lab, movRI .rax (abiNeed tab).toUInt64, i64 (.cmp (.reg (rr .r9)) (oR .rax)), jccL .c abiSetupL,
+       movRI .rax w, movMR (mb .r8 (tab.globOff mode)) .rax, jmpL abiSetupL][t]?)
+    (bC bS pb : ByteArray) (sa : Word) (dm : MachineData) (ra : Word) (hc : CmpCall bC bS pb sa dm ra)
+    (hneed : drvNeed tab ≤ dm.regs.r9.toNat)
+    (Acc : Prop) (Err : Word → Prop) (Hi : Word → DataMem → Prop) (m5 : Mem) (s : MachineData)
+    (hf : CmpFrame tab dm ra sa bS.size dm.regs.r8.toNat dm.regs.rsp.toNat s)
+    (hm : MemRel (abiLayout tab dm.regs.r8.toNat sa.toNat bS.size dm.regs.rdx.toNat pb.size) m5 s.dmem)
+    (hk : ∀ s' : MachineData, CmpFrame tab dm ra sa bS.size dm.regs.r8.toNat dm.regs.rsp.toNat s' →
+      (∀ x < 2 ^ 64, (x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + abiNeed tab ≤ x) →
+        ¬ (sa.toNat ≤ x ∧ x < sa.toNat + bS.size) →
+        ¬ (dm.regs.rdx.toNat ≤ x ∧ x < dm.regs.rdx.toNat + pb.size) →
+        (x < dm.regs.rsp.toNat - 24 ∨ dm.regs.rsp.toNat + 8 ≤ x) → s'.dmem.get? (A x) = s.dmem.get? (A x)) →
+      (s'.regs.rdx = 1 ∨ OutcomeRel (abiLayout tab dm.regs.r8.toNat sa.toNat bS.size dm.regs.rdx.toNat pb.size)
+        (cmpRun p (m5.setG mode w)) s') →
+      Ev (CmpPostH dm ra Acc Err Hi) s' (at_ (Kc + i + 9))) :
+    Ev (CmpPostH dm ra Acc Err Hi) s (at_ (Kc + i)) := by
+  obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
+  obtain ⟨base, hbase⟩ : ∃ base, dm.regs.r8.toNat = base := ⟨_, rfl⟩
+  obtain ⟨rsp0, hrsp0⟩ : ∃ rsp0, dm.regs.rsp.toNat = rsp0 := ⟨_, rfl⟩
+  rw [hbase, hrsp0] at hf hk
+  rw [hbase] at hm
+  have hfits := hc.hfits
+  have hcs8 := hc.hcs8
+  have hcs24 := hc.hcs24
+  have hn := abiNeed_ge hok
+  have hneedC := hneed
+  simp only [drvNeed] at hneedC
+  have hcs := hc.hcs
+  rw [hbase, hrsp0] at hcs
+  rw [hbase] at hfits
+  rw [hrsp0] at hcs8 hcs24
+  have hside : rsp0 + 8 ≤ base ∨ base + dm.regs.r9.toNat ≤ rsp0 - 24 := by
+    rcases Nat.lt_or_ge (rsp0 - 24) base with h | h
+    · by_cases h' : rsp0 + 8 ≤ base
+      · exact .inl h'
+      · exfalso; rcases (hcs base (by omega) (by omega)).2.1 with h2 | h2 <;> omega
+    · rcases (hcs (rsp0 - 24) (by omega) (by omega)).2.1 with h2 | h2
+      · omega
+      · exact .inr h2
+  have hcsW : ∀ x, rsp0 - 24 ≤ x → x < rsp0 + 8 → x < base ∨ base + dm.regs.r9.toNat ≤ x :=
+    fun x h1 h2 => (hcs x h1 h2).2.1
+  have hpR : ∀ x, dm.regs.rdx.toNat ≤ x → x < dm.regs.rdx.toNat + pb.size → x < base ∨ base + dm.regs.r9.toNat ≤ x :=
+    fun x h1 h2 => by have := hc.hpinsDisj x h1 h2; rwa [hbase] at this
+  have hio' := hio
+  simp only [abiIO, Bool.and_eq_true, beq_iff_eq] at hio'
+  obtain ⟨⟨⟨hdIN, hpIN⟩, hdPB⟩, hpPB⟩ := hio'
+  have hIN : (m5.arr8 IN).size = bS.size := by
+    have := hm.size8 _ hdIN; simp only [abiLayout_tab, hpIN, abiLayout_s8_0] at this; exact this
+  have hPB5 : (m5.arr8 Rom.PB).size = pb.size := by
+    have := hm.size8 _ hdPB; simp only [abiLayout_tab, hpPB, abiLayout_s8_1] at this; exact this
+  have hpb5 : (⟨m5.arr8 Rom.PB⟩ : ByteArray).size = pb.size := hPB5
+  have hin5 : (⟨m5.arr8 IN⟩ : ByteArray).size = bS.size := hIN
+  have hSa : ∀ x, sa.toNat ≤ x → x < sa.toNat + bS.size →
+      (x < base ∨ base + dm.regs.r9.toNat ≤ x) ∧ (x < rsp0 - 24 ∨ rsp0 + 8 ≤ x) := fun x h1 h2 => by
+    obtain ⟨q1, -, -, q4⟩ := hc.hSDisj x h1 h2
+    rw [hbase] at q1; rw [hrsp0] at q4; exact ⟨q1, q4⟩
+  have hPa : ∀ x, dm.regs.rdx.toNat ≤ x → x < dm.regs.rdx.toNat + pb.size →
+      (x < base ∨ base + dm.regs.r9.toNat ≤ x) ∧ (x < rsp0 - 24 ∨ rsp0 + 8 ≤ x) := fun x h1 h2 => by
+    refine ⟨hpR x h1 h2, Classical.byContradiction fun hn => ?_⟩
+    simp only [not_or, Nat.not_lt, Nat.not_le] at hn
+    exact (hcs x (by omega) (by omega)).2.2.2 ⟨h1, h2⟩
+  have hG5 : (abiLayout tab base sa.toNat bS.size dm.regs.rdx.toNat pb.size).Ok :=
+    abiLayout_ok hok ⟨Nat.le_refl _, by omega, hc.hSEnd, hc.hpinsEnd,
+      fun x h1 h2 => by rcases (hSa x h1 h2).1 with h | h <;> omega,
+      fun x h1 h2 => by rcases hpR x h1 h2 with h | h <;> omega,
+      fun x h1 h2 => (hc.hSDisj x h1 h2).2.2.1⟩
+  have hgeo : CmpGeo tab base dm.regs.r9.toNat rsp0 := ⟨hfits, hneed, hcsW, hcs24, hcs8⟩
+  refine cmp_modeM q p hq hok hAX hio hwf hng _ hcR fd hentry hnp hC i e w lab hblk hen
+    dm ra sa (nS := bS.size) ⟨m5.arr8 IN⟩ ⟨m5.arr8 Rom.PB⟩ hin5.symm hgeo hside (by rw [hpb5, hc.hnp])
+    (by rw [hin5]; exact hc.hSEnd) (by rw [hpb5]; exact hc.hpinsEnd)
+    (fun x h1 h2 => ?_) (fun x h1 h2 => ?_) _ _ _ s hf (fun i hi => ?_) (fun i hi => ?_)
+    (m := m5) (inp0 := sa.toNat) (n0 := bS.size) (by rw [hpb5]; exact hG5)
+    (fun x h1 h2 => (hSa x h1 h2).2) (by rw [hpb5]; exact hm) ?_
+  · rw [hin5] at h2
+    obtain ⟨q1, q2⟩ := hSa x h1 h2
+    exact ⟨q1, q2, by rw [hpb5]; exact (hc.hSDisj x h1 h2).2.2.1⟩
+  · rw [hpb5] at h2; exact hPa x h1 h2
+  · have hg := hm.get8 _ hdIN i hi
+    simp only [abiLayout_tab, hpIN, abiLayout_b8_0] at hg
+    exact hg
+  · have hg := hm.get8 _ hdPB i hi
+    simp only [abiLayout_tab, hpPB, abiLayout_b8_1] at hg
+    exact hg
+  intro s4 hf4 hsame4 hout hsz
+  erw [cmpIn_self] at hout
+  simp only [hin5, hpb5] at hout hsame4
+  exact hk s4 hf4 hsame4 hout
+
 /-- **The compared run's front on the machine** (`ca_cmp_front`, shared by `ca_start_c` and
 `ca_start_ac`, the flag in `r10`): the region's size test, the save area, modes `4` and `5`. Unless
 the front stops (an accept, `CmpFrontAcc45`; an error, `CmpFrontErr45`; a decline), the run goes on
@@ -279,11 +379,11 @@ theorem cmp_front (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk ta
     (Or.inr (Or.inr ⟨.rax, rfl, rfl⟩)) ?_
   refine ev_jcc (hC.get (i := 36) rfl) (fun hlt => ?_) (fun hge => ?_)
   · -- declined
-    rw [Code.label (i := 152) hC rfl]
-    refine ev_label (hC.get (i := 152) rfl) ?_
-    refine ev_movRI (hC.get (i := 153) rfl) ?_
-    refine ev_movRI (hC.get (i := 154) rfl) ?_
-    refine ev_ret (hC.get (i := 155) rfl) (ra := ra)
+    rw [Code.label (i := 157) hC rfl]
+    refine ev_label (hC.get (i := 157) rfl) ?_
+    refine ev_movRI (hC.get (i := 158) rfl) ?_
+    refine ev_movRI (hC.get (i := 159) rfl) ?_
+    refine ev_ret (hC.get (i := 160) rfl) (ra := ra)
       (by rsimp; rw [toBitVec_eq_A]; exact hc.hra) ?_
     refine Eventually.done _ ⟨⟨rfl, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, fun h => ?_, fun h => ?_⟩, fun h => ?_⟩ <;>
       dsimp only at * <;> (try rsimp at *)

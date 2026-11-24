@@ -23,7 +23,8 @@ Then, on `R` as mode `5` left it (the solution's bytes again as the input, not r
 
 * `ca_start_ac` (**entry 1 of the threaded compared run**): `ca_start_a7` (mode `7`): the
   challenge's preparation and index, and the frozen buffer in `OUT` (one image set, the
-  solution's header and the challenge's), `2^63 + kC`; the result `2^63 + kS + kC`.
+  solution's header and the challenge's), `2^63 + kC`; the result `2^63 + kS + kC` (a decline if
+  `kS + kC ≥ 2^63`).
 * `ca_start_c` (**the sequential compared run**): `ca_start_a6` (mode `6`): the same with the
   buffer's header only, `2^63 + kC`; then `ca_check_seq` in place with the mode word `8` for the
   solution's jobs `[0, kS)`, and unless that returns `rdx = 0`, `rax = ACCEPT`, the result; then
@@ -45,6 +46,7 @@ def abiStartCL : Label := "ca_start_c"
 def abiStartACL : Label := "ca_start_ac"
 def abiCmpFrontL : Label := "ca_cmp_front"
 def abiCmpThrL : Label := "ca_cmp_thr"
+def abiCmpKokL : Label := "ca_cmp_kok"
 def abiCmpDoneL : Label := "ca_cmp_done"
 def abiCmpDeclineL : Label := "ca_cmp_decline"
 
@@ -116,12 +118,15 @@ def cmpSeqTail (tab : Tab) : Program :=
    movMR (mb .r15 Tab.stackTop) .rax, callL abiCheckSGL,
    jmpL abiCmpDoneL]
 
-/-- The threaded run's entry 1 after the front: mode `7`, `2^63 + kS + kC`. -/
+/-- The threaded run's entry 1 after the front: mode `7`, `2^63 + kS + kC` (`rcx = 2^63` after
+`cmpOkGe`; a job count `kS + kC ≥ 2^63` declines, `rdx = 1`). -/
 def cmpThrTail (tab : Tab) : Program :=
   [.label abiCmpThrL] ++
   cmpArgsS tab ++ [callL abiStartA7L] ++ cmpOkGe ++
   [i64 (.sub (.reg (rr .rax)) (oR .rcx)), movRR .rdx .rax] ++ cmpSaveRax tab ++
   [movRM .r11 (mb .rax 48), i64 (.add (.reg (rr .rdx)) (oR .r11)),
+   i64 (.cmp (.reg (rr .rdx)) (oR .rcx)), jccL .c abiCmpKokL, movRI .rdx 1, jmpL abiCmpDoneL,
+   .label abiCmpKokL,
    movRI .rax 9223372036854775808, i64 (.add (.reg (rr .rax)) (oR .rdx)), movRI .rdx 0]
 
 /-- The exit (the caller's `r15` and the return address back) and the decline. -/

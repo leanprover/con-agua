@@ -247524,6 +247524,11 @@ movq $6768868458496, %rax
 addq %r15, %rax
 movq 48(%rax), %r11
 addq %r11, %rdx
+cmpq %rcx, %rdx
+jb ca_cmp_kok
+movq $1, %rdx
+jmp ca_cmp_done
+ca_cmp_kok:
 movq $-9223372036854775808, %rax
 addq %rdx, %rax
 movq $0, %rdx
