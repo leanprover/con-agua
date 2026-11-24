@@ -199,7 +199,7 @@ theorem abiMode_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok 
     (h6 : Host.prog[k + 6]? = some (jmpL abiSetupL))
     (hcR : Code (abiStub tab ++ compileProgX X tab q "check") k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
-    (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiArgs b pb dm ra) :
     Ev (fun st => EntryPost (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
         dm ra (L.run p abiFuel "check" [] ((loadMem b pb (abiSz tab)).setG mode w)) st ∧
         SizesPost b pb st)
@@ -276,7 +276,7 @@ theorem abiA_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : a
     (fz own : List TieredArray) (hng : mode.id < tab.ng) (k0 : Nat)
     (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProgX X tab q "check")) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
-    (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiArgs b pb dm ra) :
     Ev (fun st => EntryPost (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
         dm ra (L.run p abiFuel "check" [] ((loadMem b pb (abiSz tab)).setG mode 1)) st ∧
         SizesPost b pb st)
@@ -297,7 +297,7 @@ theorem abiA0_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : 
     (fz own : List TieredArray) (hng : mode.id < tab.ng) (k0 : Nat)
     (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProgX X tab q "check")) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
-    (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiArgs b pb dm ra) :
     Ev (fun st => EntryPost (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
         dm ra (L.run p abiFuel "check" [] ((loadMem b pb (abiSz tab)).setG mode 3)) st ∧
         SizesPost b pb st)

@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Final.BufChain
+public import ConAgua.Compiler.AbiCmp
 import ConAgua.Final.DrvFinal
 public import ConAgua.Checker.ParThreadTwin
 import ConAgua.Final.BufAbi
@@ -33,7 +34,7 @@ fold invariant at a job's view comes from the model of the accepted prefix.
 facts are `ThreadsAcc`, which the threaded verdict reuses for the jobs below a failing one; beyond
 them, what `Final/Statement.lean` lists: Kraken's semantics, the assembler, linker and loader):
 
-* **Entry 1's call**: `ca_start_a` is called as `AbiCall` says (the input and pin buffers, a zero
+* **Entry 1's call**: `ca_start_a` (with a solution: `ca_start_ac`) is called as `AbiCall` says (the input and pin buffers, a zero
   region, the 32 bytes of machine stack around `rsp`; `mmap` gives the stated memory facts).
 * **First return** (`FirstReturn`): the harness regains control, at each call's return address,
   in a state that has every property the machine is guaranteed to reach at that address
@@ -144,6 +145,18 @@ return address `ra`. -/
 def FirstReturn [Host] (dm : MachineData) (pc : Int64) (ra : Word) (st : MachineState) : Prop :=
   ∀ P : MachineState → Prop, Ev P dm pc → (∀ s, P s → s.pc = Int64.ofBitVec ra.toBitVec) → P st
 
+/-- **Entry 1's label**: `ca_start_a` (the flat threaded run), `ca_start_ac` with a solution (the
+compared threaded run). -/
+def abiEntryAL : Option ByteArray → Label
+  | none => abiStartAL
+  | some _ => abiStartACL
+
+/-- **The sequential driver's label**: `ca_start`, `ca_start_c` with a solution (the sequential
+compared run). -/
+def abiSeqL : Option ByteArray → Label
+  | none => abiStartL
+  | some _ => abiStartCL
+
 /-- **How a thread calls `ca_check_b`** (the harness's part of `BufCall`; the buffer's header
 facts come from entry 1): the region mapped, large enough and in the address space, the buffer
 holding `B` and apart from the region, the return address and the stack window. -/
@@ -201,10 +214,11 @@ structure ThreadsAcc [Host] (dm₀ : MachineData) (st₀ : MachineState) (B : Ar
 /-- **What the threaded harness does** (trusted; the module doc lists it): entry 1 at `dm₀`
 returning at `st₀`, the buffer `B`, and the threads `ths`, whose calls all accept
 (`ThreadsAcc`) and claim every job index below `k`. -/
-structure ThreadsRun [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState)
-    (B : Array Word) (ths : List ThreadM) : Prop extends ThreadsAcc dm₀ st₀ B ths where
-  call₀ : AbiCall b pb dm₀ ra₀
-  ret₀ : FirstReturn dm₀ (label abiStartAL) ra₀ st₀
+structure ThreadsRun [Host] (b : ByteArray) (sol : Option ByteArray) (pb : ByteArray) (dm₀ : MachineData)
+    (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM) : Prop
+    extends ThreadsAcc dm₀ st₀ B ths where
+  call₀ : AbiCall b sol pb dm₀ ra₀
+  ret₀ : FirstReturn dm₀ (label (abiEntryAL sol)) ra₀ st₀
   rdx₀ : st₀.data.regs.rdx = 0
   rax₀ : 9223372036854775808 ≤ st₀.data.regs.rax.toNat
   /-- the buffer: `OUT`'s first `len` words, `len` its word `1` -/
@@ -349,14 +363,14 @@ the trusted threaded harness runs as `ThreadsRun` says. And every call, entry 1 
 theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
-    (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] ∧
+    (hR : ThreadsRun b none pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] ∧
       RegsRestored dm₀.regs st₀.data.regs ∧
       ∀ t ∈ ths, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs := by
   have hc := code_of_checkerFile_par hcode
   have hnres : 1 ≤ checkerTab.nres := by decide
   -- entry 1
   have hE := abiA_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok checkerTab_abiIO checkerProgI_wf MODE PLO PHI OUT HDRF CTLF hdrHw
-    frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hR.call₀
+    frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hR.call₀.toAbiArgs
   obtain ⟨⟨-, hRR₀, -, hout₀⟩, hsz⟩ := hR.ret₀ _ hE (fun s h => h.1.1)
   have hne : st₀.data.regs.rdx ≠ 1 := by rw [hR.rdx₀]; decide
   obtain ⟨hb, hpb⟩ := hsz.resolve_left hne
@@ -450,7 +464,7 @@ without the registers). -/
 theorem threadsRun_twinAcceptsPooled [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
-    (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] :=
+    (hR : ThreadsRun b none pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] :=
   (threadsRun_twinAcceptsPooled_regs k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR).1
 
 end ConAgua.Final

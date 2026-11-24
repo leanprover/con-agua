@@ -9,7 +9,7 @@ import Kraken.X64.Registers
 /-!
 # The setup stub on the machine: `ca_setup` (called with `ca_start`'s arguments)
 
-`AbiCall`: how the harness calls `ca_start(in, in_len, pins, pins_len, base, base_len)`: the input
+`AbiArgs`: how the harness calls `ca_start(in, in_len, pins, pins_len, base, base_len)`: the input
 bytes `b` at `in`, the pin data `pb` at `pins`, and a zero region `[base, base + base_len)` apart
 from both buffers and from the caller's stack. The driver `ca_start` passes the call on to entry 1,
 which jumps to the setup stub (`ConAgua/Compiler/Abi.lean`) with the same arguments. The stub lays
@@ -23,12 +23,13 @@ namespace ConAgua.Final
 
 open L L.Compiler
 
-/-- **How the harness calls `ca_start`**: System V arguments `rdi, rsi` = the input buffer and its
+/-- **The input, pin and region arguments of an entry-1 call** (`AbiCall`'s facts without the
+solution): System V arguments `rdi, rsi` = the input buffer and its
 length, `rdx, rcx` = the pin-data buffer and its length, `r8, r9` = the region and its length;
 the buffers hold `b` and `pb`; the region is zero, in the address space, and apart from both
 buffers; the buffers are apart from each other; the return address is on the machine stack, whose
 32 bytes around `rsp` are mapped and apart from the region and the buffers. -/
-structure AbiCall (b pb : ByteArray) (dm : MachineData) (ra : Word) : Prop where
+structure AbiArgs (b pb : ByteArray) (dm : MachineData) (ra : Word) : Prop where
   hin : ∀ i (h : i < b.size), dm.dmem.get? (A (dm.regs.rdi.toNat + i)) = some b[i]
   hn : dm.regs.rsi.toNat = b.size
   hpins : ∀ i (h : i < pb.size), dm.dmem.get? (A (dm.regs.rdx.toNat + i)) = some pb[i]
@@ -51,7 +52,7 @@ structure AbiCall (b pb : ByteArray) (dm : MachineData) (ra : Word) : Prop where
   hcs24 : 24 ≤ dm.regs.rsp.toNat
   hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64
 
-/-- **`AbiCall` on a mapped region** (not necessarily zero): how the compared run's driver calls the
+/-- **`AbiArgs` on a mapped region** (not necessarily zero): how the compared run's driver calls the
 setup stub again on a region that holds an L memory (`ConAgua/Final/CmpStub.lean`). -/
 structure AbiCallM (b pb : ByteArray) (dm : MachineData) (ra : Word) : Prop where
   hin : ∀ i (h : i < b.size), dm.dmem.get? (A (dm.regs.rdi.toNat + i)) = some b[i]
@@ -77,10 +78,45 @@ structure AbiCallM (b pb : ByteArray) (dm : MachineData) (ra : Word) : Prop wher
   hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64
 
 /-- A zero region is mapped. -/
-theorem AbiCall.toM {b pb : ByteArray} {dm : MachineData} {ra : Word} (hc : AbiCall b pb dm ra) :
+theorem AbiArgs.toM {b pb : ByteArray} {dm : MachineData} {ra : Word} (hc : AbiArgs b pb dm ra) :
     AbiCallM b pb dm ra :=
   ⟨hc.hin, hc.hn, hc.hpins, hc.hnp, fun x h1 h2 => by rw [hc.hzero x h1 h2]; rfl, hc.hfits, hc.hinEnd,
     hc.hpinsEnd, hc.hinDisj, hc.hpinsDisj, hc.hbufDisj, hc.hra, hc.hcs, hc.hcs24, hc.hcs8⟩
+
+/-- **The solution's address of a compared run's call**: the first stack argument, the word at
+`rsp + 8` (`0` if unmapped). -/
+def solAddr (dm : MachineData) : Word := (rdW dm.dmem (A (dm.regs.rsp.toNat + 8))).getD 0
+
+/-- **The solution's stack arguments of a compared run's call** (`ca_start_ac`, `ca_start_c`,
+System V's seventh and eighth arguments): the solution's buffer at `solAddr dm` (the word at
+`rsp + 8`) holding `bS`, its length at `rsp + 16`; the buffer in the address space and apart from
+the region, the challenge's and the pin data's buffers and the stack window; the two argument
+words in the address space and apart from the region. -/
+structure SolArgs (b bS pb : ByteArray) (dm : MachineData) : Prop where
+  hsa : rdW dm.dmem (A (dm.regs.rsp.toNat + 8)) = some (solAddr dm)
+  hsn : rdW dm.dmem (A (dm.regs.rsp.toNat + 16)) = some (UInt64.ofNat bS.size)
+  hS : ∀ i (h : i < bS.size), dm.dmem.get? (A ((solAddr dm).toNat + i)) = some bS[i]
+  hSEnd : (solAddr dm).toNat + bS.size < 2 ^ 64
+  hSDisj : ∀ x, (solAddr dm).toNat ≤ x → x < (solAddr dm).toNat + bS.size →
+    (x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x) ∧
+    ¬ (dm.regs.rdi.toNat ≤ x ∧ x < dm.regs.rdi.toNat + b.size) ∧
+    ¬ (dm.regs.rdx.toNat ≤ x ∧ x < dm.regs.rdx.toNat + pb.size) ∧
+    (x < dm.regs.rsp.toNat - 24 ∨ dm.regs.rsp.toNat + 8 ≤ x)
+  hsEnd : dm.regs.rsp.toNat + 24 < 2 ^ 64
+  hsArgs : ∀ x, dm.regs.rsp.toNat + 8 ≤ x → x < dm.regs.rsp.toNat + 24 →
+    x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x
+
+/-- **How the harness calls entry 1** (`ca_start`, `ca_start_a`; with a solution `sol = some bS`,
+a compared run's `ca_start_c`, `ca_start_ac`): System V arguments `rdi, rsi` = the input buffer
+(the challenge's, in a compared run) and its length, `rdx, rcx` = the pin-data buffer and its
+length, `r8, r9` = the region and its length; the buffers hold `b` and `pb`; the region is zero,
+in the address space, and apart from both buffers; the buffers are apart from each other; the
+return address is on the machine stack, whose 32 bytes around `rsp` are mapped and apart from the
+region and the buffers (`AbiArgs`); with a solution, its buffer and length as the stack arguments
+(`SolArgs`). -/
+structure AbiCall (b : ByteArray) (sol : Option ByteArray) (pb : ByteArray) (dm : MachineData) (ra : Word) : Prop
+    extends AbiArgs b pb dm ra where
+  hsol : ∀ bS, sol = some bS → SolArgs b bS pb dm
 
 /-- A word of zero bytes reads as `0`. -/
 theorem rdW_of_zero {d : DataMem} {x : Nat} (_hx : x + 8 ≤ 2 ^ 64)
@@ -112,7 +148,7 @@ theorem abiIO_cases {tab : Tab} (hio : abiIO tab = true) (hnb : tab.nb = 2) {a :
 /-- The memory the stub leaves: L's initial memory (`loadMem` with the input bytes, the pin data
 and every word array zeros of the length `abiSz` gives it) in the stub's layout. -/
 theorem abi_memRel (tab : Tab) (hok : abiTabOk tab = true) (hio : abiIO tab = true) (b pb : ByteArray)
-    (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) (hneed : abiNeed tab ≤ dm.regs.r9.toNat) :
+    (dm : MachineData) (ra : Word) (hc : AbiArgs b pb dm ra) (hneed : abiNeed tab ≤ dm.regs.r9.toNat) :
     MemRel (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
       (loadMem b pb (abiSz tab))
       (stores dm.regs dm.regs.r8.toNat dm.dmem 0 (abiVals tab)) := by
@@ -251,7 +287,7 @@ theorem abi_memRel (tab : Tab) (hok : abiTabOk tab = true) (hio : abiIO tab = tr
     rw [hL]; omega
 
 theorem abiCall_geom {tab : Tab} {b pb : ByteArray} {dm : MachineData} {ra : Word}
-    (hc : AbiCall b pb dm ra) (hneed : abiNeed tab ≤ dm.regs.r9.toNat) :
+    (hc : AbiArgs b pb dm ra) (hneed : abiNeed tab ≤ dm.regs.r9.toNat) :
     AbiGeom tab dm.regs.r8.toNat dm.regs.r9.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size :=
   ⟨hneed, hc.hfits, hc.hinEnd, hc.hpinsEnd, hc.hinDisj, hc.hpinsDisj, hc.hbufDisj⟩
 

@@ -236,7 +236,7 @@ arrays.
   It keeps its return address and the caller's `r15` past `ca_setup`'s region (`drvSave`; the
   driver's region is 64 bytes larger, `drvNeed`, the size `ca_region_size` names), pops its return
   address off the machine stack before each `call` and holds `base` in `r15` (which `ca_enter`
-  restores); so each callee's machine stack is the caller's (the 32 bytes `AbiCall` names) and
+  restores); so each callee's machine stack is the caller's (the 32 bytes `AbiArgs` names) and
   the driver touches no callee-saved register but `r15`. -/
 
 def abiStartAL : Label := "ca_start_a"
