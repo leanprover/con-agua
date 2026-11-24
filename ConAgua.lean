@@ -139,6 +139,7 @@ public import ConAgua.Checker.CmpSPhase
 public import ConAgua.Checker.CmpSPhaseT
 public import ConAgua.Checker.CmpSPhaseThr
 public import ConAgua.Checker.CmpSeqW
+public import ConAgua.Checker.CmpSeqEntry
 public import ConAgua.Final.CmpThreadsL
 public import ConAgua.Checker.CmpThreadsS
 public import ConAgua.Final.CmpThreads
