@@ -113,7 +113,7 @@ theorem checker_mode7 {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : Phas
     rcases (show g = 0 ∨ g = 1 ∨ g = 2 by omega) with rfl | rfl | rfl <;> exact ⟨by decide, by decide⟩
   rw [cmpM7_eq h5] at h7
   have hO5 : OutEq m m5 := hm5 ▸ OutEq.of_out (parCompactMem_out m 1)
-  obtain ⟨c, ⟨m9, hF6, hok9, rfl⟩, hres⟩ := checkC3_run_g PS hF hst hk6 hsz hpb hsz6 (hO5.setG MODE 7) 7 1
+  obtain ⟨c, ⟨m9, hF6, hok9, rfl⟩, hres⟩ := checkC3_run PS hF hst hk6 hsz hpb hsz6 (hO5.setG MODE 7) 7 1
     (.inr ⟨rfl, rfl⟩) (by simp [Mem.setG]) abiFuel hN rs7 _ h7
   have hO9 : OutEq m9 (parCompactMem m9 1) := OutEq.of_out (parCompactMem_out m9 1)
   have hb9 : m9.bytes = m.bytes := by

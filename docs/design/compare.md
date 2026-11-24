@@ -278,3 +278,19 @@ order, `checkStreamJ`), `TwinCompareVerdict`, `TwinCompareVerdictPooled`.
   at our pin, so it cannot be imported); to be deleted when it does.
 * H3: the harness and `ca_start_a7` wired (5114a9f40); `CmpThreadsRun` and the threaded accept,
   model, no-`False` theorems drafted (fb0ead731), sent to the coordinator.
+* 2026-11-24: H2's frozen rows (7282b8ad9; flat `Init` instructions unchanged at 1 and 16
+  threads: 202 633.5 M both), H1b's L-level verdict claims (`cmpErr_twin` complete; modes 6 and 7
+  claim nothing, class 0; the solution's threaded jobs `cmpV_tjobS`) merged.
+* **The harness shape, redone.** The user rejected the three-entry harness (keep facts across
+  three driver calls). Options weighed: (A) one buffer frozen after the challenge's preparation
+  (the solution's jobs on an extended store: the approved twin statement changes; and two
+  indices keyed by the same names: a selector in every lookup), (B) the flat entries with an
+  optional solution and a phase loop in `main.c`, and the user's "bank switching" (an L primitive
+  swapping two arrays' descriptors: the compiler's simulation fixes one layout per run, so that
+  is a change to the whole simulation chain). Chosen (A'): bank switching in the header. One
+  entry-1 call freezes the solution's buffer (mode 5) and, after the challenge's preparation
+  (mode 7), the challenge's self-contained buffer right after it; entry 2 reads the phase from the
+  buffer and the global job index, so `main.c` is the flat loop. Each phase's jobs see exactly
+  their mode's frozen image, so the twin statements stay. One pool for both phases: the reported
+  failure is the smallest failing index, and every solution index is below every challenge
+  index, so the verdict is con-ron's.
