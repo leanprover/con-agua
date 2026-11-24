@@ -27,22 +27,22 @@ namespace L.Checker
 open L L.Arena L.Front L.Rom ConAgua.Final
 open ConRon.Arena ConRon.Arena.Frontend
 
-/-- The arrays header S's view replaces: the stream index's rows, `FIRSTS`, `DECL`. -/
-def csA : List TieredArray := [TIXA, TIXS, TIXN, EIXA, EIXS, EIXN, FIRSTS, L.Front.DECL]
+/-- The arrays header S's view replaces: the stream index's rows, `FIRSTS`, `DECL`, `DLP`. -/
+def csA : List TieredArray := [TIXA, TIXS, TIXN, EIXA, EIXS, EIXN, FIRSTS, L.Front.DECL, L.Front.DLP]
 
 /-- The `CTL` words header S's view replaces: the index's counter, the frozen index's words, the
 solution's flag. -/
 def csC : List Word := [128, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 224]
 
-theorem csA_arr {b : TieredArray} (h : b ∈ csA) : b.hi = false ∧ (b.arr = 67 ∨ (129 ≤ b.arr ∧ b.arr ≤ 137)) := by
+theorem csA_arr {b : TieredArray} (h : b ∈ csA) : b.hi = false ∧ (b.arr = 67 ∨ b.arr = 68 ∨ (129 ≤ b.arr ∧ b.arr ≤ 137)) := by
   simp only [csA, List.mem_cons, List.not_mem_nil, or_false] at h
-  rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+  rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
 
 theorem csC_val {x : Word} (h : x ∈ csC) : x.toNat = 128 ∨ (162 ≤ x.toNat ∧ x.toNat ≤ 173) ∨ x.toNat = 224 := by
   simp only [csC, List.mem_cons, List.not_mem_nil, or_false] at h
   rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
 
-theorem not_mem_csA {b : TieredArray} (h : b.hi = true ∨ (b.arr ≠ 67 ∧ (b.arr < 129 ∨ 137 < b.arr))) : b ∉ csA :=
+theorem not_mem_csA {b : TieredArray} (h : b.hi = true ∨ (b.arr ≠ 67 ∧ b.arr ≠ 68 ∧ (b.arr < 129 ∨ 137 < b.arr))) : b ∉ csA :=
   fun hm => by
     have := csA_arr hm
     rcases h with h | h
@@ -74,10 +74,10 @@ theorem _root_.L.Arena.JobM.csSwap {J : Option ISolution} {t t' : Mem} (h : JobM
       unfold tierA otxArr; generalize (u &&& 1 != 0) = b
       cases b <;> split <;> (try split) <;> decide
     have e1 : ∀ u, t'.arr64 (tierA (oixArr (rowTag w)) u) = t.arr64 (tierA (oixArr (rowTag w)) u) :=
-      fun u => hf.arr _ (not_mem_csA (.inr ⟨by have := hA u; omega, .inr (by have := hA u; omega)⟩))
+      fun u => hf.arr _ (not_mem_csA (.inr ⟨by have := hA u; omega, by have := hA u; omega, .inr (by have := hA u; omega)⟩))
         (fun e => by have := hA u; rw [e] at this; revert this; decide)
     have e2 : ∀ u, t'.arr64 (tierA (otxArr (rowTag w)) u) = t.arr64 (tierA (otxArr (rowTag w)) u) :=
-      fun u => hf.arr _ (not_mem_csA (.inr ⟨by have := hB u; omega, .inr (by have := hB u; omega)⟩))
+      fun u => hf.arr _ (not_mem_csA (.inr ⟨by have := hB u; omega, by have := hB u; omega, .inr (by have := hB u; omega)⟩))
         (fun e => by have := hB u; rw [e] at this; revert this; decide)
     have e3 : ownRow t' w = ownRow t w := by simp only [ownRow, e1]
     simp only [stampW, hf.ctl 133 (by decide), e3, e2]
@@ -138,7 +138,7 @@ theorem csIndexR {m9 mS : Mem} {I : IStreamIndex} (hS : SolIdxR m9 I)
 
 /-- **Header S's view** `mS` of the memory `m9` the compaction freezes (hypothesis-level; the
 buffer's header S maps its frozen entries to `mS`'s arrays): `m9` but the stream index's rows are
-the solution's (`SIX*`/`STX*`), `FIRSTS` and `DECL` the solution's (`m`'s, after its index build),
+the solution's (`SIX*`/`STX*`), `FIRSTS`, `DECL` and `DLP` the solution's (`m`'s, after its index build),
 `CTL[128]` the solution's next counter (`CTL[225]`), the frozen index's words the solution's, and
 the flag `CTL[224] = 0`. -/
 structure CsViewS (m m9 mS : Mem) : Prop where
@@ -147,6 +147,7 @@ structure CsViewS (m m9 mS : Mem) : Prop where
   tix : ∀ g ≤ 2, mS.arr64 (tixArr g) = m9.arr64 (stxArr g)
   firsts : mS.arr64 FIRSTS = m.arr64 FIRSTS
   decl : mS.arr64 L.Front.DECL = m.arr64 L.Front.DECL
+  dlp : mS.arr64 L.Front.DLP = m.arr64 L.Front.DLP
   c128 : rdW (mS.arr64 CTL) 128 = rdW (m9.arr64 CTL) 225
   frz : ∀ x ∈ frozenCtl, rdW (mS.arr64 CTL) x = rdW (m.arr64 CTL) x
   c224 : rdW (mS.arr64 CTL) 224 = 0
@@ -158,10 +159,10 @@ variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds dsS
 
 /-- **The solution's jobs' memory half at header S's view**: from the challenge's (at the
 solution `J`, `m9`), the solution's index build's stream index and frozen words (`m`), and its
-records (`m`'s `DECL`, the shared `DLP`), at the same twin state. -/
+records (`m`'s `DECL`, `DLP`), at the same twin state. -/
 theorem _root_.L.Arena.JobM.csViewS {J : ISolution} {m m9 mS : Mem}
     (h : JobM pins dn ds (some J) I m9 a) (hV : CsViewS m m9 mS) (hIm : IndexR m J.idx)
-    (hFz : FrozenR m J.idx) (hD : DeclsF (m.arr64 L.Front.DECL) (m9.arr64 DLP) dsS)
+    (hFz : FrozenR m J.idx) (hD : DeclsF (m.arr64 L.Front.DECL) (m.arr64 DLP) dsS)
     (hfs : J.idx.firsts.size = dsS.size) : JobM pins dn dsS none J.idx mS a := by
   have hf := hV.frame
   have hS : SolR m9 J := h.jsol.sol.2
@@ -171,7 +172,7 @@ theorem _root_.L.Arena.JobM.csViewS {J : ISolution} {m m9 mS : Mem}
   have hI : IndexR mS J.idx := csIndexR ⟨hS.base, hS.btbl, hS.next, hS.size, hS.rows⟩ hV.eix hV.tix hE
     (fun i hi => by rw [hV.firsts]; exact hIm.firsts i hi) (by rw [hV.firsts]; exact hIm.firstsSize)
     hV.c128
-  exact h.csSwap hf hI (by rw [hV.decl, hf.arr DLP (by decide) (by decide)]; exact hD)
+  exact h.csSwap hf hI (by rw [hV.decl, hV.dlp]; exact hD)
     (hFz.congr hV.frz) hfs hV.c224
 
 end

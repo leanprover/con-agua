@@ -87,7 +87,7 @@ end
 /-- **The solution's threads at the challenge's index state accept ⇒ the twin's pool of the
 solution's jobs from `sI` accepts.** After the solution's index build (`FoldOn`) and mode `6`'s
 steps (`F6`: the frozen memory `m9`, the challenge's index build ending in `a'`), header S's view
-`mS` of `m9` (`CsViewS`; the solution's records over the shared `DLP`), a buffer `B` whose first
+`mS` of `m9` (`CsViewS`), a buffer `B` whose first
 call is `mS`'s fresh memory, threads on `B`, each a fresh region running its calls, every job index
 below `khi` (the solution's record count) claimed, each thread's claims increasing. -/
 theorem cmpThreadsS_poolI {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS bC bS) {m₇ m : Mem}
@@ -96,7 +96,7 @@ theorem cmpThreadsS_poolI {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : 
     {m2 m3 m4 : Mem} {dsC : Array IDeclaration} {sG : AState} {res : List IDeclaration}
     {I : IStreamIndex} {a' : AState}
     (h : Side6 PS m c m2 m3 dsC sG res m4) (hI : buildIndex res.toArray sG = .ok (.ok I, a'))
-    (hV : CsViewS m m9 mS) (hDLP : L.Front.DeclsF (m.arr64 L.Front.DECL) (m9.arr64 L.Front.DLP) PS.dsS)
+    (hV : CsViewS m m9 mS)
     (B : Array Word) (hB : CsFirst B mS) (khi : Word) (hk : khi.toNat = PS.dsS.size)
     (ths : List (Mem × List (Word × Nat × Mem)))
     (hth : ∀ t ∈ ths, (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (mS.arr64 b).size) ∧ t.1.glob INIT = 0 ∧
@@ -106,7 +106,7 @@ theorem cmpThreadsS_poolI {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : 
     PoolJobs VM PS.ipins none PS.IS PS.dsS a' := by
   obtain ⟨hJM9, hwf, hoff, -⟩ := F6.jobMAt hF h6 h hI
   have hJM : JobM PS.ipins (dnOf sG.store) PS.dsS none PS.IS mS a' :=
-    hJM9.csViewS (J := solutionOf PS.IS res) hV hF.build.idx hF.frozen hDLP hF.fsize
+    hJM9.csViewS (J := solutionOf PS.IS res) hV hF.build.idx hF.frozen hF.build.decls hF.fsize
   obtain ⟨-, -, -, -, ho⟩ := h.phase.out
   -- the solution's records at `sG`
   have hoS := StagesOut.cmp PS.pfx PS.pinsR
@@ -320,7 +320,7 @@ theorem _root_.L.Checker.Side6.stagesI {bC bS : ByteArray} {PS : PhaseS bC bS} {
 theorem cmpThreads_twinPooledI {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS bC bS)
     {m₇ m : Mem} (hF : FoldOn bS pb (abiSz checkerTab) PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m)
     {c : Word} {m9 mS : Mem} (h6 : F6 PS m c m9) (hb9 : m9.bytes = m.bytes)
-    (hV : CsViewS m m9 mS) (hDLP : L.Front.DeclsF (m.arr64 L.Front.DECL) (m9.arr64 L.Front.DLP) PS.dsS)
+    (hV : CsViewS m m9 mS)
     (BS : Array Word) (hBS : CsFirst BS mS) (khi : Word) (hk : khi.toNat = PS.dsS.size)
     (thsS : List (Mem × List (Word × Nat × Mem)))
     (hthS : ∀ t ∈ thsS, (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (mS.arr64 b).size) ∧ t.1.glob INIT = 0 ∧
@@ -335,7 +335,7 @@ theorem cmpThreads_twinPooledI {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (
     (hincC : ∀ t ∈ thsC, (t.2.map (·.1)).Pairwise (· < ·)) :
     TwinComparesAcceptsPooledI bC bS := by
   obtain ⟨m2, m3, dsC, sG, res, m4, I, a', h, hI, -⟩ := F6.jobM hF h6
-  have hPS := cmpThreadsS_poolI hpb PS hF h6 hb9 h hI hV hDLP BS hBS khi hk thsS hthS hcovS hincS
+  have hPS := cmpThreadsS_poolI hpb PS hF h6 hb9 h hI hV BS hBS khi hk thsS hthS hcovS hincS
   have hPC := cmpThreadsC_poolI hpb PS hF h6 hb9 h hI hPS BC hBC thsC hthC hcovC hincC
   obtain ⟨sA, sB, sC, sC', sD, sE, sF, sG', sH, pre, rC, rS, dsC', hA, hB, hC', hCS, hDS, hE, hIS,
     hDC, hside, hIC⟩ := h.stagesI hI
