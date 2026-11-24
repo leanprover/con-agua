@@ -305,8 +305,14 @@ static int run_main(int argc, char **argv) {
    sequential driver) resp. `ca_start_ac` (entry 1 of the threaded run, `run_jobs`), the
    challenge's bytes in the first two arguments (as `ca_start`'s input), the solution's in the
    last two (on the stack), on a region of ca_region_size bytes. The call is as `CmpCall`
-   (ConAgua/Final/CmpAbi.lean) states; the threaded accept is covered by
-   `checkerFile_compare_threads_accept`. */
+   (ConAgua/Final/CmpAbi.lean) states. The sequential run's accept and its reject or decline are
+   covered by `checkerFile_compare_accepts` (ConAgua/Final/Compare.lean): an accept is
+   `TwinComparesAccepts`, a class 1 or 2 is `TwinCompareVerdict` (ConAgua/Final/CompareTwin.lean,
+   CompareTwinVerdict.lean). The threaded run's accept is covered by
+   `checkerFile_compare_threads_accept` (`TwinComparesAcceptsPooled`), its reject or decline by
+   `checkerFile_compare_threads_verdict` (`TwinCompareVerdictPooled`), under `ThreadsRun` resp.
+   `ThreadsFail` as for a FILE. Only the challenge has a model; nothing is concluded about the
+   solution (`checkerFile_compare_model`). */
 extern ca_res ca_start_c(const uint8_t *c, uint64_t c_len, const uint8_t *pins, uint64_t pins_len,
                          void *base, uint64_t base_len, const uint8_t *s, uint64_t s_len);
 
