@@ -37,7 +37,8 @@ open L L.Compiler L.Checker L.Arena
 /-- **What entry 1 of the compared run leaves** (L-level): the solution's preparation (`FoldOn`),
 the challenge's (`F6`, `c` its job count), the solution's jobs' view `mS` (`CsViewS`); the buffer
 `B` with header S at word `0` (the solution's `kS = B[2]` jobs; it shows `mS`, `HdrView`) and header
-C at word `B[5]` (the challenge's; it shows `m9`), and `k = kS + c`. -/
+C at word `B[5]` (the challenge's; it shows `m9`), every frozen entry of the same length in both
+headers (a thread's arrays have the same sizes in both phases), and `k = kS + c`. -/
 def CmpOut (bC bS pb : ByteArray) (B : Array Word) (k : Word) : Prop :=
   pb.size < 2 ^ 63 ∧ ∃ (PS : PhaseS bC bS) (m₇ m : Mem) (c : Word) (m9 mS : Mem),
     FoldOn bS pb (abiSz checkerTab) PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m ∧ F6 PS m c m9 ∧
@@ -46,6 +47,7 @@ def CmpOut (bC bS pb : ByteArray) (B : Array Word) (k : Word) : Prop :=
     HdrOk B ∧ HdrView B mS ∧ (B.getD 2 0).toNat = PS.dsS.size ∧
     B.getD 5 0 ≠ 0 ∧ (B.getD 5 0).toNat ≤ B.size ∧
     HdrOk (B.extract (B.getD 5 0).toNat B.size) ∧ HdrView (B.extract (B.getD 5 0).toNat B.size) m9 ∧
+    (∀ i < frozen.length, fzExt mS (fzAt i) = fzExt m9 (fzAt i)) ∧
     k = B.getD 2 0 + c ∧ (B.getD 2 0).toNat + c.toNat < 2 ^ 64
 
 /-- **Stand-in (L level; H2c's mode `7`, H5's views)**: after the front and mode `7` returning

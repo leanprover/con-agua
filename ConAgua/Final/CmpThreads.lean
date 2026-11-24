@@ -81,6 +81,7 @@ theorem c1Thr_accepts_standin {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (P
     {c : Word} {m9 mS : Mem} (h6 : F6 PS m c m9) (hb9 : m9.bytes = m.bytes) (hV : CsViewS m m9 mS)
     (B : Array Word) (hBS : HdrView B mS) (khi : Word) (hk : khi.toNat = PS.dsS.size)
     (BC : Array Word) (hBC : HdrView BC m9)
+    (hext : ∀ i < frozen.length, fzExt mS (fzAt i) = fzExt m9 (fzAt i))
     (ths : List (Mem × List (Word × Nat × Mem) × List (Word × Nat × Mem)))
     (hth : ∀ t ∈ ths, (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (mS.arr64 b).size) ∧ t.1.glob INIT = 0 ∧
       ThreadRuns B t.1 t.2.1 ∧ (∀ c' ∈ t.2.1, c'.1 < khi) ∧
@@ -104,7 +105,7 @@ theorem cmpThreadsRun_twinThr_regs [Host] (k0 : Nat) (hcode : Code checkerFile k
     (hR : ThreadsRun bC (some bS) pb dm₀ ra₀ st₀ B ths) : TwinComparesAcceptsThr bC bS ∧
       RegsRestored dm₀.regs st₀.data.regs ∧
       ∀ t ∈ ths, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs := by
-  obtain ⟨hRR₀, hpb, PS, m₇, m, c, m9, mS, hF, h6, hb9, hV, hsz, hS, hfS, hk2S, hL5, -, hC, hfC, hk, hnov⟩ :=
+  obtain ⟨hRR₀, hpb, PS, m₇, m, c, m9, mS, hF, h6, hb9, hV, hsz, hS, hfS, hk2S, hL5, -, hC, hfC, hext, hk, hnov⟩ :=
     cmpEntry1_out k0 hcode bC bS pb h64 (solAddr dm₀) dm₀ ra₀ st₀ hR.call₀.cmp hR.ret₀ hR.rdx₀ hR.rax₀ B hR.bufw hR.buflen
   have hL0 : (B.getD 5 0).toNat ≠ 0 := fun h => hL5 (UInt64.toNat_inj.mp (by rw [h]; rfl))
   have hthr := cpThreadsAcc_runs k0 hcode dm₀ st₀ B ths hR.toThreadsAcc hS _ rfl hL0 hC (B.getD 2 0) c rfl
@@ -113,7 +114,7 @@ theorem cmpThreadsRun_twinThr_regs [Host] (k0 : Nat) (hcode : Code checkerFile k
   obtain ⟨fC, hf⟩ := Classical.axiomOfChoice hf'
   refine ⟨?_, hRR₀, fun t ht i hi => (hf t ht).2.2.2.2.2.2.2 i hi⟩
   refine c1Thr_accepts_standin hpb PS hF h6 hb9 hV B hfS (B.getD 2 0) hk2S
-    (B.extract (B.getD 5 0).toNat B.size) hfC
+    (B.extract (B.getD 5 0).toNat B.size) hfC hext
     (ths.map fun t => (zeroMem checkerTab, fS t, fC t)) (fun t' ht' => ?_) (fun j hj => ?_) (fun j hj => ?_)
     (fun t' ht' => ?_) (fun t' ht' => ?_)
   · obtain ⟨t, ht, rfl⟩ := List.mem_map.mp ht'
