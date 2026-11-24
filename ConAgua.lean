@@ -128,6 +128,7 @@ public import ConAgua.Final.CmpMain
 public import ConAgua.Final.CompareTwin
 public import ConAgua.Final.CompareTwinVerdict
 public import ConAgua.Final.CompareTwinI
+public import ConAgua.Final.CompareTwinSeq
 public import ConAgua.Final.CmpChain
 public import ConAgua.Checker.CompareChain6
 public import ConAgua.Checker.CmpHdrKeep
@@ -140,8 +141,8 @@ public import ConAgua.Checker.CmpSPhaseT
 public import ConAgua.Checker.CmpSPhaseThr
 public import ConAgua.Checker.CmpSeqW
 public import ConAgua.Checker.CmpSeqEntry
-public import ConAgua.Final.CmpThreadsL
-public import ConAgua.Checker.CmpThreadsS
+public import ConAgua.Final.CpThreads
+public import ConAgua.Final.CpThreadFail
 public import ConAgua.Final.CmpThreads
 public import ConAgua.Final.CmpThreadsVerdict
 public import ConAgua.Checker.CompareTwinC
