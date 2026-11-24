@@ -137,8 +137,6 @@ public import ConAgua.Final.CompareTwinSeq
 public import ConAgua.Final.CompareTwinThr
 public import ConAgua.Final.CmpChain
 public import ConAgua.Checker.CompareChain6
-public import ConAgua.Checker.CmpHdrKeep
-public import ConAgua.Checker.CmpSJobs
 public import ConAgua.Checker.CmpThreadsPool
 public import ConAgua.Arena.C1Pool
 public import ConAgua.Checker.CmpThreadsC

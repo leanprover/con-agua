@@ -256,22 +256,28 @@ def viewSCtl (m : Mem) : Array Word :=
 
 /-- **Header S's view of `m`**: the stream index's rows `EIX*`/`TIX*` are the solution's
 `SIX*`/`STX*`, the records, firsts and declaration pool the solution's stashed `SDECL`, `SFIRSTS`,
-`SDLP`, and `CTL` the solution's seed (`viewSCtl`). -/
+`SDLP`, and `CTL` the solution's seed (`viewSCtl`); swapped, the solution's rows `SIX*`/`STX*` are
+the challenge's `EIX*`/`TIX*` (header S points them at those images). -/
 def viewSArr (m : Mem) (a : TieredArray) : Array Word :=
   if a = ↑EIXA then m.arr64 SIXA else if a = ↑EIXS then m.arr64 SIXS else if a = ↑EIXN then m.arr64 SIXN
   else if a = ↑TIXA then m.arr64 STXA else if a = ↑TIXS then m.arr64 STXS else if a = ↑TIXN then m.arr64 STXN
   else if a = ↑L.Front.DECL then m.arr64 L.Checker.SDECL else if a = ↑FIRSTS then m.arr64 L.Checker.SFIRSTS
-  else if a = ↑L.Front.DLP then m.arr64 L.Checker.SDLP else if a = ↑CTL then viewSCtl m else m.arr64 a
+  else if a = ↑L.Front.DLP then m.arr64 L.Checker.SDLP else if a = ↑CTL then viewSCtl m
+  else if a = ↑SIXA then m.arr64 EIXA else if a = ↑SIXS then m.arr64 EIXS else if a = ↑SIXN then m.arr64 EIXN
+  else if a = ↑STXA then m.arr64 TIXA else if a = ↑STXS then m.arr64 TIXS else if a = ↑STXN then m.arr64 TIXN
+  else m.arr64 a
 
 def viewS (m : Mem) : Mem := { m with words := viewSArr m }
 
 /-- The arrays `viewS` changes. -/
-def vsChg : List TieredArray := [↑EIXA, ↑EIXS, ↑EIXN, ↑TIXA, ↑TIXS, ↑TIXN, ↑L.Front.DECL, ↑FIRSTS, ↑L.Front.DLP, ↑CTL]
+def vsChg : List TieredArray := [↑EIXA, ↑EIXS, ↑EIXN, ↑TIXA, ↑TIXS, ↑TIXN, ↑L.Front.DECL, ↑FIRSTS, ↑L.Front.DLP, ↑CTL,
+  ↑SIXA, ↑SIXS, ↑SIXN, ↑STXA, ↑STXS, ↑STXN]
 
 theorem viewS_arr (m : Mem) (a : TieredArray) (h : a ∉ vsChg) : (viewS m).arr64 a = m.arr64 a := by
   simp only [vsChg, List.mem_cons, List.not_mem_nil, or_false, not_or] at h
-  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10⟩ := h
-  simp only [viewS, Mem.arr64, viewSArr, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, ite_false]
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14, h15, h16⟩ := h
+  simp only [viewS, Mem.arr64, viewSArr, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14, h15, h16,
+    ite_false]
 
 /-- The `CTL` words the seed's patches change. -/
 def vsPatched (k : Nat) : Bool := k == 128 || (162 ≤ k && k ≤ 173) || k == 224
@@ -307,6 +313,24 @@ theorem viewSCtl_getD (m : Mem) (k : Nat) (hk : vsPatched k = false) :
     omega
   unfold viewSCtl
   rw [getD_setIB_ne _ _ _ _ (Ne.symm h1.2.1), hf _ _ hW, getD_setIB_ne _ _ _ _ (Ne.symm h1.1)]
+
+theorem viewSCtl_128 (m : Mem) (h : 128 < (m.arr64 CTL).size) :
+    (viewSCtl m).getD (Nat.toUInt64 128).toNat 0 = (m.arr64 CTL).getD 225 0 := by
+  have hf : ∀ (ks : List Nat) (c : Array Word), (∀ j ∈ ks, j ≠ 128) →
+      (ks.foldl (fun c j => c.setIfInBounds j ((m.arr64 L.Checker.SCTL).getD j 0)) c).getD 128 0 = c.getD 128 0 := by
+    intro ks
+    induction ks with
+    | nil => intro c _; rfl
+    | cons j ks ih =>
+      intro c hj
+      rw [List.foldl_cons, ih _ (fun x hx => hj x (by simp [hx])), getD_setIB_ne _ _ _ _ (hj j (by simp))]
+  have hW : ∀ j ∈ hsSeedW, j ≠ 128 := by decide
+  rw [toNat_c _ (by omega)]
+  unfold viewSCtl
+  rw [getD_setIB_ne _ _ _ _ (by decide), hf _ _ hW, Array.getD_eq_getD_getElem?,
+    Array.getElem?_setIfInBounds_self_of_lt h]
+  rfl
+
 
 theorem viewS_ctl (m : Mem) : (viewS m).arr64 ↑CTL = viewSCtl m := by
   simp only [viewS, Mem.arr64]
@@ -352,46 +376,43 @@ theorem same_self {i : Nat} (hi : i < frozen.length) (h : hsE i = .same i) :
   simp only [bne_self_eq_false, Bool.false_or, Bool.and_eq_true, Bool.not_eq_true'] at this
   exact ⟨this.1, fun hm => by rw [List.contains_iff_mem.mpr hm] at this; cases this.2⟩
 
-/-- The stream index's rows header S takes from the solution's: (entry, its source, the
-solution's source, the count slot). -/
-def movedT : List (Nat × ArrId × ArrId × Nat) :=
-  [(53, EIXA, SIXA, nanonCS.ca.toNat), (54, EIXS, SIXS, nstrCS.ca.toNat), (55, EIXN, SIXN, nnumCS.ca.toNat),
-   (56, TIXA, STXA, nanonCS.ca.toNat), (57, TIXS, STXS, nstrCS.ca.toNat), (58, TIXN, STXN, nnumCS.ca.toNat)]
+/-- The rows header S swaps: (entry, header C's entry it takes, their sources, the count slot):
+`EIX*`/`TIX*` take the solution's `SIX*`/`STX*`, and those take `EIX*`/`TIX*`. -/
+def movedT : List (Nat × Nat × ArrId × ArrId × Nat) :=
+  [(53, 63, EIXA, SIXA, nanonCS.ca.toNat), (54, 64, EIXS, SIXS, nstrCS.ca.toNat), (55, 65, EIXN, SIXN, nnumCS.ca.toNat),
+   (56, 66, TIXA, STXA, nanonCS.ca.toNat), (57, 67, TIXS, STXS, nstrCS.ca.toNat), (58, 68, TIXN, STXN, nnumCS.ca.toNat),
+   (63, 53, SIXA, EIXA, nanonCS.ca.toNat), (64, 54, SIXS, EIXS, nstrCS.ca.toNat), (65, 55, SIXN, EIXN, nnumCS.ca.toNat),
+   (66, 56, STXA, TIXA, nanonCS.ca.toNat), (67, 57, STXS, TIXS, nstrCS.ca.toNat), (68, 58, STXN, TIXN, nnumCS.ca.toNat)]
 
-theorem movedT_hs : movedT.all (fun x => decide (hsE x.1 = .same (x.1 + 10)) &&
-    decide ((fzAt x.1).src = x.2.1) && decide ((fzAt (x.1 + 10)).src = x.2.2.1) &&
-    !vsPatched x.2.2.2 && decide (x.2.2.2 < 2 ^ 64)) = true := by decide +kernel
+/-- A swapped row's extent: twice its count, under the compare flag. -/
+def rowExt (e : Expr) (ca : Nat) : Prop := e = .bin .mul (fzC 2) (fzCtl ca) ∨ e = fzSolExt ca
 
-theorem movedT_e : ∀ x ∈ movedT, (fzAt x.1).e = .bin .mul (fzC 2) (fzCtl x.2.2.2) ∧
-    (fzAt (x.1 + 10)).e = fzSolExt x.2.2.2 := by
+theorem movedT_hs : movedT.all (fun x => decide (hsE x.1 = .same x.2.1) &&
+    decide ((fzAt x.1).src = x.2.2.1) && decide ((fzAt x.2.1).src = x.2.2.2.1) &&
+    !vsPatched x.2.2.2.2 && decide (x.2.2.2.2 < 2 ^ 64)) = true := by decide +kernel
+
+theorem movedT_e : ∀ x ∈ movedT, rowExt (fzAt x.1).e x.2.2.2.2 ∧ rowExt (fzAt x.2.1).e x.2.2.2.2 := by
   intro x hx
   simp only [movedT, List.mem_cons, List.not_mem_nil, or_false] at hx
-  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl <;> exact ⟨rfl, rfl⟩
+  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    first | exact ⟨.inl rfl, .inr rfl⟩ | exact ⟨.inr rfl, .inl rfl⟩
 
-theorem movedT_ok : ∀ x ∈ movedT, hsE x.1 = .same (x.1 + 10) ∧ (fzAt x.1).src = x.2.1 ∧
-    (fzAt x.1).e = .bin .mul (fzC 2) (fzCtl x.2.2.2) ∧ (fzAt (x.1 + 10)).src = x.2.2.1 ∧
-    (fzAt (x.1 + 10)).e = fzSolExt x.2.2.2 ∧ vsPatched x.2.2.2 = false ∧ x.2.2.2 < 2 ^ 64 := by
+theorem movedT_ok : ∀ x ∈ movedT, hsE x.1 = .same x.2.1 ∧ (fzAt x.1).src = x.2.2.1 ∧
+    (fzAt x.2.1).src = x.2.2.2.1 ∧ rowExt (fzAt x.1).e x.2.2.2.2 ∧ rowExt (fzAt x.2.1).e x.2.2.2.2 ∧
+    vsPatched x.2.2.2.2 = false ∧ x.2.2.2.2 < 2 ^ 64 := by
   intro x hx
   have := List.all_eq_true.mp movedT_hs x hx
   simp only [Bool.and_eq_true, decide_eq_true_eq, Bool.not_eq_true'] at this
-  have he := movedT_e x hx
-  exact ⟨this.1.1.1.1, this.1.1.1.2, he.1, this.1.1.2, he.2, this.1.2, this.2⟩
+  exact ⟨this.1.1.1.1, this.1.1.1.2, this.1.1.2, (movedT_e x hx).1, (movedT_e x hx).2, this.1.2, this.2⟩
 
 theorem hsE_moved_all : (List.range frozen.length).all (fun i => match hsE i with
     | .same j => j == i || movedT.any (·.1 == i) | _ => true) = true := by decide +kernel
 
-theorem viewSArr_moved (m : Mem) : viewSArr m ↑EIXA = m.arr64 SIXA ∧ viewSArr m ↑EIXS = m.arr64 SIXS ∧
-    viewSArr m ↑EIXN = m.arr64 SIXN ∧ viewSArr m ↑TIXA = m.arr64 STXA ∧ viewSArr m ↑TIXS = m.arr64 STXS ∧
-    viewSArr m ↑TIXN = m.arr64 STXN := by
-  unfold viewSArr
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
-  · rw [ite_eq_left rfl]
-  · rw [ite_eq_right (by decide), ite_eq_left rfl]
-  · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]
-  · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]
-  · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]
-  · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide),
-      ite_eq_left rfl]
+theorem viewSArr_moved (m : Mem) : ∀ x ∈ movedT, viewSArr m ↑x.2.2.1 = m.arr64 x.2.2.2.1 := by
+  intro x hx
+  simp only [movedT, List.mem_cons, List.not_mem_nil, or_false] at hx
+  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    simp only [viewSArr] <;> rfl
 
 theorem fzEv_ctl_viewS (m : Mem) (k : Nat) (hk : vsPatched k = false) (hk' : k < 2 ^ 64) :
     fzEv (viewS m) (fzCtl k) = fzEv m (fzCtl k) := by
@@ -401,8 +422,8 @@ theorem fzEv_ctl_viewS (m : Mem) (k : Nat) (hk : vsPatched k = false) (hk' : k <
   rw [e, e', toNat_c _ hk']
   exact viewSCtl_getD m k hk
 
-/-- **A header S entry taken from another header C entry** (the stream index's rows): `viewS`
-shows the solution's rows with their extents (the compare flag `CTL[cmpCW] = 1`). -/
+/-- **A header S entry taken from another header C entry** (the swapped rows): `viewS` shows
+header C's image with its extent (the compare flag `CTL[cmpCW] = 1`). -/
 theorem same_view (m : Mem) (h224 : rd64 m CTL (Nat.toUInt64 cmpCW) = 1) {i j : Nat} (hi : i < frozen.length)
     (hj : hsE i = .same j) :
     (viewS m).arr64 (fzAt i).src = m.arr64 (fzAt j).src ∧ fzEv (viewS m) (fzAt i).e = fzEv m (fzAt j).e := by
@@ -417,22 +438,21 @@ theorem same_view (m : Mem) (h224 : rd64 m CTL (Nat.toUInt64 cmpCW) = 1) {i j : 
     subst hxi'
     rw [hj] at h1
     cases h1
-    rw [h2, h3, h4, h5]
-    refine ⟨?_, ?_⟩
-    · simp only [movedT, List.mem_cons, List.not_mem_nil, or_false] at hx
-      have hv := viewSArr_moved m
-      rcases hx with rfl | rfl | rfl | rfl | rfl | rfl
-      · exact hv.1
-      · exact hv.2.1
-      · exact hv.2.2.1
-      · exact hv.2.2.2.1
-      · exact hv.2.2.2.2.1
-      · exact hv.2.2.2.2.2
-    · simp only [fzSolExt, fzEv_bin, fzEv_ctl_viewS m _ h6 h7]
-      have e : fzEv m (fzCtl cmpCW) = 1 := h224
-      have e2 : fzEv (viewS m) (fzC 2) = fzEv m (fzC 2) := rfl
-      rw [e, e2]
-      simp [BinOp.eval]
+    rw [h2, h3]
+    refine ⟨viewSArr_moved m x hx, ?_⟩
+    have e : fzEv m (fzCtl cmpCW) = 1 := h224
+    have ev : fzEv (viewS m) (fzCtl cmpCW) = 1 := by
+      rw [fzEv_ctl_viewS m cmpCW (by decide) (by decide)]; exact e
+    have e2 : fzEv (viewS m) (fzC 2) = fzEv m (fzC 2) := rfl
+    have hc := fzEv_ctl_viewS m _ h6 h7
+    have hr : ∀ (M : Mem) (f : Expr), fzEv M (fzCtl cmpCW) = 1 → rowExt f x.2.2.2.2 →
+        fzEv M f = fzEv M (.bin .mul (fzC 2) (fzCtl x.2.2.2.2)) := by
+      intro M f h1 hf
+      rcases hf with rfl | rfl
+      · rfl
+      · simp only [fzSolExt, fzEv_bin, h1]; simp [BinOp.eval]
+    rw [hr _ _ ev h4, hr _ _ e h5]
+    simp only [fzEv_bin, hc, e2]
 
 /-! ### Header S's entries in the final memory -/
 
@@ -759,6 +779,231 @@ theorem seedMem_high (M : Mem) (so : Word) (hso : so.toNat + 256 < 2 ^ 64) (k : 
   rw [getD_set64_ne _ _ _ _ _ (by rw [toNat_badd _ _ (by omega)]; omega),
     seedFold_high so hso hsSeedW _ hW k hk,
     getD_set64_ne _ _ _ _ _ (by rw [toNat_badd _ _ (by omega)]; omega)]
+
+
+/-- Header C's entry `j` read through `hsVal` (header C at `OUT[hdrW‥)`): its offset (relative to
+header C) and its extent. -/
+theorem hsVal_C (hok : parCompactOK m9 1 hdrWW = true) (hlt : (m9.arr64 OUT).size < 2 ^ 64) {j : Nat}
+    (hj : j < frozen.length) :
+    rd64 (parCompactMem m9 1 hdrWW) OUT (hdrW + (10 + 2 * j)).toUInt64 = fzOff m9 j ∧
+    rd64 (parCompactMem m9 1 hdrWW) OUT (hdrW + (11 + 2 * j)).toUInt64 = UInt64.ofNat (fzExt m9 (fzAt j)) := by
+  have hhw := hdrW_eq
+  have hfl := frozen_length
+  have hb : hdrWW.toNat + hdrW < 2 ^ 64 := by simp [hdrWW]; omega
+  have hb' : hdrWW.toNat = hdrW := by simp [hdrWW]; omega
+  have := parCompactMem_entry_b hok hb (fun _ => hlt) hj
+  rw [hb'] at this
+  simp only [rd64]
+  rw [toNat_c _ (by omega), toNat_c _ (by omega)]
+  exact this
+
+theorem viewSArr_s (m : Mem) : viewSArr m ↑L.Front.DECL = m.arr64 L.Checker.SDECL ∧
+    viewSArr m ↑FIRSTS = m.arr64 L.Checker.SFIRSTS ∧ viewSArr m ↑L.Front.DLP = m.arr64 L.Checker.SDLP := by
+  unfold viewSArr
+  refine ⟨?_, ?_, ?_⟩
+  · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide),
+      ite_eq_right (by decide), ite_eq_left rfl]
+  · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide),
+      ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]
+  · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide),
+      ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]
+
+/-- **The solution's own images**: `viewS` shows its records, firsts and declaration pool where
+header S's entries point. -/
+theorem fzEv_cmpOr (M : Mem) (h : fzEv M (fzCtl cmpCW) = 1) (e : Expr) (k : Nat) :
+    fzEv M (fzCmpOr e k) = fzEv M (fzCtl k) := by
+  simp only [fzCmpOr, fzEv_bin, h, BinOp.eval, UInt64.one_mul]; grind
+
+theorem extra_view (m : Mem) (hcw : fzEv m (fzCtl cmpCW) = 1) (x : Nat × Fz) (hx : x ∈ fzsImgs) :
+    (viewS m).arr64 (fzAt x.1).src = m.arr64 x.2.src ∧ fzEv (viewS m) (fzAt x.1).e = fzEv m x.2.e := by
+  have hv := viewSArr_s m
+  have hcw' : fzEv (viewS m) (fzCtl cmpCW) = 1 := by
+    rw [fzEv_ctl_viewS m cmpCW (by decide) (by decide)]; exact hcw
+  have hD := fzEv_ctl_viewS m cmpKD (by decide) (by decide)
+  have hP := fzEv_ctl_viewS m cmpKP (by decide) (by decide)
+  simp only [fzsImgs, List.mem_cons, List.not_mem_nil, or_false] at hx
+  rcases hx with rfl | rfl | rfl
+  · refine ⟨?_, ?_⟩
+    · show viewSArr m ↑FIRSTS = _; exact hv.2.1
+    · show fzEv (viewS m) (fzCmpOr fzDecl cmpKD) = fzEv m (fzCtl cmpKD)
+      rw [fzEv_cmpOr _ hcw', hD]
+  · refine ⟨?_, ?_⟩
+    · show viewSArr m ↑L.Front.DECL = _; exact hv.1
+    · show fzEv (viewS m) (.bin .add (fzC 1) (.bin .mul (fzC 8) (fzCmpOr fzDecl cmpKD))) =
+        fzEv m (.bin .add (fzC 1) (.bin .mul (fzC 8) (fzCtl cmpKD)))
+      simp only [fzEv_bin, fzEv_cmpOr _ hcw', hD]; rfl
+  · refine ⟨?_, ?_⟩
+    · show viewSArr m ↑L.Front.DLP = _; exact hv.2.2
+    · show fzEv (viewS m) (.bin .add (fzC 1) (fzCmpOr (.ld64 L.Front.DLP (fzC 0)) cmpKP)) =
+        fzEv m (.bin .add (fzC 1) (fzCtl cmpKP))
+      simp only [fzEv_bin, fzEv_cmpOr _ hcw', hP]; rfl
+
+/-- Header C's images, moved to header S's offsets, lie below the solution's images. -/
+theorem cmpS_offs (hok : parCompactOK m9 1 hdrWW = true) (hlt : (m9.arr64 OUT).size < 2 ^ 64) {j : Nat}
+    (hj : j < frozen.length) :
+    (fzOff m9 j + hdrW.toUInt64).toNat = hdrW + (fzOff m9 j).toNat ∧
+    hdrW + (fzOff m9 j).toNat + fzExt m9 (fzAt j) ≤ (hdrW.toUInt64 + fzOff m9 frozen.length).toNat := by
+  have hhw := hdrW_eq
+  have hfl := frozen_length
+  have hb : hdrWW.toNat + hdrW < 2 ^ 64 := by simp [hdrWW]; omega
+  have hW := parCompactOK_hdr_b hok hb
+  have hg : (∀ j ≤ frozen.length, (fzOff m9 j).toNat = hdrW + fzSum m9 j) ∧
+      hdrWW.toNat + hdrW + fzSum m9 frozen.length ≤ (m9.arr64 OUT).size := by
+    have h' := hok
+    simp only [parCompactOK, Bool.and_eq_true] at h'
+    exact (pcGo_good m9 1 hdrWW hW hb (fun _ => hlt) frozen.length (Nat.le_refl _) h'.1.1.1).1 one_ne_zero'
+  have hb' : hdrWW.toNat = hdrW := by simp [hdrWW]; omega
+  have h1 := hg.1 j (by omega)
+  have h2 := hg.1 _ (Nat.le_refl _)
+  have hm := fzSum_mono m9 (j := j + 1) (n := frozen.length) (by omega)
+  rw [fzSum_succ, ← fzExt_eq] at hm
+  refine ⟨?_, ?_⟩
+  · rw [UInt64.toNat_add, toNat_c _ (by omega), Nat.mod_eq_of_lt (by omega)]; omega
+  · rw [UInt64.toNat_add, toNat_c _ (by omega), Nat.mod_eq_of_lt (by omega)]; omega
+
+/-- **Header S's view**: the whole buffer shows the solution's phase `viewS m9` (the challenge's
+index state with the solution's index rows, records, firsts, declaration pool and seed words), and
+names header C as the next phase (word `5`). -/
+theorem cmpView_S (hok : parCompactOK m9 1 hdrWW = true) (hlt : (m9.arr64 OUT).size < 2 ^ 64)
+    (hS : CmpHdrSOK (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length))
+    (h224 : rd64 m9 CTL (Nat.toUInt64 cmpCW) = 1) :
+    HdrView (cmpBufS OUT (cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length))) (viewS m9) ∧
+    (cmpBufS OUT (cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length))).getD 5 0 = hdrWW := by
+  obtain ⟨hsz, ho0, hlc, h256, hX1, hX2, h1, h5, hk⟩ := cmpC_facts hok hlt hS
+  have hhw := hdrW_eq
+  have hSz : (cmpBufS OUT (cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length))).size =
+      (hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).2.toNat := by
+    simp only [cmpBufS, h1, Array.size_extract]; omega
+  have hSg : ∀ k < (hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).2.toNat,
+      (cmpBufS OUT (cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length))).getD k 0 =
+      ((cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).arr64 OUT).getD k 0 := by
+    intro k hk'
+    simp only [cmpBufS, h1]
+    rw [getD_extract_lt _ _ _ _ (by simp only [Array.size_extract]; omega), Nat.zero_add]
+  refine ⟨⟨fun i hi => ?_, fun i hi => ?_, ?_, ?_, fun i hi => ?_⟩, by rw [hSg 5 (by omega), h5]⟩
+  · sorry -- img: by hsE i (same: cmpS_entry + parCompactMem_img_b + same_view; zero: zero_view; extra:
+          -- cmpS_extra + seedMem_at (entry 0) / seedMem_high (60‥62) + viewSArr)
+  · obtain ⟨_, -, -, hc256, -⟩ := cmpS_extra hok hlt hS (0, fzAt 0) (by simp [xsL])
+    have hctl : 256 ≤ (m9.arr64 CTL).size := by
+      have e : fzEv m9 (fzAt 0).e = 256 := rfl
+      have e2 : (fzAt 0).src = CTL := rfl
+      rw [e, e2] at hc256; simpa using hc256
+    cases hE : hsE i with
+    | same j =>
+      obtain ⟨v1, v2⟩ := same_view m9 h224 hi hE
+      rw [fzExt_eq, v1, v2, ← fzExt_eq]
+      exact fzExt_le_src (b := hdrWW) hok (hsE_lt hi j hE)
+    | extra =>
+      obtain ⟨x, hx, rfl⟩ := List.mem_map.mp ((hsE_extra_iff hi).mp hE)
+      simp only [xsL, List.mem_cons] at hx
+      rcases hx with rfl | hx'
+      · show fzExt (viewS m9) (fzAt 0) ≤ ((viewS m9).arr64 ↑CTL).size
+        rw [viewS_ctl]
+        have hs' : (viewSCtl m9).size = (m9.arr64 CTL).size := by
+          have hfs : ∀ (ks : List Nat) (c : Array Word),
+              (ks.foldl (fun c k => c.setIfInBounds k ((m9.arr64 L.Checker.SCTL).getD k 0)) c).size = c.size := by
+            intro ks; induction ks with
+            | nil => intro c; rfl
+            | cons k ks ih => intro c; rw [List.foldl_cons, ih, Array.size_setIfInBounds]
+          unfold viewSCtl
+          rw [Array.size_setIfInBounds, hfs, Array.size_setIfInBounds]
+        rw [hs']
+        exact hctl
+      · obtain ⟨_, -, -, q3, -⟩ := cmpS_extra hok hlt hS x (by simp [xsL, hx'])
+        obtain ⟨w1, w2⟩ := extra_view m9 h224 x hx'
+        rw [fzExt_eq, w1, w2]
+        exact q3
+  · have h9 : 9 < ((seedMem (hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).1
+        (hdrW.toUInt64 + fzOff m9 frozen.length)).arr64 OUT).size := by
+      have e := hsTail_size (seedMem (hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).1
+        (hdrW.toUInt64 + fzOff m9 frozen.length)) (hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).2
+      simp only [cmpHdrSMem] at hsz
+      omega
+    have hT := hsTail_words _ (hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).2 h9
+    simp only [bufEntry, Nat.mul_zero, Nat.add_zero]
+    rw [hSg 8 (by omega), hSg 9 (by omega)]
+    simp only [cmpHdrSMem]
+    rw [hT.2.2.2.2.2.2.1, hT.2.2.2.2.2.2.2]
+    simp [hdrWW, hhw]
+  · have h9 : 9 < ((seedMem (hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).1
+        (hdrW.toUInt64 + fzOff m9 frozen.length)).arr64 OUT).size := by
+      have e := hsTail_size (seedMem (hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).1
+        (hdrW.toUInt64 + fzOff m9 frozen.length)) (hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).2
+      simp only [cmpHdrSMem] at hsz
+      omega
+    have hT := hsTail_words _ (hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).2 h9
+    have hFr : OutFrame m9 (seedMem (hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).1
+        (hdrW.toUInt64 + fzOff m9 frozen.length)) :=
+      (((parCompactMem_out_b m9 1 hdrWW).trans (OutFrame.hsMem _ _)).trans (OutFrame.xsGo _ _ _)).trans
+        (((OutFrame.set64 _ _ _).trans (OutFrame.seedFold _ _ _)).trans (OutFrame.set64 _ _ _))
+    obtain ⟨_, -, -, hc256, -⟩ := cmpS_extra hok hlt hS (0, fzAt 0) (by simp [xsL])
+    have hctl : 256 ≤ (m9.arr64 CTL).size := by
+      have e : fzEv m9 (fzAt 0).e = 256 := rfl
+      have e2 : (fzAt 0).src = CTL := rfl
+      rw [e, e2] at hc256; simpa using hc256
+    have hb0 : bufImg (cmpBufS OUT (cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length))) 0 =
+        (cmpBufS OUT (cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length))).extract 0 hdrW := by
+      simp only [bufImg, bufEntry, Nat.mul_zero, Nat.add_zero]
+      rw [hSg 8 (by omega), hSg 9 (by omega)]
+      simp only [cmpHdrSMem]
+      rw [hT.2.2.2.2.2.2.1, hT.2.2.2.2.2.2.2]
+      simp [hdrWW, hhw]
+    have hvd : viewSArr m9 ↑L.Front.DECL = m9.arr64 L.Checker.SDECL := by
+      unfold viewSArr
+      rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide),
+        ite_eq_right (by decide), ite_eq_left rfl]
+    rw [hb0, getD_extract_lt _ _ _ _ (by simp only [Array.size_extract]; omega), Nat.zero_add,
+      getD_extract_lt _ _ _ _ (by simp only [Array.size_extract]; omega), Nat.zero_add,
+      hSg 2 (by omega), hSg 3 (by omega)]
+    simp only [cmpHdrSMem]
+    rw [hT.2.2.1, hT.2.2.2.1]
+    refine ⟨?_, ?_⟩
+    · have hv : (viewS m9).arr64 ↑L.Front.DECL = m9.arr64 L.Checker.SDECL := by
+        simp only [viewS, Mem.arr64]; exact hvd
+      simp only [rd64, hFr.arr (L.Checker.SDECL : TieredArray) (by decide), hv]
+    · simp only [rd64, hFr.arr (CTL : TieredArray) (by decide), viewS_ctl]
+      have e1 : UInt64.toNat 128 = (Nat.toUInt64 128).toNat := rfl
+      have e2 : UInt64.toNat 225 = 225 := rfl
+      rw [e1, viewSCtl_128 m9 (by omega), e2]
+  · have hfl := frozen_length
+    rw [hSz]
+    rcases i with _ | i
+    · simp only [bufEntry, Nat.mul_zero, Nat.add_zero]
+      rw [hSg 8 (by omega), hSg 9 (by omega)]
+      have h9 : 9 < ((seedMem (hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).1
+          (hdrW.toUInt64 + fzOff m9 frozen.length)).arr64 OUT).size := by
+        have e := hsTail_size (seedMem (hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).1
+          (hdrW.toUInt64 + fzOff m9 frozen.length)) (hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).2
+        simp only [cmpHdrSMem] at hsz
+        omega
+      have hT := hsTail_words _ (hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).2 h9
+      simp only [cmpHdrSMem]
+      rw [hT.2.2.2.2.2.2.1, hT.2.2.2.2.2.2.2]
+      have e154 : hdrWW.toNat = 154 := rfl
+      have e0 : (0 : Word).toNat = 0 := rfl
+      rw [e154, e0]
+      have := hX1
+      omega
+    · have hi' : i < frozen.length := by have := frozenIdsL_length; omega
+      simp only [bufEntry, show 8 + 2 * (i + 1) = 10 + 2 * i by omega, show 9 + 2 * (i + 1) = 11 + 2 * i by omega]
+      rw [hSg _ (by omega), hSg _ (by omega)]
+      cases hE : hsE i with
+      | same j =>
+        have hj := hsE_lt hi' j hE
+        have hv : hsVal (parCompactMem m9 1 hdrWW) i = some (rd64 (parCompactMem m9 1 hdrWW) OUT
+            (hdrW + (10 + 2 * j)).toUInt64 + hdrW.toUInt64, rd64 (parCompactMem m9 1 hdrWW) OUT
+            (hdrW + (11 + 2 * j)).toUInt64) := by simp only [hsVal, hE]
+        obtain ⟨e1, e2⟩ := cmpS_entry hok hlt hS hi' _ hv
+        obtain ⟨c1, c2⟩ := hsVal_C hok hlt hj
+        rw [e1, e2, c1, c2]
+        obtain ⟨o1, o2⟩ := cmpS_offs hok hlt hj
+        rw [o1, UInt64.toNat_ofNat_of_lt' (by rw [fzExt_eq]; exact UInt64.toNat_lt_size _)]
+        omega
+      | extra =>
+        obtain ⟨x, hx, rfl⟩ := List.mem_map.mp ((hsE_extra_iff hi').mp hE)
+        obtain ⟨ox, -, q2, -, q4, q5, -⟩ := cmpS_extra hok hlt hS x hx
+        rw [q4, q5]
+        exact q2
 
 end viewS2
 

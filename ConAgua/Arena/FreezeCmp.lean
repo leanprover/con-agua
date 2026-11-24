@@ -17,8 +17,9 @@ over the same images:
 * the store arrays, the pool, the columns, `PINS`, `EREC`: header C's entries (the offsets moved
   by `hdrW`, header S sitting `hdrW` words before header C);
 * `EIX*`/`TIX*` (the stream index the jobs read): the images of the solution's rows `SIX*`/`STX*`
-  (the solution's rows themselves as in header C: the solution's jobs run with no solution and do
-  not read them);
+  and, swapped, `SIX*`/`STX*` the images of the challenge's `EIX*`/`TIX*` (the solution's jobs run
+  with no solution and do not read them; the swap keeps every image under one entry, of the same
+  length as header C's);
 * `CTLF`, `FIRSTS`, `DECL`, `DLP`: four more images after header C's buffer: the seed (`CTL[0‥256)`
   with the solution's words patched: `128` := the solution's index counter `CTL[225]`,
   `162‥173` := `SCTL`'s, `224` := `0`), and the solution's stashed `SFIRSTS`, `SDECL`, `SDLP`
@@ -51,6 +52,9 @@ def hsE (i : Nat) : HsE :=
     else if a = EIXA then .same (fzIdx SIXA) else if a = EIXS then .same (fzIdx SIXS)
     else if a = EIXN then .same (fzIdx SIXN) else if a = TIXA then .same (fzIdx STXA)
     else if a = TIXS then .same (fzIdx STXS) else if a = TIXN then .same (fzIdx STXN)
+    else if a = SIXA then .same (fzIdx EIXA) else if a = SIXS then .same (fzIdx EIXS)
+    else if a = SIXN then .same (fzIdx EIXN) else if a = STXA then .same (fzIdx TIXA)
+    else if a = STXS then .same (fzIdx TIXS) else if a = STXN then .same (fzIdx TIXN)
     else .same i
 
 /-- Header C's word `k` (header C at `OUT[hdrW‥)`). -/
