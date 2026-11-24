@@ -144,13 +144,13 @@ static uint8_t *slurp(int fd, const char *path, uint64_t *n) {
   return buf;
 }
 
-static int in_mapped;  /* the input buffer is a mapping of the file, not a malloc'd buffer */
+static int in_mapped, s_mapped;  /* the input (resp. solution) buffer is a mapping of the file */
 
 /* The input: a nonempty regular file is mapped read-only;
    anything else (a pipe, a terminal, an empty file) or a file mmap refuses is read with `slurp`.
    The bytes `b` the theorem talks about are whatever the buffer holds: a mapped file that
    another process changes during the run changes them (and one truncated faults: a crash). */
-static uint8_t *read_input(const char *path, uint64_t *n) {
+static uint8_t *read_input(const char *path, uint64_t *n, int *mapped) {
   int fd = open(path, O_RDONLY);
   if (fd < 0) fail(path, strerror(errno));
   struct stat st;
@@ -158,7 +158,7 @@ static uint8_t *read_input(const char *path, uint64_t *n) {
     uint8_t *buf = mmap(0, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
     if (buf != MAP_FAILED) {
       close(fd);
-      in_mapped = 1;
+      *mapped = 1;
       *n = st.st_size;
       return buf;
     }
@@ -166,16 +166,19 @@ static uint8_t *read_input(const char *path, uint64_t *n) {
   return slurp(fd, path, n);
 }
 
-/* `--jobs=N` (N > 1), the threaded mode.
+/* `--jobs=N` (N > 1), the threaded mode (and the threaded compared run, `run_compare`).
 
-   Entry 1 (`ca_start_a`) runs the stages and the stream index in the region. On success
-   (rdx = 0, rax = 2^63 + k for k records, one job each) it has written the frozen buffer into
-   `OUT`, whose word 1 is the buffer's length in words. The buffer stays where it is: the rest of
-   the region is unmapped around it and the buffer is made read-only, so a write to it faults and
-   kills the process, which is never an accept (route A). N threads then each map their own zero
-   region of ca_worker_size bytes and claim job indices from one atomic counter, calling
-   `ca_check_b(buf, len, j, region, region_len)` for each claimed j, one call after the other on
-   the region as the previous call left it.
+   Entry 1 (`ca_start_a`; for a compared run `ca_start_ac`, which takes the solution's bytes as
+   two more arguments) runs the stages and the stream index in the region. On success (rdx = 0,
+   rax = 2^63 + k for k jobs) it has written the frozen buffer into `OUT`, whose word 1 is the
+   buffer's length in words. The buffer stays where it is: the rest of the region is unmapped
+   around it and the buffer is made read-only, so a write to it faults and kills the process,
+   which is never an accept (route A). N threads then each map their own zero region and claim
+   job indices from one atomic counter, calling `ca_check_b(buf, len, j, region, region_len)` for
+   each claimed j, one call after the other on the region as the previous call left it. The
+   region is ca_worker_size bytes, twice that if the buffer's word 5 is nonzero (a compared run's
+   buffer has two job phases, and entry 2 runs each phase on its own part of the region; which
+   job is in which phase is entry 2's business, not the harness's).
 
    Concurrency: the threads share only the read-only buffer, the claim counter (fetch_add hands
    out each of 0, 1, 2, ... once, in order, so each thread's claims increase: `ThreadsRun`'s
@@ -186,7 +189,8 @@ static uint8_t *read_input(const char *path, uint64_t *n) {
    the indices are claimed in order and a thread finishes the job it holds, so every lower job
    has been run, and accepted, when the threads are joined (`ThreadFail`'s `below`). */
 static const uint64_t *g_buf;   /* the frozen buffer */
-static uint64_t g_len, g_k;     /* its length in words; the number of jobs (records) */
+static uint64_t g_len, g_k;     /* its length in words; the number of jobs */
+static uint64_t g_wsize;        /* each thread's region size */
 static uint64_t g_next;         /* the claim counter */
 static int g_stop;              /* set after a failure: the other threads stop claiming */
 
@@ -196,44 +200,22 @@ typedef struct { uint64_t j; ca_res r; } slot_t;
 /* One thread: claims jobs until the counter passes k or a call fails. */
 static void *worker(void *arg) {
   slot_t *res = arg;
-  uint8_t *region = mmap(0, ca_worker_size, PROT_READ | PROT_WRITE,
+  uint8_t *region = mmap(0, g_wsize, PROT_READ | PROT_WRITE,
                          MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
   if (region == MAP_FAILED) fail("mmap", strerror(errno));
-  advise_huge(region + 2 * ca_slot, ca_worker_size / ca_slot - 2);  /* the owned arrays' slots */
+  for (uint64_t o = 0; o < g_wsize; o += ca_worker_size)  /* the owned arrays' slots */
+    advise_huge(region + o + 2 * ca_slot, ca_worker_size / ca_slot - 2);
   while (!__atomic_load_n(&g_stop, __ATOMIC_RELAXED)) {
     uint64_t j = __atomic_fetch_add(&g_next, 1, __ATOMIC_RELAXED);
     if (j >= g_k) break;
-    ca_res r = ca_check_b(g_buf, g_len, j, region, ca_worker_size);
+    ca_res r = ca_check_b(g_buf, g_len, j, region, g_wsize);
     if (!accepted(r)) {
       *res = (slot_t){j, r};
       __atomic_store_n(&g_stop, 1, __ATOMIC_RELAXED);
       break;
     }
   }
-  munmap(region, ca_worker_size);  /* the compared run's second phase maps fresh regions */
   return NULL;
-}
-
-/* The pool: `jobs` threads run the `k` jobs of the frozen buffer `buf` (`len` words) as described
-   above, and the result is the failing job's with the smallest index, or accept. Shared by the
-   flat threaded run and both check phases of the threaded compared run. */
-static ca_res run_pool(const uint64_t *buf, uint64_t len, uint64_t k, int jobs) {
-  g_buf = buf; g_len = len; g_k = k; g_next = 0; g_stop = 0;
-  pthread_t *th = calloc(jobs, sizeof *th);
-  slot_t *res = calloc(jobs, sizeof *res);
-  if (!th || !res) fail("calloc", strerror(errno));
-  for (int t = 0; t < jobs; t++) res[t].j = UINT64_MAX;
-  int n = 0;  /* threads started; those that start drain the counter, so any n >= 1 is sound */
-  for (int t = 0; t < jobs; t++)
-    if (pthread_create(&th[n], NULL, worker, &res[n]) == 0) n++;
-  if (n == 0) fail("pthread_create", "no thread could be started");
-  slot_t first = {UINT64_MAX, {ACCEPT, 0}};
-  for (int t = 0; t < n; t++) {
-    pthread_join(th[t], NULL);
-    if (res[t].j < first.j) first = res[t];
-  }
-  free(th); free(res);
-  return first.r;
 }
 
 /* The frozen buffer an entry left in `OUT` of the region at `base`: its length in words (word 1),
@@ -247,19 +229,41 @@ static uint64_t out_len(uint8_t *base) {
 /* `OUT`'s pages that hold `len` words: whole 4096-byte pages (munmap, mprotect). */
 static size_t out_bytes(uint64_t len) { return (len * 8 + 4095) & ~(size_t)4095; }
 
-static int run_jobs(int jobs, uint8_t *in, uint64_t in_len, const uint8_t *pins, uint64_t pins_len,
-                    uint8_t *base) {
-  ca_res r = ca_start_a(in, in_len, pins, pins_len, base, ca_region_size);
+extern ca_res ca_start_ac(const uint8_t *c, uint64_t c_len, const uint8_t *pins, uint64_t pins_len,
+                          void *base, uint64_t base_len, const uint8_t *s, uint64_t s_len);
+
+/* The threaded run: entry 1 on `in` (and, for a compared run, `s` != NULL, the solution), then
+   `jobs` threads over the frozen buffer as described above. */
+static int run_jobs(int jobs, uint8_t *in, uint64_t in_len, uint8_t *s, uint64_t s_len, uint8_t *base) {
+  ca_res r = s ? ca_start_ac(in, in_len, pins, sizeof pins, base, ca_region_size, s, s_len)
+               : ca_start_a(in, in_len, pins, sizeof pins, base, ca_region_size);
   if (!(r.rdx == 0 && r.rax >= 1ull << 63)) return print_verdict(r);
   uint64_t len = out_len(base);
-  if (len == 0) return print_verdict((ca_res){0, 2});
+  if (len < 6) return print_verdict((ca_res){0, 2});
   uint64_t *out = (uint64_t *)(base + ca_out_off);
   size_t bytes = out_bytes(len);
   munmap(base, ca_out_off);
   munmap((uint8_t *)out + bytes, ca_region_size - ca_out_off - bytes);
   if (mprotect(out, bytes, PROT_READ) != 0) fail("mprotect", strerror(errno));
-  if (in_mapped) munmap(in, in_len); else free(in);  /* the jobs read no input byte */
-  return print_verdict(run_pool(out, len, r.rax - (1ull << 63), jobs));
+  /* the jobs read no input byte */
+  if (in_mapped) munmap(in, in_len); else free(in);
+  if (s) { if (s_mapped) munmap(s, s_len); else free(s); }
+  g_buf = out; g_len = len; g_k = r.rax - (1ull << 63); g_next = 0; g_stop = 0;
+  g_wsize = out[5] ? 2 * ca_worker_size : ca_worker_size;
+  pthread_t *th = calloc(jobs, sizeof *th);
+  slot_t *res = calloc(jobs, sizeof *res);
+  if (!th || !res) fail("calloc", strerror(errno));
+  for (int t = 0; t < jobs; t++) res[t].j = UINT64_MAX;
+  int n = 0;  /* threads started; those that start drain the counter, so any n >= 1 is sound */
+  for (int t = 0; t < jobs; t++)
+    if (pthread_create(&th[n], NULL, worker, &res[n]) == 0) n++;
+  if (n == 0) fail("pthread_create", "no thread could be started");
+  slot_t first = {UINT64_MAX, {ACCEPT, 0}};
+  for (int t = 0; t < n; t++) {
+    pthread_join(th[t], NULL);
+    if (res[t].j < first.j) first = res[t];
+  }
+  return print_verdict(first.r);
 }
 
 static int run_compare(const char *prog, int jobs, int argc, char **argv);
@@ -287,80 +291,27 @@ static int run_main(int argc, char **argv) {
   if (cmp) return run_compare(prog, jobs, argc, argv);
   if (argc != 1) { fprintf(stderr, "usage: %s [--jobs=N] FILE\n       %s [--jobs=N] --compare [--] CHALLENGE SOLUTION\n", prog, prog); return 3; }
   uint64_t in_len;
-  uint8_t *in = read_input(argv[0], &in_len);
+  uint8_t *in = read_input(argv[0], &in_len, &in_mapped);
   uint8_t *region = mmap(0, ca_region_size, PROT_READ | PROT_WRITE,
                          MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
   if (region == MAP_FAILED) fail("mmap", strerror(errno));
   advise_huge(region + ca_w0, ca_nw);
-  if (jobs > 1) return run_jobs(jobs, in, in_len, pins, sizeof pins, region);
+  if (jobs > 1) return run_jobs(jobs, in, in_len, NULL, 0, region);
   return print_verdict(ca_start(in, in_len, pins, sizeof pins, region, ca_region_size));
 }
 
 /* `[--jobs=N] --compare [--] CHALLENGE SOLUTION` (the flags in either order): CHALLENGE checked
    with its axioms other than the built-in ones, and its declarations whose value uses `sorryAx`,
    justified by SOLUTION, which is checked as a FILE is. The two files are read as FILE is
-   (`read_input`); the verdict line and the exit status are `print_verdict`'s.
-
-   Sequential (N = 1, the default): the region is ca_cmp_region_size bytes, and `ca_compare` is
-   called once, the challenge's bytes in the first two arguments (as `ca_start`'s input), the
-   solution's in the last two (on the stack). Its accept is covered by
-   `checkerFile_compare_accepts` (ConAgua/Final/Compare.lean; the call is as `CmpCall` states).
-
-   Threaded (N > 1), `run_compare_jobs`: the harness drives the mode entries itself, all on one
-   region of ca_region_size bytes, each call on the region as the previous call left it:
-     ca_start_a4(c, ...)  the stages up to the challenge's parse; on with rdx = 0, rax >= 2^63
-     ca_start_a5(s, ...)  the solution's parse, preparation, pins, index, its frozen buffer in
-                          `OUT`; rax = 2^63 + kS
-     the solution's kS jobs on N threads (`run_pool`, as the flat threaded mode; `OUT` read-only
-                          meanwhile, the rest of the region kept mapped and untouched)
-     ca_start_a7(s, ...)  `OUT` writable again: the challenge's preparation, index (the
-                          solution's moved aside), its frozen buffer in `OUT`; rax = 2^63 + kC
-     the challenge's kC jobs on N threads (`run_pool`)
-   The pin data and both files stay in place until the end (each entry's setup reads the
-   descriptors of the input and the pins). A failure in a phase ends the run with its verdict
-   (the failing job with the smallest index, as the flat threaded mode). Its accept is covered by
-   `checkerFile_compare_threads_accept` (ConAgua/Final/CmpThreads.lean), under the hypotheses
-   `CmpThreadsRun` states about this harness. */
-extern ca_res ca_compare(const uint8_t *c, uint64_t c_len, const uint8_t *pins, uint64_t pins_len,
+   (`read_input`); the verdict line and the exit status are `print_verdict`'s. The only
+   difference from a FILE run is the entry called with the second file: `ca_start_c` (the
+   sequential driver) resp. `ca_start_ac` (entry 1 of the threaded run, `run_jobs`), the
+   challenge's bytes in the first two arguments (as `ca_start`'s input), the solution's in the
+   last two (on the stack), on a region of ca_region_size bytes. The call is as `CmpCall`
+   (ConAgua/Final/CmpAbi.lean) states; the threaded accept is covered by
+   `checkerFile_compare_threads_accept`. */
+extern ca_res ca_start_c(const uint8_t *c, uint64_t c_len, const uint8_t *pins, uint64_t pins_len,
                          void *base, uint64_t base_len, const uint8_t *s, uint64_t s_len);
-extern ca_res ca_start_a4(const uint8_t *in, uint64_t in_len, const uint8_t *pins, uint64_t pins_len,
-                          void *base, uint64_t base_len);
-extern ca_res ca_start_a5(const uint8_t *in, uint64_t in_len, const uint8_t *pins, uint64_t pins_len,
-                          void *base, uint64_t base_len);
-extern ca_res ca_start_a7(const uint8_t *in, uint64_t in_len, const uint8_t *pins, uint64_t pins_len,
-                          void *base, uint64_t base_len);
-extern const uint64_t ca_cmp_region_size;
-
-static int high(ca_res r) { return r.rdx == 0 && r.rax >= 1ull << 63; }
-
-/* One check phase of the threaded compared run: the buffer the entry left in `OUT`, read-only
-   while the pool runs `k` jobs on it, writable again after. */
-static ca_res cmp_phase(uint8_t *base, uint64_t k, int jobs) {
-  uint64_t len = out_len(base);
-  if (len == 0) return (ca_res){0, 2};
-  uint64_t *out = (uint64_t *)(base + ca_out_off);
-  size_t bytes = out_bytes(len);
-  if (mprotect(out, bytes, PROT_READ) != 0) fail("mprotect", strerror(errno));
-  ca_res r = run_pool(out, len, k, jobs);
-  if (mprotect(out, bytes, PROT_READ | PROT_WRITE) != 0) fail("mprotect", strerror(errno));
-  return r;
-}
-
-static int run_compare_jobs(int jobs, uint8_t *c, uint64_t c_len, uint8_t *s, uint64_t s_len) {
-  uint8_t *base = mmap(0, ca_region_size, PROT_READ | PROT_WRITE,
-                       MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
-  if (base == MAP_FAILED) fail("mmap", strerror(errno));
-  advise_huge(base + ca_w0, ca_nw);
-  ca_res r = ca_start_a4(c, c_len, pins, sizeof pins, base, ca_region_size);
-  if (!high(r)) return print_verdict(r);
-  r = ca_start_a5(s, s_len, pins, sizeof pins, base, ca_region_size);
-  if (!high(r)) return print_verdict(r);
-  r = cmp_phase(base, r.rax - (1ull << 63), jobs);
-  if (!accepted(r)) return print_verdict(r);
-  r = ca_start_a7(s, s_len, pins, sizeof pins, base, ca_region_size);
-  if (!high(r)) return print_verdict(r);
-  return print_verdict(cmp_phase(base, r.rax - (1ull << 63), jobs));
-}
 
 static int compare_usage(const char *prog, const char *why) {
   fprintf(stderr, "%s: --compare takes %s, a challenge and its solution\n", prog, why);
@@ -372,14 +323,14 @@ static int run_compare(const char *prog, int jobs, int argc, char **argv) {
   if (argc != 2) return compare_usage(prog, "two files");
   if (strcmp(argv[0], argv[1]) == 0) return compare_usage(prog, "two different files");
   uint64_t c_len, s_len;
-  uint8_t *c = read_input(argv[0], &c_len);
-  uint8_t *s = read_input(argv[1], &s_len);
-  if (jobs > 1) return run_compare_jobs(jobs, c, c_len, s, s_len);
-  uint8_t *region = mmap(0, ca_cmp_region_size, PROT_READ | PROT_WRITE,
+  uint8_t *c = read_input(argv[0], &c_len, &in_mapped);
+  uint8_t *s = read_input(argv[1], &s_len, &s_mapped);
+  uint8_t *region = mmap(0, ca_region_size, PROT_READ | PROT_WRITE,
                          MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
   if (region == MAP_FAILED) fail("mmap", strerror(errno));
   advise_huge(region + ca_w0, ca_nw);
-  return print_verdict(ca_compare(c, c_len, pins, sizeof pins, region, ca_cmp_region_size, s, s_len));
+  if (jobs > 1) return run_jobs(jobs, c, c_len, s, s_len, region);
+  return print_verdict(ca_start_c(c, c_len, pins, sizeof pins, region, ca_region_size, s, s_len));
 }
 
 /* Every path flushes the verdict line before exiting: a flush that fails is status 3 (the

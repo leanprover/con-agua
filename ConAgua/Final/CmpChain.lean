@@ -150,13 +150,6 @@ theorem checker_cmpHdrKeep : CmpHdrKeep checkerProg MODE PLO PHI frozenIdsL parO
   have e : frozenIdsL[0] = (HDRF : TieredArray) := rfl
   rw [e, hk.1, bufMem_hdr]
 
-/-- **`CmpGuard` for the checker**. -/
-theorem checker_cmpGuard (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    (hbC : bC.size < 2 ^ 63) (hbS : bS.size < 2 ^ 63) (hpb : pb.size < 2 ^ 63) :
-    CmpGuard checkerTab checkerProg MODE PLO PHI OUT frozenIdsL parOwnedL bC bS pb :=
-  ⟨fun _ _ _ _ h4 hge4 h5 hge5 => checker_cmpBufOk bC bS pb h64 hbC hbS hpb h4 hge4 h5 hge5,
-    checker_cmpHdrKeep⟩
-
 /-- **The solution's jobs of the compared run accept ⇒ the twin's job list accepts** (one worker,
 `J = none`). After mode `5` (the solution's index build, `FoldOn`, then `par_compact(1)`: `m5`),
 the jobs `j < k` on the buffer as the jobs before left it, from the zero region (`CmpJobs`), with
@@ -202,8 +195,5 @@ theorem cmpSJobs_twin {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : Phas
 
 /-- info: 'ConAgua.Final.cmpSJobs_twin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms cmpSJobs_twin
-
-/-- info: 'ConAgua.Final.checker_cmpGuard' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms checker_cmpGuard
 
 end ConAgua.Final
