@@ -221,7 +221,8 @@ arrays.
   `lo`, `hi` in `rsi`, `rdx`), on a region entry 1 left: the table as `ca_setup` lays it out, except
   that `out`, the seed of `CTL` and the byte arrays get no memory and the header `hdrf` is the
   first `hw` words of `out`'s slot (`seqVals`: static words, as `abiStub`'s); `plo`, `phi`, the
-  mode word `2`; then `ca_enter`. The frozen arrays are phase A's own, whole (only the threads
+  mode word `2` (from `ca_check_seq_m`: the mode word in `r10`, the compared run's modes `8`, `9`);
+  then `ca_enter`. The frozen arrays are phase A's own, whole (only the threads
   read images cut to their extents).
 * `ca_start(in, in_len, pins, pins_len, base, base_len)` (**the sequential driver**, what the
   harness calls): entry 1 with the mode word `3` (`ca_start_a0`: the buffer's header only); if it
@@ -240,6 +241,8 @@ def abiCheckBL : Label := "ca_check_b"
 /-- `ca_check_b` past its length tests (`bufMinStub`). -/
 def abiCheckB1L : Label := "ca_check_b_go"
 def abiCheckSL : Label := "ca_check_seq"
+/-- `ca_check_seq` with the mode word in `r10` (the compared run's modes `8`, `9`). -/
+def abiCheckSML : Label := "ca_check_seq_m"
 def abiDrvDoneL : Label := "ca_drv_done"
 def abiDrvDeclineL : Label := "ca_drv_decline"
 
@@ -356,11 +359,12 @@ def parStub0 (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat
   [movMR (mb .rcx (tab.globOff plo)) .rdx, movMR (mb .rcx (tab.globOff phi)) .r9,
    movRI .rax 2, movMR (mb .rcx (tab.globOff mode)) .rax,
    movRR .rdi .rcx, movRI .rsi abiFuelM.toUInt64, jmpL enterL,
-  -- entry 2 in place (the region in `r8`, the range in `rsi`, `rdx`)
-   .label abiCheckSL] ++
+  -- entry 2 in place (the region in `r8`, the range in `rsi`, `rdx`; from `ca_check_seq_m`, the
+  -- mode word in `r10`)
+   .label abiCheckSL, movRI .r10 2, .label abiCheckSML] ++
   storesCode 0 (seqVals tab out hdrf ctlf hw) ++
   [movMR (mb .r8 (tab.globOff plo)) .rsi, movMR (mb .r8 (tab.globOff phi)) .rdx,
-   movRI .rax 2, movMR (mb .r8 (tab.globOff mode)) .rax,
+   movMR (mb .r8 (tab.globOff mode)) .r10,
    movRR .rdi .r8, movRI .rsi abiFuelM.toUInt64, jmpL enterL,
   -- the sequential driver (its return address and the caller's `r15` in the save area, the
   -- region in `r15`; each `call` puts its return address in the caller's slot)

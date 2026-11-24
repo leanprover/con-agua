@@ -9114,6 +9114,8 @@ movq %rcx, %rdi
 movq $4611686018427387902, %rsi
 jmp ca_enter
 ca_check_seq:
+movq $2, %r10
+ca_check_seq_m:
 movq $35433480192, %rax
 addq %r8, %rax
 movq %rax, (%r8)
@@ -18162,8 +18164,7 @@ movq $175996253, %rax
 movq %rax, 35392(%r8)
 movq %rsi, 35504(%r8)
 movq %rdx, 35520(%r8)
-movq $2, %rax
-movq %rax, 35496(%r8)
+movq %r10, 35496(%r8)
 movq %r8, %rdi
 movq $4611686018427387902, %rsi
 jmp ca_enter
@@ -247396,6 +247397,13 @@ jb ca_setup
 movq $5, %rax
 movq %rax, 35496(%r8)
 jmp ca_setup
+ca_start_a6:
+movq $6768868458496, %rax
+cmpq %rax, %r9
+jb ca_setup
+movq $6, %rax
+movq %rax, 35496(%r8)
+jmp ca_setup
 ca_start_a7:
 movq $6768868458496, %rax
 cmpq %rax, %r9
@@ -247404,17 +247412,14 @@ movq $7, %rax
 movq %rax, 35496(%r8)
 jmp ca_setup
 ca_start_c:
-movq $14499809591296, %rax
-cmpq %rax, %r9
-jb ca_cmp_decline
 movq $0, %r10
 jmp ca_cmp_front
 ca_start_ac:
+movq $1, %r10
+ca_cmp_front:
 movq $6768868458560, %rax
 cmpq %rax, %r9
 jb ca_cmp_decline
-movq $1, %r10
-ca_cmp_front:
 movq $6768868458496, %rax
 addq %r8, %rax
 movq %r15, (%rax)
@@ -247454,6 +247459,47 @@ movq %rax, %rdx
 movq $6768868458496, %rax
 addq %r15, %rax
 movq %rdx, 48(%rax)
+movq 56(%rax), %r11
+cmpq $0, %r11
+jne ca_cmp_thr
+movq $6768868458496, %rax
+addq %r15, %rax
+movq 16(%rax), %rdi
+movq 24(%rax), %rsi
+movq 32(%rax), %rdx
+movq 40(%rax), %rcx
+movq %r15, %r8
+movq $6768868458496, %r9
+call ca_start_a6
+cmpq $0, %rdx
+jne ca_cmp_done
+movq $-9223372036854775808, %rcx
+cmpq %rcx, %rax
+jb ca_cmp_done
+subq %rcx, %rax
+movq %rax, %rdx
+movq $6768868458496, %rax
+addq %r15, %rax
+movq %rdx, 56(%rax)
+movq $8, %r10
+movq $0, %rsi
+movq 48(%rax), %rdx
+movq %r15, %r8
+call ca_check_seq_m
+cmpq $0, %rdx
+jne ca_cmp_done
+movq $71757147230292, %rcx
+cmpq %rcx, %rax
+jne ca_cmp_done
+movq $6768868458496, %rax
+addq %r15, %rax
+movq 56(%rax), %rdx
+movq $9, %r10
+movq $0, %rsi
+movq %r15, %r8
+call ca_check_seq_m
+jmp ca_cmp_done
+ca_cmp_thr:
 movq $6768868458496, %rax
 addq %r15, %rax
 movq 16(%rax), %rdi
@@ -247474,39 +247520,6 @@ movq $6768868458496, %rax
 addq %r15, %rax
 movq 48(%rax), %r11
 addq %r11, %rdx
-movq %rdx, 48(%rax)
-movq 56(%rax), %r11
-cmpq $0, %r11
-jne ca_cmp_ret
-ca_cmp_loop:
-movq $6768868458496, %rax
-addq %r15, %rax
-movq 56(%rax), %rdx
-cmpq 48(%rax), %rdx
-jae ca_cmp_after
-movq $6184752906240, %rdi
-addq %r15, %rdi
-movq 8(%rdi), %rsi
-movq $6803228196864, %rcx
-addq %r15, %rcx
-movq $7696581394432, %r8
-call ca_check_b
-cmpq $0, %rdx
-jne ca_cmp_done
-movq $71757147230292, %rcx
-cmpq %rcx, %rax
-jne ca_cmp_done
-movq $6768868458496, %rax
-addq %r15, %rax
-movq 56(%rax), %rdx
-addq $1, %rdx
-movq %rdx, 56(%rax)
-jmp ca_cmp_loop
-ca_cmp_after:
-movq $71757147230292, %rax
-movq $0, %rdx
-jmp ca_cmp_done
-ca_cmp_ret:
 movq $-9223372036854775808, %rax
 addq %rdx, %rax
 movq $0, %rdx
@@ -247550,9 +247563,6 @@ ca_worker_size: .quad 3848290697216
 ca_nw: .quad 195
 ca_nb: .quad 2
 ca_npos: .quad 198
-.section .rodata
-.globl ca_cmp_region_size
-ca_cmp_region_size: .quad 14499809591296
 .globl ca_start_c
 .globl ca_start_ac
 .globl ca_diag

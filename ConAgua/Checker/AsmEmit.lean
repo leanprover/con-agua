@@ -30,7 +30,7 @@ def main (args : List String) : IO Unit := do
   let out := args.headD "checker.s"
   let code := compileProgX checkerX checkerTab checkerProgI "check"
   IO.FS.writeFile out (asmTextAbiPar checkerTab L.Arena.MODE L.Arena.PLO L.Arena.PHI L.Arena.OUT L.Arena.HDRF L.Arena.CTLF L.Arena.hdrHw L.Arena.frozenIdsL
-      L.Arena.parOwnedL (code ++ cmpStub checkerTab L.Arena.MODE L.Arena.OUT L.Arena.parOwnedL) ++
-    tabSymbols checkerTab ++ cmpSymbols checkerTab L.Arena.parOwnedL ++
+      L.Arena.parOwnedL (code ++ cmpStub checkerTab L.Arena.MODE) ++
+    tabSymbols checkerTab ++
     ".globl ca_start_c\n.globl ca_start_ac\n.globl ca_diag\nca_diag: .quad -1\n")
   IO.println s!"wrote {out}: {code.length} directives, nb {checkerTab.nb}, nw {checkerTab.nw}"
