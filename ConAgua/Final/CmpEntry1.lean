@@ -26,8 +26,7 @@ import all ConAgua.Checker.Entry
 checker). For the harness (`Final/CpThreads.lean`): `cmpEntry1_out`, a return with `rdx = 0`,
 `rax ≥ 2^63` leaves the frozen buffer `B` (the harness reads `OUT[0, OUT[1])`) as the L facts
 `CmpOut` describe, with `rax - 2^63 = kS + kC` jobs; `cmpEntry1_fail`, a failing return of a class
-other than `0` is the twin's pooled comparison rejecting or declining (`TwinCompareVerdictPooledI`,
-a stage failing).
+other than `0` is a stage of the twin's comparison failing (`TwinCompareVerdict`).
 -/
 
 namespace ConAgua.Final
@@ -140,22 +139,22 @@ theorem cmpEntry1_out [Host] (k0 : Nat) (hcode : Code checkerFile k0) (bC bS pb 
   rw [e]; exact hout
 
 /-- **A failing entry 1 of the threaded compared run is the twin's** (a class other than `0`): a
-stage fails as the twin's does (modes `4`, `5`; mode `7` fails only with class `0`). -/
+stage fails as the twin's does (`TwinCompareVerdict`; modes `4`, `5`; mode `7` fails only with class `0`). -/
 theorem cmpEntry1_fail [Host] (k0 : Nat) (hcode : Code checkerFile k0) (bC bS pb : ByteArray)
     (h64 : System.Platform.numBits = 64) (sa : Word) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState)
     (hc : CmpCall bC bS pb sa dm₀ ra₀) (hret : FirstReturn dm₀ (label abiStartACL) ra₀ st₀)
     (hrdx : st₀.data.regs.rdx = 2) (hk : st₀.data.regs.rax &&& 3 ≠ 0) :
-    TwinCompareVerdictPooledI bC bS (st₀.data.regs.rax &&& 3) := by
+    TwinCompareVerdict bC bS (st₀.data.regs.rax &&& 3) := by
   have hP := hret _ (cmpEntry1_regs k0 hcode bC bS pb sa dm₀ ra₀ hc) (fun s h => h.1.1)
   obtain ⟨⟨-, -, -, herr⟩, -⟩ := hP
   rcases herr hrdx with ⟨hbC, hpb, ⟨e, he, hc'⟩ | ⟨rs4, m4, h4, hge4, hbS, e, he, hc'⟩⟩ |
       ⟨rs5, m5, -, e, he, hc'⟩
   · have hcls : e.cls = st₀.data.regs.rax &&& 3 := by rw [Err.cls, hc']
     rw [← hcls] at hk ⊢
-    exact .inl (cmpV_a4 bC bS pb h64 hbC hpb e he hk)
+    exact cmpV_a4 bC bS pb h64 hbC hpb e he hk
   · have hcls : e.cls = st₀.data.regs.rax &&& 3 := by rw [Err.cls, hc']
     rw [← hcls] at hk ⊢
-    exact .inl (cmpV_a5 bC bS pb h64 hbC hbS hpb rs4 m4 h4 hge4 e he hk)
+    exact cmpV_a5 bC bS pb h64 hbC hbS hpb rs4 m4 h4 hge4 e he hk
   · have hcls : e.cls = st₀.data.regs.rax &&& 3 := by rw [Err.cls, hc']
     exact absurd (hcls ▸ cmpV_a67 (.inr (by simp [Mem.setG])) he) hk
 
