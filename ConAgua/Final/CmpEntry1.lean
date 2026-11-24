@@ -24,6 +24,7 @@ import ConAgua.Checker.CompareChain6J
 public import ConAgua.Final.CmpAbi
 import ConAgua.Arena.IWFrame
 import ConAgua.L.WordOff
+public import ConAgua.Checker.CmpCall
 
 @[expose] public section
 

@@ -5,6 +5,7 @@ import Kraken.X64.Registers
 public import ConAgua.Final.CmpOutcome
 public import ConAgua.Final.CmpAbi
 import ConAgua.L.Logic
+public import ConAgua.Checker.CmpCall
 
 @[expose] public section
 

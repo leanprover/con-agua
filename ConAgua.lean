@@ -126,6 +126,7 @@ public import ConAgua.Checker.CrsKeepPB
 public import ConAgua.Checker.AsmTailEq
 public import ConAgua.Final.CmpStub
 public import ConAgua.Final.CmpAbi
+public import ConAgua.Checker.CmpCall
 public import ConAgua.Final.CmpOutcome
 public import ConAgua.Final.CmpMain
 public import ConAgua.Final.CmpA

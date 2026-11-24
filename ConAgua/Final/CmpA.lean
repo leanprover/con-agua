@@ -3,6 +3,7 @@ module
 public import ConAgua.Final.CmpMain
 import ConAgua.Final.DrvAbi
 import Kraken.X64.Registers
+public import ConAgua.Checker.CmpCall
 
 @[expose] public section
 

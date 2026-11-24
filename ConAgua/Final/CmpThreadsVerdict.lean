@@ -6,6 +6,7 @@ public import ConAgua.Final.ThreadsVerdict
 import ConAgua.Final.CpThreadFail
 import ConAgua.Verdict.CmpVSPhase
 import ConAgua.Checker.C1Hdr
+import ConAgua.Checker.CmpCall
 
 @[expose] public section
 
