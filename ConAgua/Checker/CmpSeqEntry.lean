@@ -53,9 +53,10 @@ solution's copied in (`s` → `d`), `2 · CTL[ca]` words each; returns the exten
   return 0
 }
 
-/-- `check_bs()`: the bank switch to the solution's view, then its jobs `PLO‥PHI - 1`. -/
--- con-ron: none — the compared run's phase boundary (con-ron keeps two driver states) and the worker's jobs (`check_b`)
-@[no_expose] def checkBSL : FunDecl := lfn () locals (z, n, a, b) {
+/-- `cq_bank_s()`: the challenge's rows, records, firsts and declaration pool kept in the `C*`
+stash arrays and the solution's copied in, the extents in `CCTL[0‥8]`. -/
+-- con-ron: none — the compared run's phase boundary (con-ron keeps two driver states)
+@[no_expose] def cqBankSL : FunDecl := lfn () locals (n, a, b) {
   n := call cq_swap_eixa(); CCTL.u64[0] := n; n := call cq_swap_tixa(); CCTL.u64[1] := n;
   n := call cq_swap_eixs(); CCTL.u64[2] := n; n := call cq_swap_tixs(); CCTL.u64[3] := n;
   n := call cq_swap_eixn(); CCTL.u64[4] := n; n := call cq_swap_tixn(); CCTL.u64[5] := n;
@@ -78,6 +79,13 @@ solution's copied in (`s` → `d`), `2 · CTL[ca]` words each; returns the exten
   CCTL.u64[8] := n;
   copy!(CDLP.u64, 0, DLP.u64, 0, n);
   copy!(DLP.u64, 0, SDLP.u64, 0, n);
+  return 0
+}
+
+/-- `cq_ctl_s()`: the challenge's index words kept in `CCTL[16‥29]`, the solution's in `CTL`
+(the counter `CTL[225]`, `SCTL[162‥173]`, the flag `0`). -/
+-- con-ron: none — the compared run's phase boundary (con-ron keeps two driver states)
+@[no_expose] def cqCtlSL : FunDecl := lfn () locals () {
   CCTL.u64[16] := CTL.u64[128];
   CTL.u64[128] := CTL.u64[225];
   CCTL.u64[17] := CTL.u64[162]; CTL.u64[162] := SCTL.u64[162];
@@ -94,6 +102,14 @@ solution's copied in (`s` → `d`), `2 · CTL[ca]` words each; returns the exten
   CCTL.u64[28] := CTL.u64[173]; CTL.u64[173] := SCTL.u64[173];
   CCTL.u64[29] := CTL.u64[224];
   CTL.u64[224] := 0;
+  return 0
+}
+
+/-- `check_bs()`: the bank switch to the solution's view, then its jobs `PLO‥PHI - 1`. -/
+-- con-ron: none — the compared run's phase boundary (con-ron keeps two driver states) and the worker's jobs (`check_b`)
+@[no_expose] def checkBSL : FunDecl := lfn () locals (z) {
+  z := call cq_bank_s();
+  z := call cq_ctl_s();
   z := call flush_caches();
   if DECL.u64[0] < PHI { abort };
   if PHI < PLO { abort };
@@ -101,9 +117,10 @@ solution's copied in (`s` → `d`), `2 · CTL[ca]` words each; returns the exten
   return 71757147230292
 }
 
-/-- `check_bc()`: the challenge's view restored from the stash, then its jobs `PLO‥PHI - 1`. -/
--- con-ron: none — the compared run's phase boundary (con-ron keeps two driver states) and the worker's jobs (`check_b`)
-@[no_expose] def checkBCL : FunDecl := lfn () locals (z, n) {
+/-- `cq_bank_c()`: the challenge's rows, records, firsts and declaration pool restored from the
+stash at the extents `cq_bank_s` used. -/
+-- con-ron: none — the compared run's phase boundary (con-ron keeps two driver states)
+@[no_expose] def cqBankCL : FunDecl := lfn () locals (z, n) {
   z := call cq_back_eixa(CCTL.u64[0]); z := call cq_back_tixa(CCTL.u64[1]);
   z := call cq_back_eixs(CCTL.u64[2]); z := call cq_back_tixs(CCTL.u64[3]);
   z := call cq_back_eixn(CCTL.u64[4]); z := call cq_back_tixn(CCTL.u64[5]);
@@ -113,6 +130,12 @@ solution's copied in (`s` → `d`), `2 · CTL[ca]` words each; returns the exten
   copy!(FIRSTS.u64, 0, CFIRSTS.u64, 0, n);
   n := CCTL.u64[8];
   copy!(DLP.u64, 0, CDLP.u64, 0, n);
+  return 0
+}
+
+/-- `cq_ctl_c()`: the challenge's index words restored from `CCTL[16‥29]`. -/
+-- con-ron: none — the compared run's phase boundary (con-ron keeps two driver states)
+@[no_expose] def cqCtlCL : FunDecl := lfn () locals () {
   CTL.u64[128] := CCTL.u64[16];
   CTL.u64[162] := CCTL.u64[17];
   CTL.u64[163] := CCTL.u64[18];
@@ -127,6 +150,14 @@ solution's copied in (`s` → `d`), `2 · CTL[ca]` words each; returns the exten
   CTL.u64[172] := CCTL.u64[27];
   CTL.u64[173] := CCTL.u64[28];
   CTL.u64[224] := CCTL.u64[29];
+  return 0
+}
+
+/-- `check_bc()`: the challenge's view restored from the stash, then its jobs `PLO‥PHI - 1`. -/
+-- con-ron: none — the compared run's phase boundary (con-ron keeps two driver states) and the worker's jobs (`check_b`)
+@[no_expose] def checkBCL : FunDecl := lfn () locals (z) {
+  z := call cq_bank_c();
+  z := call cq_ctl_c();
   z := call flush_caches();
   if DECL.u64[0] < PHI { abort };
   if PHI < PLO { abort };
@@ -136,7 +167,8 @@ solution's copied in (`s` → `d`), `2 · CTL[ca]` words each; returns the exten
 
 /-- The sequential compared run's job phases. -/
 def cmpSeqProg : Prog :=
-  [("check_bs", checkBSL), ("check_bc", checkBCL),
+  [("check_bs", checkBSL), ("check_bc", checkBCL), ("cq_bank_s", cqBankSL), ("cq_ctl_s", cqCtlSL),
+   ("cq_bank_c", cqBankCL), ("cq_ctl_c", cqCtlCL),
    ("cq_swap_eixa", cqSwapRowsG CEIXA EIXA SIXA 34), ("cq_swap_tixa", cqSwapRowsG CTIXA TIXA STXA 34),
    ("cq_swap_eixs", cqSwapRowsG CEIXS EIXS SIXS 36), ("cq_swap_tixs", cqSwapRowsG CTIXS TIXS STXS 36),
    ("cq_swap_eixn", cqSwapRowsG CEIXN EIXN SIXN 38), ("cq_swap_tixn", cqSwapRowsG CTIXN TIXN STXN 38),
