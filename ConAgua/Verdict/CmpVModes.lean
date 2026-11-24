@@ -31,12 +31,12 @@ compare2-verdict)
 Mode `4` (`check_c1`) and mode `5` (`check_c2`) run the stages of entry 1: of their callees only
 `builtin_prelude` and `front_run` can fail with a class other than `0` (the others are in `nvFns`,
 `checkerProg_nv`), and their error halves (`FrontStageE.lean`) claim the twin's prelude or parse
-failing, the challenge's (`TwinCompareVerdict.prelude`, `.frontC`) or the solution's (`.frontS`,
+failing, the challenge's (`TwinCompareStagesFail.prelude`, `.frontC`) or the solution's (`.frontS`,
 at `CmpAt4`'s twin prefix). Mode `6` (`check_c3`) is in `nvFns` itself: it claims nothing.
 
-* `cmpV_a4`: a failing mode-`4` run of class other than `0` is `TwinCompareVerdict`;
+* `cmpV_a4`: a failing mode-`4` run of class other than `0` is `TwinCompareStagesFail`;
 * `cmpV_a5`: so is a failing mode-`5` run after mode `4` returned `2^63`;
-* `cmpV_a6`, `cmpV_a7` (`cmpV_a67`): a failing mode-`6` or mode-`7` run has class `0`.
+* `cmpV_a67`: a failing mode-`6` or mode-`7` run has class `0`.
 -/
 
 namespace L.Checker
@@ -53,14 +53,14 @@ set_option experimental.vcgen true
 /-- `builtin_prelude`'s error half, claiming the compared run's prelude failing. -/
 theorem cmpV_preludeStageE (bC bS pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK bC pb sz) :
     StageSpecE checkerProg "builtin_prelude" [] (Q3 bC (checkerRels bC pb sz))
-      (TwinCompareVerdict bC bS) := by
+      (TwinCompareStagesFail bC bS) := by
   intro n _hn s₀
   refine M.triple_of_run' (fun _ _ _ _ _ => trivial) fun s e hs hr hQ hk => ?_
   subst hs
   obtain ⟨sA, hA, h3⟩ := hQ
   have h3 : R3 (loadMem bC pb sz) s.mem pb sA := h3
   have hc := CapsOK.keep h3.since.keep h3.since.caps
-  exact TwinCompareVerdict.prelude hA (RefC.run_err (builtinPrelude_specE checkerProg checkerProg_builtin n
+  exact TwinCompareStagesFail.prelude hA (RefC.run_err (builtinPrelude_specE checkerProg checkerProg_builtin n
       ⟨s.mem, Locals.init []⟩) (fun _ h0 h => absurd h0 h) checkerProg_nv trivial
     (builtinPrelude_ref hin.1 sA n
       ⟨h3.arena, h3.sdr, h3.twin, Nat.lt_of_lt_of_le (by decide) hc.2.1, h3.mode⟩)
@@ -84,22 +84,22 @@ theorem cmpV_frontRunE {b pb : ByteArray} {sz : TieredArray → Nat} (h64 : Syst
 
 /-- The challenge's `front_run`'s error half. -/
 theorem cmpV_frontCStageE (bC bS pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK bC pb sz) :
-    StageSpecE checkerProg "front_run" [] (Q4 bC (checkerRels bC pb sz)) (TwinCompareVerdict bC bS) := by
+    StageSpecE checkerProg "front_run" [] (Q4 bC (checkerRels bC pb sz)) (TwinCompareStagesFail bC bS) := by
   intro n _hn s₀
   refine M.triple_of_run' (fun _ _ _ _ _ => trivial) fun s e hs hr hQ hk => ?_
   subst hs
   obtain ⟨sA, pre, sB, hA, hB, h4⟩ := hQ
-  exact TwinCompareVerdict.frontC hA hB (cmpV_frontRunE hin.1 hin.2.1 h4 hr hk)
+  exact TwinCompareStagesFail.frontC hA hB (cmpV_frontRunE hin.1 hin.2.1 h4 hr hk)
 
 /-- The solution's `front_run`'s error half, before it (`QS4`). -/
 theorem cmpV_frontSStageE (bC bS pb : ByteArray) (sz : TieredArray → Nat)
     (h64 : System.Platform.numBits = 64) (hb : bS.size < 2 ^ 63) :
-    StageSpecE checkerProg "front_run" [] (QS4 bC bS pb sz) (TwinCompareVerdict bC bS) := by
+    StageSpecE checkerProg "front_run" [] (QS4 bC bS pb sz) (TwinCompareStagesFail bC bS) := by
   intro n _hn s₀
   refine M.triple_of_run' (fun _ _ _ _ _ => trivial) fun s e hs hr hQ hk => ?_
   subst hs
   obtain ⟨sA, pre, sB, rC, sC, ⟨hA, hB, hC⟩, h4, -⟩ := hQ
-  exact TwinCompareVerdict.frontS hA hB hC (cmpV_frontRunE h64 hb h4 hr hk)
+  exact TwinCompareStagesFail.frontS hA hB hC (cmpV_frontRunE h64 hb h4 hr hk)
 
 /-! ## The entries' errors from their stages -/
 
@@ -191,7 +191,7 @@ other than `0` is the twin's compared run failing with that class. -/
 theorem cmpV_a4 (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64) (hbC : bC.size < 2 ^ 63)
     (hpb : pb.size < 2 ^ 63) (e : Err)
     (hrun : cmpRun checkerProg (cmpM4 checkerTab MODE bC pb) = .error e) (hk : e.cls ≠ 0) :
-    TwinCompareVerdict bC bS e.cls := by
+    TwinCompareStagesFail bC bS e.cls := by
   have hsz : ∀ s, abiSz checkerTab s < 2 ^ 64 := fun s => by
     have := abiSz_le checkerTab_abiOk s; simp only [abiWords] at this; omega
   generalize hsz' : abiSz checkerTab = sz at hsz
@@ -218,7 +218,7 @@ theorem cmpV_a4 (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64) (hbC
   have hn : n ≤ 2 ^ 62 := by simp [n, abiFuel]
   let s₀ : St := { mem := cmpM4 checkerTab MODE bC pb, loc := Locals.init [] }
   have H := M.of_run_err (P := fun s => s = s₀) rfl hr
-    (check_err_dispatchC hlc n s₀ (fun e => e.cls ≠ 0 → TwinCompareVerdict bC bS e.cls)
+    (check_err_dispatchC hlc n s₀ (fun e => e.cls ≠ 0 → TwinCompareStagesFail bC bS e.cls)
       (fun s₁ => M.triple_of_run' (fun _ _ _ _ _ => trivial) fun s e' hs hr' hm _ => by
         subst hs
         exact M.of_run_err (P := fun t => t = s) rfl hr'
@@ -240,7 +240,7 @@ theorem cmpV_a5 (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64) (hbC
     (h4 : cmpRun checkerProg (cmpM4 checkerTab MODE bC pb) = .ok (rs4, m4))
     (hge4 : 2 ^ 63 ≤ (rs4.getD 0 0).toNat) (e : Err)
     (hrun : cmpRun checkerProg (cmpM5 MODE m4 bS) = .error e) (hk : e.cls ≠ 0) :
-    TwinCompareVerdict bC bS e.cls := by
+    TwinCompareStagesFail bC bS e.cls := by
   have hsz : ∀ s, abiSz checkerTab s < 2 ^ 64 := fun s => by
     have := abiSz_le checkerTab_abiOk s; simp only [abiWords] at this; omega
   have hN : abiFuel < 2 ^ 62 := by simp [abiFuel]
@@ -259,7 +259,7 @@ theorem cmpV_a5 (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64) (hbC
   have hn : n ≤ 2 ^ 62 := by simp [n, abiFuel]
   let s₀ : St := { mem := cmpM5 MODE m4 bS, loc := Locals.init [] }
   have H := M.of_run_err (P := fun s => s = s₀) rfl hr
-    (check_err_dispatchC hlc n s₀ (fun e => e.cls ≠ 0 → TwinCompareVerdict bC bS e.cls)
+    (check_err_dispatchC hlc n s₀ (fun e => e.cls ≠ 0 → TwinCompareStagesFail bC bS e.cls)
       (fun s₁ => M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ _ _ h4' => by
         rw [hmode] at h4'; exact absurd h4' (by decide))
       (fun s₁ => M.triple_of_run' (fun _ _ _ _ _ => trivial) fun s e' hs hr' hm _ => by
@@ -296,14 +296,5 @@ theorem cmpV_a67 {m : Mem} (hmode : m.glob MODE = 6 ∨ m.glob MODE = 7) {e : Er
           (by decide +kernel) n [k] s₁))
       rfl)
   exact H (.inr (.inr hmode))
-
-/-- **Mode `6` claims nothing** (`cmpV_a67`). -/
-theorem cmpV_a6 {m : Mem} (hmode : m.glob MODE = 6) {e : Err}
-    (hrun : cmpRun checkerProg m = .error e) : e.cls = 0 := cmpV_a67 (.inl hmode) hrun
-
-/-- **Mode `7` claims nothing** (`cmpV_a67`): mode `7` is `check_c3(1)`, outside the verdict
-closure as mode `6`'s `check_c3(0)`. -/
-theorem cmpV_a7 {m : Mem} (hmode : m.glob MODE = 7) {e : Err}
-    (hrun : cmpRun checkerProg m = .error e) : e.cls = 0 := cmpV_a67 (.inr hmode) hrun
 
 end L.Checker

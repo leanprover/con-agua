@@ -59,9 +59,6 @@ theorem not_mem_csA {b : TieredArray} (h : b.hi = true ∨ (b.arr ≠ 67 ∧ b.a
     · rw [this.1] at h; cases h
     · omega
 
-theorem not_mem_csC {x : Word} (h : x.toNat ≠ 128 ∧ x.toNat ≠ 224 ∧ (x.toNat < 162 ∨ 173 < x.toNat)) : x ∉ csC :=
-  fun hm => by have := csC_val hm; omega
-
 theorem cq_trunc_agree {P P' : Array Word} {t : Nat} (h1 : t + 1 ≤ P.size) (h2 : t + 1 ≤ P'.size)
     (g : ∀ j, j ≤ t → P'[j]? = P[j]?) : L.Front.trunc P' t = L.Front.trunc P t := by
   have e : P'.extract 0 (t + 1) = P.extract 0 (t + 1) := by

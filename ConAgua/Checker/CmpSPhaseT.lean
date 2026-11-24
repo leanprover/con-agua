@@ -1,8 +1,9 @@
 module
 
-public import ConAgua.Checker.CompareTwinJ
+public import ConAgua.Checker.CompareTwinC
+public import ConAgua.Arena.PoolJobsJ
 public import ConAgua.Arena.PoolJobs
-public import ConAgua.Final.CompareTwinI
+public import ConAgua.Final.CompareTwinVerdict
 import ConRon.Bridge.Compare.Stages
 import ConRon.Bridge.Compare.Side
 import ConRon.Bridge.Checker.Index
@@ -20,9 +21,9 @@ Both check phases start from `sI`, the state after the challenge's index build.
 
 * `poolHypsS_I`: the facts `pool_twin` takes (`PoolHyps`) for the solution's records `dsS`, its
   index `IS`, at `sI`: the solution's index build's facts carried to `sI` by `Ext`/`PExt`
-  monotonicity (as `stagesCI_model`).
+  monotonicity (as `stagesCPooled_model`).
 * `poolHypsJ_ofPI`: `poolHypsJ_ofP` from the solution's pool at `sI` (`PoolJobs`): the solution's
-  records' distinct names by `pooled_fold_records` from `sI` (as `stagesCI_model`).
+  records' distinct names by `pooled_fold_records` from `sI` (as `stagesCPooled_model`).
 -/
 
 namespace L.Checker

@@ -16,8 +16,8 @@ label `abiSeqL (some bS)`). Entry 1 freezes the store in place; the stub then ru
 region, the solution's jobs (mode `8`) and the challenge's (mode `9`) in place.
 
 * `checkerFile_compare_accepts_regs`, `checkerFile_compare_accepts`: every run returns to the
-  caller (with the callee-saved registers); an accept is `TwinComparesAcceptsSeqI bC bS`, a reject
-  or decline of class `1` or `2` is `TwinCompareVerdictSeqI bC bS` with that class.
+  caller (with the callee-saved registers); an accept is `TwinComparesAccepts bC bS`, a reject
+  or decline of class `1` or `2` is `TwinCompareVerdict bC bS` with that class.
 * `checkerFile_compare_model`, `checkerFile_compare_no_False`: the challenge of an accepted
   comparison has a model, and one declaring a theorem of type `False` is not accepted.
 -/
@@ -37,9 +37,9 @@ theorem checkerFile_compare_accepts_regs [Host] (k0 : Nat) (hcode : Code checker
     (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm : MachineData) (ra : Word) (hc : AbiCall bC (some bS) pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinComparesAcceptsSeqI bC bS) ∧
+        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinComparesAccepts bC bS) ∧
         (st.data.regs.rdx = 2 → st.data.regs.rax &&& 3 ≠ 0 →
-          TwinCompareVerdictSeqI bC bS (st.data.regs.rax &&& 3)))
+          TwinCompareVerdict bC bS (st.data.regs.rax &&& 3)))
       dm (label (abiSeqL (some bS))) :=
   eventually_weaken _ _ _ _ (fun _ ⟨⟨hpc, hr, h, h2⟩, _⟩ =>
       ⟨hpc, hr, fun h0 h1 => cmpAccS_twin bC bS pb h64 checkerProg_cqSeq (h h0 h1),
@@ -54,9 +54,9 @@ theorem checkerFile_compare_accepts [Host] (k0 : Nat) (hcode : Code checkerFile 
     (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm : MachineData) (ra : Word) (hc : AbiCall bC (some bS) pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinComparesAcceptsSeqI bC bS) ∧
+        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinComparesAccepts bC bS) ∧
         (st.data.regs.rdx = 2 → st.data.regs.rax &&& 3 ≠ 0 →
-          TwinCompareVerdictSeqI bC bS (st.data.regs.rax &&& 3)))
+          TwinCompareVerdict bC bS (st.data.regs.rax &&& 3)))
       dm (label (abiSeqL (some bS))) :=
   eventually_weaken _ _ _ _ (fun _ ⟨hpc, _, h⟩ => ⟨hpc, h⟩)
     (checkerFile_compare_accepts_regs k0 hcode bC bS pb h64 dm ra hc)
@@ -79,7 +79,7 @@ theorem checkerFile_compare_model (V : Type w) [ConLeche.SetTheory V] [Host]
                 ConLeche.Cached.sideRecord)))))
       dm (label (abiSeqL (some bS))) :=
   eventually_weaken _ _ _ _
-    (fun _ ⟨hpc, h, _⟩ => ⟨hpc, fun h0 h1 => twinComparesAcceptsSeqI_model V (h h0 h1)⟩)
+    (fun _ ⟨hpc, h, _⟩ => ⟨hpc, fun h0 h1 => twinComparesAccepts_model V (h h0 h1)⟩)
     (checkerFile_compare_accepts k0 hcode bC bS pb h64 dm ra hc)
 
 /-- **No `False` in an accepted comparison's challenge** (`checker.s`, called at `ca_start_c`): if
@@ -95,7 +95,7 @@ theorem checkerFile_compare_no_False (V : Type w) [ConLeche.SetTheory V] [Host]
     (dm : MachineData) (ra : Word) (hc : AbiCall bC (some bS) pb dm ra)
     (st : MachineState) (hret : FirstReturn dm (label (abiSeqL (some bS))) ra st)
     (hrdx : st.data.regs.rdx = 0) (hacc : st.data.regs.rax = ACCEPT) : False :=
-  twinComparesAcceptsSeqI_no_False V hfalse
+  twinComparesAccepts_no_False V hfalse
     ((hret _ (checkerFile_compare_accepts k0 hcode bC bS pb h64 dm ra hc) (fun _ h => h.1)).2.1 hrdx hacc)
 
 /-- info: 'ConAgua.Final.checkerFile_compare_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/

@@ -1,7 +1,6 @@
 module
 
-public import ConAgua.Final.CompareTwinI
-import ConAgua.Final.CompareTwinSeq
+public import ConAgua.Final.CompareTwin
 import ConRon.Bridge.Specs
 import ConRon.Bridge.Inductives.Decl
 import ConLeche.Model.OfEnvModelM
@@ -21,15 +20,16 @@ import ConLeche.Verify.Frontend.Prepare
 /-!
 # The threaded compared run's twin: each worker's challenge jobs from its solution jobs (lane compare2)
 
-`TwinComparesAcceptsThr` (`Final/CompareTwinI.lean`): after the stages up to the challenge's index
+`TwinComparesAcceptsPooled` (`Final/CompareTwin.lean`): after the stages up to the challenge's index
 build (`sI`), workers each run some of the solution's jobs from `sI.worker` and then, continuing,
 some of the challenge's with the solution (`PoolJobs2`).
 
-* `stagesCThr_model`: con-ron's `stagesC_model` with the solution's fold by `pooled_foldP` over the
+* `stagesCPooled_model`: con-ron's `stagesC_model` with the solution's fold by `pooled_foldP` over the
   workers' solution lists (every prefix accepted, so each worker's solution list ends in a worker's
   state of `sI`: `job_spec` along the list), and the challenge's (`pooledAcceptsJ_bridge`'s body)
   over the workers' challenge lists, each from the state its solution list ended in.
-* `twinComparesAcceptsThr_model`, `_no_False`: the conclusions of the sequential ones.
+* `twinComparesAcceptsPooled_model`, `_no_False`: the challenge has a model; no `False` in it.
+  The sequential ones (`Final/CompareTwinSeq.lean`) follow by `TwinComparesAccepts.pooled`.
 -/
 
 namespace ConAgua.Final
@@ -39,12 +39,44 @@ open ConRon.Bridge ConRon.Bridge.Frontend
 
 universe w
 
+/-- A list of jobs accepted, at its head: the head's job and the rest from its state. -/
+theorem checkJobList_cons_inv {mode : CheckMode} {pins : List INatOpPinSet} {J : Option ISolution}
+    {I : IStreamIndex} {ds : Array IDeclaration} {t : Nat} {rest : List Nat} {w w'' : AState}
+    (h : checkJobList mode pins J I ds (t :: rest) w = .ok (.ok (), w'')) :
+    ∃ (ht : t < ds.size) (w₁ : AState), recordJob mode pins J I t ds[t] w = .ok ((), w₁) ∧
+      checkJobList mode pins J I ds rest w₁ = .ok (.ok (), w'') := by
+  simp only [checkJobList] at h
+  cases hr : runJob mode pins J I ds t w with
+  | error e => rw [hr] at h; exact nomatch h
+  | ok r =>
+    obtain ⟨res, w₁⟩ := r
+    rw [hr] at h
+    cases res with
+    | error e => simp at h
+    | ok u =>
+      simp only at h
+      unfold runJob at hr
+      cases hdt : ds[t]? with
+      | none => rw [hdt] at hr; simp at hr
+      | some dt =>
+        rw [hdt] at hr
+        simp only at hr
+        cases hj : recordJob mode pins J I t dt w with
+        | error e => rw [hj] at hr; simp at hr
+        | ok q =>
+          obtain ⟨u', w₁'⟩ := q
+          rw [hj] at hr
+          simp only [Except.ok.injEq, Prod.mk.injEq] at hr
+          obtain ⟨-, rfl⟩ := hr
+          obtain ⟨ht, rfl⟩ := Array.getElem?_eq_some_iff.mp hdt
+          exact ⟨ht, _, by cases u'; exact hj, h⟩
+
 /-- con-ron: proof/ConRon/Bridge/Compare/Stages.lean stagesC_model, with each worker's solution
 jobs from the challenge's index state and its challenge jobs from the state they end in — **the
 challenge of a comparison the twin accepts as the threads run it has a model**. -/
-theorem stagesCThr_model (V : Type w) [ConLeche.SetTheory V]
+theorem stagesCPooled_model (V : Type w) [ConLeche.SetTheory V]
     (hk : CoreSpec ConRon.Arena.checkFuel) (hind : IndSpec)
-    {bC bS : ByteArray} (h : TwinComparesAcceptsThr bC bS) :
+    {bC bS : ByteArray} (h : TwinComparesAcceptsPooled bC bS) :
     ∃ rcC preC dsP, ConLeche.Frontend.parseChunks [bC] = .ok rcC ∧
       dsP = (ConLeche.Frontend.preparePrelude preC rcC.decls).toList.map
         ConLeche.Cached.sideRecord ∧
@@ -179,22 +211,22 @@ theorem stagesCThr_model (V : Type w) [ConLeche.SetTheory V]
 /-- **The challenge of a comparison the twin accepts as the threads run it has a model**: con-leche's parser reads the
 challenge, and its prepared records, each hole the axiom of its statement, have a model in every
 set theory. Nothing is concluded about the solution. -/
-theorem twinComparesAcceptsThr_model (V : Type w) [SetTheory V] {bC bS : ByteArray}
-    (h : TwinComparesAcceptsThr bC bS) :
+theorem twinComparesAcceptsPooled_model (V : Type w) [SetTheory V] {bC bS : ByteArray}
+    (h : TwinComparesAcceptsPooled bC bS) :
     ∃ (rcC : ConLeche.Frontend.ParseResultD) (preC : ConLeche.Frontend.PreludeIx),
       ConLeche.Frontend.parseChunks [bC] = .ok rcC ∧
       Nonempty (Model V (ConLeche.streamEnv
         ((ConLeche.Frontend.preparePrelude preC rcC.decls).toList.map ConLeche.Cached.sideRecord))) := by
   obtain ⟨rcC, preC, dsP, hclC, rfl, ⟨hmod⟩⟩ :=
-    stagesCThr_model V CoreSpec.of_core ConRon.Bridge.Inductives.indSpec_of_bridge h
+    stagesCPooled_model V CoreSpec.of_core ConRon.Bridge.Inductives.indSpec_of_bridge h
   exact ⟨rcC, preC, hclC, ⟨ConLeche.Model.Model.ofEnvModelM hmod⟩⟩
 
 /-- **No `False` in the challenge of a comparison the twin accepts as the threads run it**: a challenge file that declares
 a theorem of type `False` is not accepted, whatever the solution. -/
-theorem twinComparesAcceptsThr_no_False (V : Type w) [SetTheory V] {bC bS : ByteArray}
-    (hfalse : jsonWithTheoremFalse [bC]) (h : TwinComparesAcceptsThr bC bS) : False := by
+theorem twinComparesAcceptsPooled_no_False (V : Type w) [SetTheory V] {bC bS : ByteArray}
+    (hfalse : jsonWithTheoremFalse [bC]) (h : TwinComparesAcceptsPooled bC bS) : False := by
   obtain ⟨rcC, preC, dsP, hclC, rfl, ⟨mp⟩⟩ :=
-    stagesCThr_model V CoreSpec.of_core ConRon.Bridge.Inductives.indSpec_of_bridge h
+    stagesCPooled_model V CoreSpec.of_core ConRon.Bridge.Inductives.indSpec_of_bridge h
   obtain ⟨cv, vl, hty, hmem⟩ := ConLeche.Frontend.parseChunks_jsonWithTheoremFalse hfalse hclC
   have hmem' : Declaration.thmDecl cv vl ∈
       (ConLeche.Frontend.preparePrelude preC rcC.decls).toList := by
@@ -219,10 +251,10 @@ theorem twinComparesAcceptsThr_no_False (V : Type w) [SetTheory V] {bC bS : Byte
       (.inl ⟨_, List.mem_map_of_mem hmem', hcd⟩)
   exact ConLeche.Model.no_constant_of_False mp c hcs hcty
 
-/-- info: 'ConAgua.Final.twinComparesAcceptsThr_model' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms twinComparesAcceptsThr_model
+/-- info: 'ConAgua.Final.twinComparesAcceptsPooled_model' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms twinComparesAcceptsPooled_model
 
-/-- info: 'ConAgua.Final.twinComparesAcceptsThr_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms twinComparesAcceptsThr_no_False
+/-- info: 'ConAgua.Final.twinComparesAcceptsPooled_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms twinComparesAcceptsPooled_no_False
 
 end ConAgua.Final

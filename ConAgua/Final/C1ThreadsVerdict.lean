@@ -1,5 +1,6 @@
 module
 
+import ConAgua.Checker.CompareTwinC
 public import ConAgua.Final.C1Threads
 public import ConAgua.Verdict.ThreadsE
 import ConAgua.Verdict.CmpVSJobs
@@ -8,7 +9,6 @@ import ConAgua.Verdict.CmpVSPhase
 import ConAgua.Checker.CmpThreadsC
 import ConAgua.Checker.CmpThreadsPool
 import ConAgua.Checker.CmpVerdictNv
-import ConAgua.Checker.CompareTwinJ
 import ConAgua.Checker.CmpSPhaseT
 import ConAgua.Checker.CrsProgPB
 import ConAgua.Checker.RomProgInit
@@ -31,10 +31,9 @@ import ConRon.Bridge.Compare.Mates
 `c1Thr_failC`: a thread ran its solution calls over header S and then, on the region as they left
 it, its challenge calls over header C, the last failing with an error of class other than `0`; the
 other threads claimed every solution job and every challenge job below the failing one: the
-twin's threaded comparison fails with that class (`TwinCompareVerdictThr`'s third disjunct). The
+twin's threaded comparison fails with that class (`TwinCompareVerdictPooled`'s third disjunct). The
 solution's phase as in `c1Thr_accepts` (with the failing thread's solution calls as one more
-worker), the switch (`c1_thrBack`), then the failing thread's walk (`cmpV_tjobCI`'s, from its own
-start).
+worker), the switch (`c1_thrBack`), then the failing thread's walk (from its own start).
 -/
 
 open ConRon.Arena ConRon.Bridge
@@ -66,7 +65,7 @@ theorem c1Thr_failC {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS
     (hcovC : ∀ j' : Word, j' < j → ∃ t ∈ ths, ∃ c' ∈ t.2.2, c'.1 = j')
     (hincS : ∀ t ∈ ths, (t.2.1.map (·.1)).Pairwise (· < ·))
     (hincC : ∀ t ∈ ths, (t.2.2.map (·.1)).Pairwise (· < ·)) :
-    TwinCompareVerdictThr bC bS e.cls := by
+    TwinCompareVerdictPooled bC bS e.cls := by
   obtain ⟨m2, m3, dsC, sG, res, m4, I, a', h, hI, -⟩ := F6.jobM hF h6
   obtain ⟨hJM9, hwf, hoff, -⟩ := F6.jobMAt hF h6 h hI
   have hJM : JobM PS.ipins (dnOf sG.store) PS.dsS none PS.IS mS a' :=

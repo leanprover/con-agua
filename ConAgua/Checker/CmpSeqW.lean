@@ -221,14 +221,6 @@ theorem cq_not_cdC {x : Word} (h : x.toNat = 128 ∨ (162 ≤ x.toNat ∧ x.toNa
   simp only [Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq] at h1
   omega
 
-/-- **A run of `check_jobs` keeps** the stream index's rows and `FIRSTS`, the pin table, the
-solution's rows, and the index's, frozen and solution's `CTL` words. -/
-theorem cq_jobs_keep {n : Nat} {vs : List Word} {m m' : Mem} {rs : List Word}
-    (h : run checkerProg n "check_jobs" vs m = .ok (rs, m')) :
-    MemFrame cdA cdC m m' ∧ m'.bytes = m.bytes :=
-  have ⟨_, hF, _, hc⟩ := checkerProg_jobsW
-  run_memFrame hc hF h
-
 /-! ## With the flag off: the walks' memos kept
 
 `record_job` dispatches on the flag `CTL[224]`: with the flag `0` it calls `check_decl`, never

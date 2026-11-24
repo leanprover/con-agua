@@ -16,10 +16,7 @@ the workers' job lists) at the L level, for the threaded compared run: as the fl
 
 * `pool_walkJL`: a worker's chain over any list of positions whose prefixes are mixed runs is the
   twin's `checkJobList` accepting at the solution, each record a mixed step at its prefix.
-* `pool_prefixJ`: workers whose claims increase and cover `[0, n)` give every prefix up to `n` a
-  mixed run (by induction on the position: the worker that claimed `k` ran its earlier claims,
-  whose prefixes the induction gives).
-* `pool_twinJT`: every worker's list accepted by `checkJobList` from the driver state's worker.
+  The pool over workers from their own starts: `pool_prefixJW`, `pool_twinJW` (`Arena/C1Pool.lean`).
 -/
 
 open ConRon.Arena ConRon.Bridge
@@ -67,67 +64,6 @@ theorem pool_walkJL (H : PoolHypsJ (pins := pins) (pinsP := pinsP) (ds := ds) (d
       · rcases List.mem_cons.mp hx with rfl | hx'
         · exact ⟨htk', env', hst⟩
         · exact hds x hx'
-
-/-- **The pool's induction with a solution, up to `n`**: workers, each a start state related to
-the driver state's worker and a chain of steps, with claims increasing in each worker and covering
-the positions below `n`, give every prefix up to length `n` a mixed run. -/
-theorem pool_prefixJ (H : PoolHypsJ (pins := pins) (pinsP := pinsP) (ds := ds) (dsP := dsP) (I := I)
-      (s₁ := s₁) (J := J) (dsS := dsS) (matesU := matesU) Rel Call) (hst : StateOK s₁)
-    (ths : List (σ × List Nat)) (hstart : ∀ t ∈ ths, Rel t.1 s₁.worker)
-    (hchain : ∀ t ∈ ths, JobChain Call t.1 t.2) (hinc : ∀ t ∈ ths, t.2.Pairwise (· < ·))
-    (n : Nat) (hn : n ≤ ds.size) (hcov : ∀ k < n, ∃ t ∈ ths, k ∈ t.2) :
-    ∀ k ≤ n, MixedPrefix pinsP ⟨ConLeche.mkFEnv (ConLeche.streamEnv dsS), matesU⟩ dsP k := by
-  have main : ∀ k, k ≤ n → ∀ t ≤ k,
-      MixedPrefix pinsP ⟨ConLeche.mkFEnv (ConLeche.streamEnv dsS), matesU⟩ dsP t := by
-    intro k
-    induction k with
-    | zero =>
-      intro _ t ht
-      obtain rfl : t = 0 := by omega
-      exact MixedPrefix.zero _ _ _
-    | succ k ih =>
-      intro hk t ht
-      rcases Nat.lt_or_ge t (k + 1) with htk | htk
-      · exact ih (by omega) t (by omega)
-      obtain rfl : t = k + 1 := by omega
-      have hbelow := ih (by omega)
-      have hks : k < ds.size := by omega
-      obtain ⟨th, hth, hkw⟩ := hcov k (by omega)
-      obtain ⟨pre, post, he⟩ := List.append_of_mem hkw
-      have hpw := hinc th hth
-      rw [he] at hpw
-      have hpre : ∀ x ∈ pre, x < k := fun x hx =>
-        (List.pairwise_append.mp hpw).2.2 x hx k List.mem_cons_self
-      have hc : JobChain Call th.1 (pre ++ [k]) := by
-        have := hchain th hth
-        rw [he, show pre ++ k :: post = (pre ++ [k]) ++ post by simp] at this
-        exact JobChain.append_left this
-      obtain ⟨-, hds⟩ := pool_walkJL H (pre ++ [k]) th.1 s₁.worker (hstart th hth)
-        (WorkerOK.start hst) hc fun x hx => by
-          rcases List.mem_append.mp hx with hx | hx
-          · have := hpre x hx
-            exact ⟨by omega, hbelow x (by omega)⟩
-          · obtain rfl := List.mem_singleton.mp hx
-            exact ⟨hks, hbelow x (Nat.le_refl _)⟩
-      obtain ⟨hk', env', hd⟩ := hds k (by simp)
-      exact MixedPrefix.step hk' (hbelow k (Nat.le_refl _)) hd
-  exact fun k hk => main n (Nat.le_refl _) k hk
-
-/-- **The pool with a solution, refined** (con-ron's `pooledAcceptsJ_bridge`'s pool at the L level):
-workers, each a start state related to the driver state's worker and a chain of steps, whose
-claims are positions of the records, increase in each worker and cover the positions, give every
-worker's list accepted by the twin's `checkJobList` at the solution from the driver state's
-worker. -/
-theorem pool_twinJT (H : PoolHypsJ (pins := pins) (pinsP := pinsP) (ds := ds) (dsP := dsP) (I := I)
-      (s₁ := s₁) (J := J) (dsS := dsS) (matesU := matesU) Rel Call) (hst : StateOK s₁)
-    (ths : List (σ × List Nat)) (hstart : ∀ t ∈ ths, Rel t.1 s₁.worker)
-    (hchain : ∀ t ∈ ths, JobChain Call t.1 t.2) (hinc : ∀ t ∈ ths, t.2.Pairwise (· < ·))
-    (hrange : ∀ t ∈ ths, ∀ k ∈ t.2, k < ds.size) (hcov : ∀ k < ds.size, ∃ t ∈ ths, k ∈ t.2) :
-    ∀ t ∈ ths, ∃ s'', checkJobList V pins (some J) I ds t.2 s₁.worker = .ok (.ok (), s'') := by
-  have main := pool_prefixJ H hst ths hstart hchain hinc ds.size (Nat.le_refl _) hcov
-  intro th hth
-  exact (pool_walkJL H th.2 th.1 s₁.worker (hstart th hth) (WorkerOK.start hst) (hchain th hth)
-    fun x hx => have := hrange th hth x hx; ⟨this, main x (by omega)⟩).1
 
 end pool
 
