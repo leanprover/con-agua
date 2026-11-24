@@ -218,8 +218,8 @@ arrays.
   minimum length (`Tab.min64`, `bufMinStub`) or `region_len < workerNeed own`. A buffer with two
   phases (the compared run: `buf[5]`, the second phase's offset, nonzero) maps a job index
   `j ≥ buf[2]` to job `j - buf[2]` of the second phase's buffer at `buf + 8 · buf[5]`, on the
-  region's second half (`cpProStub`); the harness's region is `2 · workerNeed own` bytes
-  (`ca_worker_size`).
+  region's second sub-region, from `workerNeed own` on (`cpProStub`; the harness's region is then
+  at least `2 · workerNeed own` bytes, twice `ca_worker_size`).
 * `ca_check_seq` (**entry 2 in place**, the sequential driver; the region in `r8`, the range
   `lo`, `hi` in `rsi`, `rdx`), on a region entry 1 left: the table as `ca_setup` lays it out, except
   that `out`, the seed of `CTL` and the byte arrays get no memory and the header `hdrf` is the
@@ -337,7 +337,7 @@ def bufMinChk (tab : Tab) : Nat → List TieredArray → Program
 the buffer, `rdx` the job index `j`, `rcx`/`r8` the region: if `j ≥ buf[2]` (the first phase's job
 count) and `buf[5] ≠ 0` (the second phase's offset, in words; `0` in a one-phase buffer), then
 `j := j - buf[2]`, `buf := buf + 8 · buf[5]` (the second phase's self-contained buffer) and the
-region's second half, `[rcx + workerNeed, rcx + r8)` (declines below `2 · workerNeed`); else
+region's second sub-region, `[rcx + workerNeed, rcx + r8)` (declines below `2 · workerNeed`); else
 nothing. The buffer length (`rsi`) stays: entry 2 never reads it. -/
 def cpProStub (own : List TieredArray) : Program :=
   [movRM .rax (mb .rdi 16), i64 (.cmp (.reg (rr .rdx)) (oR .rax)), jccL .c abiCheckB0L,
@@ -410,7 +410,7 @@ def parStub (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
 
 /-- The symbols of the parallel mode for the harness. -/
 def parSymbols (tab : Tab) (out : ArrId) (own : List TieredArray) : String :=
-  s!".section .rodata\n.globl ca_out_off\n.globl ca_worker_size\nca_out_off: .quad {abiSlot * abiSlot64 tab out}\nca_worker_size: .quad {2 * workerNeed own}\n"
+  s!".section .rodata\n.globl ca_out_off\n.globl ca_worker_size\nca_out_off: .quad {abiSlot * abiSlot64 tab out}\nca_worker_size: .quad {workerNeed own}\n"
 
 /-- The assembler file with the parallel mode's entries (`parStub`) before the stub. -/
 def asmTextAbiPar (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
