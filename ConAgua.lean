@@ -128,6 +128,7 @@ public import ConAgua.Final.CmpMain
 public import ConAgua.Final.CompareTwin
 public import ConAgua.Final.CompareTwinVerdict
 public import ConAgua.Final.CompareTwinI
+public import ConAgua.Final.CompareTwinSeq
 public import ConAgua.Final.CmpChain
 public import ConAgua.Checker.CompareChain6
 public import ConAgua.Checker.CmpHdrKeep
