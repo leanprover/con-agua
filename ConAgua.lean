@@ -156,6 +156,7 @@ public import ConAgua.Checker.CmpSeqCheck
 public import ConAgua.Checker.CmpSeqViewS
 public import ConAgua.Checker.CmpSeqViewC
 public import ConAgua.Checker.CmpSeqRun
+public import ConAgua.Arena.JobStartX
 public import ConAgua.Final.CpThreads
 public import ConAgua.Final.CpThreadFail
 public import ConAgua.Final.CmpThreads
