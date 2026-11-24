@@ -243,6 +243,9 @@ def abiCheckB1L : Label := "ca_check_b_go"
 def abiCheckSL : Label := "ca_check_seq"
 /-- `ca_check_seq` with the mode word in `r10` (the compared run's modes `8`, `9`). -/
 def abiCheckSML : Label := "ca_check_seq_m"
+/-- `ca_check_seq_m` past its table stores (the table already in place, the caller writes the
+stack's top: a second run in place). -/
+def abiCheckSGL : Label := "ca_check_seq_g"
 def abiDrvDoneL : Label := "ca_drv_done"
 def abiDrvDeclineL : Label := "ca_drv_decline"
 
@@ -360,10 +363,11 @@ def parStub0 (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat
    movRI .rax 2, movMR (mb .rcx (tab.globOff mode)) .rax,
    movRR .rdi .rcx, movRI .rsi abiFuelM.toUInt64, jmpL enterL,
   -- entry 2 in place (the region in `r8`, the range in `rsi`, `rdx`; from `ca_check_seq_m`, the
-  -- mode word in `r10`)
+  -- mode word in `r10`; from `ca_check_seq_g`, past the table's stores)
    .label abiCheckSL, movRI .r10 2, .label abiCheckSML] ++
   storesCode 0 (seqVals tab out hdrf ctlf hw) ++
-  [movMR (mb .r8 (tab.globOff plo)) .rsi, movMR (mb .r8 (tab.globOff phi)) .rdx,
+  [.label abiCheckSGL,
+   movMR (mb .r8 (tab.globOff plo)) .rsi, movMR (mb .r8 (tab.globOff phi)) .rdx,
    movMR (mb .r8 (tab.globOff mode)) .r10,
    movRR .rdi .r8, movRI .rsi abiFuelM.toUInt64, jmpL enterL,
   -- the sequential driver (its return address and the caller's `r15` in the save area, the

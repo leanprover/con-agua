@@ -219,26 +219,26 @@ theorem drv_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : ab
         (st.data.regs.rdx = 2 → DrvErr tab p mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
         s (label abiDrvDoneL) := by
     intro s h15 hsp hbp h14 hbx h12 h13 hfitS hw15 hwra hmsp hacc herr
-    rw [Code.label (i := 28) hL3 rfl]
-    refine ev_label (Code.get (i := 28) hL3 rfl) ?_
-    refine ev_movRR (Code.get (i := 29) hL3 rfl) ?_
-    refine ev_movRI (Code.get (i := 30) hL3 rfl) ?_
-    refine ev_binO (op := .add) (o := oR .r15) rfl (Code.get (i := 31) hL3 rfl)
+    rw [Code.label (i := 29) hL3 rfl]
+    refine ev_label (Code.get (i := 29) hL3 rfl) ?_
+    refine ev_movRR (Code.get (i := 30) hL3 rfl) ?_
+    refine ev_movRI (Code.get (i := 31) hL3 rfl) ?_
+    refine ev_binO (op := .add) (o := oR .r15) rfl (Code.get (i := 32) hL3 rfl)
       (Or.inr (Or.inr ⟨.r15, rfl, rfl⟩)) fun st => ?_
     have hsa : (BinOp.add.eval (drvSave tab).toUInt64 s.regs.r15).toNat = base + abiNeed tab := by
       simp only [BinOp.eval, UInt64.toNat_add, drvSave, h15, Nat.toUInt64]
       rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
       omega
-    refine ev_movRM (Code.get (i := 32) hL3 rfl) ⟨by decide, by decide⟩ (v := ra) ?_ ?_
+    refine ev_movRM (Code.get (i := 33) hL3 rfl) ⟨by decide, by decide⟩ (v := ra) ?_ ?_
     · rsimp; rw [hsa]; exact hwra
-    refine ev_movRM (Code.get (i := 33) hL3 rfl) ⟨by decide, by decide⟩ (v := dm.regs.r15) ?_ ?_
+    refine ev_movRM (Code.get (i := 34) hL3 rfl) ⟨by decide, by decide⟩ (v := dm.regs.r15) ?_ ?_
     · rsimp; rw [hsa]; exact hw15
-    refine ev_movRR (Code.get (i := 34) hL3 rfl) ?_
+    refine ev_movRR (Code.get (i := 35) hL3 rfl) ?_
     have e1 : s.regs.rsp.toBitVec - 8 = A rsp0 := by
       rw [toBitVec_eq_A, hsp, A_sub8 _ (by omega) (by omega)]; rfl
-    refine ev_push (Code.get (i := 35) hL3 rfl) ?_ ?_
+    refine ev_push (Code.get (i := 36) hL3 rfl) ?_ ?_
     · rsimp; rw [e1]; exact hmsp
-    refine ev_ret (Code.get (i := 36) hL3 rfl) (ra := ra) ?_ ?_
+    refine ev_ret (Code.get (i := 37) hL3 rfl) (ra := ra) ?_ ?_
     · rsimp; rw [rdW_wrW_same]
     refine Eventually.done _ ⟨rfl, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_, ?_⟩
     · rsimp; rw [BitVec.sub_add_cancel]; show s.regs.rsp.toNat = _; rw [hsp, hrsp0]
@@ -250,18 +250,18 @@ theorem drv_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : ab
     · rsimp; exact h13
     · rsimp; exact hacc
     · rsimp; exact herr
-  rw [Code.label (i := 6) hL3 rfl]
-  refine ev_label (Code.get (i := 6) hL3 rfl) ?_
-  refine ev_movRI (Code.get (i := 7) hL3 rfl) ?_
-  refine ev_cmpRO (r := .r9) (o := oR .rax) (v := (drvNeed tab).toUInt64) (Code.get (i := 8) hL3 rfl)
+  rw [Code.label (i := 7) hL3 rfl]
+  refine ev_label (Code.get (i := 7) hL3 rfl) ?_
+  refine ev_movRI (Code.get (i := 8) hL3 rfl) ?_
+  refine ev_cmpRO (r := .r9) (o := oR .rax) (v := (drvNeed tab).toUInt64) (Code.get (i := 9) hL3 rfl)
     (Or.inr (Or.inr ⟨.rax, rfl, rfl⟩)) ?_
-  refine ev_jcc (Code.get (i := 9) hL3 rfl) (fun hlt => ?_) (fun hge => ?_)
+  refine ev_jcc (Code.get (i := 10) hL3 rfl) (fun hlt => ?_) (fun hge => ?_)
   · -- declined
-    rw [Code.label (i := 37) hL3 rfl]
-    refine ev_label (Code.get (i := 37) hL3 rfl) ?_
-    refine ev_movRI (Code.get (i := 38) hL3 rfl) ?_
+    rw [Code.label (i := 38) hL3 rfl]
+    refine ev_label (Code.get (i := 38) hL3 rfl) ?_
     refine ev_movRI (Code.get (i := 39) hL3 rfl) ?_
-    refine ev_ret (Code.get (i := 40) hL3 rfl) (ra := ra)
+    refine ev_movRI (Code.get (i := 40) hL3 rfl) ?_
+    refine ev_ret (Code.get (i := 41) hL3 rfl) (ra := ra)
       (by show rdW dm.dmem dm.regs.rsp.toBitVec = some ra; rw [toBitVec_eq_A]; exact hc.hra) ?_
     refine Eventually.done _ ⟨rfl, ⟨?_, by simp, by simp, by simp, by simp, by simp, by simp⟩,
       fun h => absurd h (by simp <;> decide), fun h => absurd h (by simp <;> decide)⟩
@@ -294,25 +294,25 @@ theorem drv_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : ab
     rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
     omega
   have hra0 : rdW dm.dmem (A rsp0) = some ra := by rw [← hrsp0]; exact hc.hra
-  refine ev_movRI (Code.get (i := 10) hL3 rfl) ?_
-  refine ev_binO (op := .add) (o := oR .r8) rfl (Code.get (i := 11) hL3 rfl)
+  refine ev_movRI (Code.get (i := 11) hL3 rfl) ?_
+  refine ev_binO (op := .add) (o := oR .r8) rfl (Code.get (i := 12) hL3 rfl)
     (Or.inr (Or.inr ⟨.r8, rfl, rfl⟩)) fun st0 => ?_
-  refine ev_movMR (Code.get (i := 12) hL3 rfl) ⟨by decide, by decide⟩ ?_ ?_
+  refine ev_movMR (Code.get (i := 13) hL3 rfl) ⟨by decide, by decide⟩ ?_ ?_
   · rsimp; rw [hsa0]
     exact isSome_rdW fun j hj => by rw [A_add]; rw [hz _ (by omega) (by omega)]; rfl
-  refine ev_pop (Code.get (i := 13) hL3 rfl) (v := ra) ?_ ?_
+  refine ev_pop (Code.get (i := 14) hL3 rfl) (v := ra) ?_ ?_
   · rsimp; rw [hsa0, toBitVec_eq_A dm.regs.rsp, hrsp0, Int.toNat_zero, Nat.add_zero,
       rdW_wrW_A (by omega) (by omega) (by rcases hsvA (base + abiNeed tab) (by omega) (by omega) with h | h <;> omega)]
     exact hra0
-  refine ev_movMR (Code.get (i := 14) hL3 rfl) ⟨by decide, by decide⟩ ?_ ?_
+  refine ev_movMR (Code.get (i := 15) hL3 rfl) ⟨by decide, by decide⟩ ?_ ?_
   · rsimp; rw [hsa0]
     exact isSome_rdW fun j hj => by
       rw [A_add]; exact isSome_get?_storeInt (by rw [show base + abiNeed tab + Int.toNat 8 + j = base + abiNeed tab + 8 + j from rfl, hz _ (by omega) (by omega)]; rfl)
-  refine ev_movRR (Code.get (i := 15) hL3 rfl) ?_
-  refine ev_movRI (Code.get (i := 16) hL3 rfl) ?_
+  refine ev_movRR (Code.get (i := 16) hL3 rfl) ?_
+  refine ev_movRI (Code.get (i := 17) hL3 rfl) ?_
   have e1 : (UInt64.ofBitVec (dm.regs.rsp.toBitVec + 8)).toBitVec - 8 = A rsp0 := by
     rw [UInt64.toBitVec_ofBitVec, BitVec.add_sub_cancel, toBitVec_eq_A, hrsp0]
-  refine ev_call (Code.get (i := 17) hL3 rfl) ?_ ?_
+  refine ev_call (Code.get (i := 18) hL3 rfl) ?_ ?_
   · rsimp; rw [e1, hsa0, Int.toNat_zero, Nat.add_zero, show Int.toNat 8 = 8 from rfl,
       rdW_wrW_A (by omega) (by omega) (by rcases hsvA (base + abiNeed tab + 8) (by omega) (by omega) with h | h <;> omega),
       rdW_wrW_A (by omega) (by omega) (by rcases hsvA (base + abiNeed tab) (by omega) (by omega) with h | h <;> omega),
@@ -320,7 +320,7 @@ theorem drv_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : ab
   rsimp
   rw [e1, hsa0, Int.toNat_zero, Nat.add_zero, show Int.toNat 8 = 8 from rfl]
   refine ev_seq (abiA0_outcome q p hq tab hok hAX hio hwf mode plo phi out hdrf ctlf hw fz own hngm k0 hcode fd hentry hnp
-    b pb _ (UInt64.ofBitVec (at_ (K + 17 + 1)).toBitVec) ?_) ?_
+    b pb _ (UInt64.ofBitVec (at_ (K + 18 + 1)).toBitVec) ?_) ?_
   · have hneedN : ((abiNeed tab).toUInt64).toNat = abiNeed tab :=
       UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
     refine hc.shrink _ _ rfl rfl rfl rfl rfl ?_ ?_ ?_ ?_ ?_
@@ -362,7 +362,7 @@ theorem drv_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : ab
       (hbufS x h1 h2).2
   have hsv1 : ∀ y, base + abiNeed tab ≤ y → y + 8 ≤ base + abiNeed tab + 16 →
       rdW s1.dmem (A y) = rdW (wrW (wrW (wrW dm.dmem (A (base + abiNeed tab)) dm.regs.r15.toBitVec)
-        (A (base + abiNeed tab + 8)) ra.toBitVec) (A rsp0) (at_ (K + 18)).toBitVec) (A y) := by
+        (A (base + abiNeed tab + 8)) ra.toBitVec) (A rsp0) (at_ (K + 19)).toBitVec) (A y) := by
     intro y h1 h2
     refine rdW_congr fun j hj => ?_
     rw [A_add]
@@ -382,8 +382,8 @@ theorem drv_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : ab
   have hmsp : (rdW s1.dmem (A rsp0)).isSome :=
     isSome_rdW fun j hj => by rw [A_add]; exact hwin _ (by omega) (by omega)
   have h15b : s1.regs.r15.toNat = base := by rw [h151, hbase]
-  refine ev_cmpRO (r := .rdx) (o := oI 0) (v := 0) (Code.get (i := 18) hL3 rfl) (Or.inl rfl) ?_
-  refine ev_jcc (Code.get (i := 19) hL3 rfl) (fun hnz => ?_) (fun hz0 => ?_)
+  refine ev_cmpRO (r := .rdx) (o := oI 0) (v := 0) (Code.get (i := 19) hL3 rfl) (Or.inl rfl) ?_
+  refine ev_jcc (Code.get (i := 20) hL3 rfl) (fun hnz => ?_) (fun hz0 => ?_)
   · -- entry 1 reported an error or exhaustion
     refine hdone _ h15b hsp1' hbp1 h141 hbx1 h121 h131 (by omega) hw15 hwra hmsp (fun h0 => ?_) (fun h2 => ?_)
     · simp only [CondCode.interp, cmpFlags_zf, Reg64s.get64_rdx] at hnz
@@ -404,30 +404,30 @@ theorem drv_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : ab
   rw [hres] at hout'
   obtain ⟨-, hRes, hMem⟩ := hout'
   have hrax : s1.regs.rax = rs1.getD 0 0 := hRes.1 0 (by simp only [abiLayout_tab]; omega) (by decide)
-  refine ev_movRI (Code.get (i := 20) hL3 rfl) ?_
-  refine ev_cmpRO (r := .rax) (o := oR .rcx) (v := (9223372036854775808 : Word)) (Code.get (i := 21) hL3 rfl)
+  refine ev_movRI (Code.get (i := 21) hL3 rfl) ?_
+  refine ev_cmpRO (r := .rax) (o := oR .rcx) (v := (9223372036854775808 : Word)) (Code.get (i := 22) hL3 rfl)
     (Or.inr (Or.inr ⟨.rcx, rfl, rfl⟩)) ?_
-  refine ev_jcc (Code.get (i := 22) hL3 rfl) (fun hlt => ?_) (fun hge3 => ?_)
+  refine ev_jcc (Code.get (i := 23) hL3 rfl) (fun hlt => ?_) (fun hge3 => ?_)
   · -- entry 1 returned below `2^63`: no jobs to run, its result is the result
     refine hdone _ h15b hsp1' hbp1 h141 hbx1 h121 h131 (by omega) hw15 hwra hmsp (fun _ hacc => ⟨hb, hpb, rs1, m1, hres, Or.inl ?_⟩)
       (fun h2 => absurd (hrdx0 ▸ h2) (by decide))
     rw [← hrax]; exact hacc
   simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not, Nat.not_lt] at hge3
   rsimp at hge3
-  refine ev_binO (op := .sub) (o := oR .rcx) rfl (Code.get (i := 23) hL3 rfl)
+  refine ev_binO (op := .sub) (o := oR .rcx) rfl (Code.get (i := 24) hL3 rfl)
     (Or.inr (Or.inr ⟨.rcx, rfl, rfl⟩)) fun st1 => ?_
-  refine ev_movRR (Code.get (i := 24) hL3 rfl) ?_
-  refine ev_movRI (Code.get (i := 25) hL3 rfl) ?_
-  refine ev_movRR (Code.get (i := 26) hL3 rfl) ?_
+  refine ev_movRR (Code.get (i := 25) hL3 rfl) ?_
+  refine ev_movRI (Code.get (i := 26) hL3 rfl) ?_
+  refine ev_movRR (Code.get (i := 27) hL3 rfl) ?_
   have e2 : s1.regs.rsp.toBitVec - 8 = A rsp0 := by
     rw [toBitVec_eq_A s1.regs.rsp, hsp1', A_sub8 _ (by omega) (by omega)]; rfl
-  refine ev_call (Code.get (i := 27) hL3 rfl) ?_ ?_
+  refine ev_call (Code.get (i := 28) hL3 rfl) ?_ ?_
   · rsimp; rw [e2]; exact hmsp
   rsimp
   rw [e2]
   refine ev_seq (abiS_outcome q p hq tab hok hAX hwf mode plo phi out hdrf ctlf hw fz own hngm hngl hngh hp k0 hcode fd
     hentry hnp (base := base) (blen := abiNeed tab) (inp := dm.regs.rdi.toNat) (n := b.size) (pins := dm.regs.rdx.toNat)
-    (np := pb.size) m1 _ (UInt64.ofBitVec (at_ (K + 27 + 1)).toBitVec) ?_ ?_) ?_
+    (np := pb.size) m1 _ (UInt64.ofBitVec (at_ (K + 28 + 1)).toBitVec) ?_ ?_) ?_
   · have hA0 : ({ toBitVec := A rsp0 } : UInt64).toNat = rsp0 := by
       show (A rsp0).toNat = rsp0; simp only [A, BitVec.toNat_ofNat]; omega
     refine ⟨Nat.le_refl _, by omega, h15b, fun x h1 h2 => ?_, ?_, fun x h1 h2 => ?_, ?_, ?_⟩
@@ -456,7 +456,7 @@ theorem drv_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : ab
   simp only at hsp2 hbp2 h142 h152 hbx2 h122 h132 hfr2 hout2
   rw [hpc]
   simp only [Int64.ofBitVec_toBitVec]
-  rw [show at_ (K + 27 + 1) = label abiDrvDoneL from (Code.label (i := 28) hL3 rfl).symm]
+  rw [show at_ (K + 28 + 1) = label abiDrvDoneL from (Code.label (i := 29) hL3 rfl).symm]
   have hA0 : ({ toBitVec := A rsp0 } : UInt64).toNat = rsp0 := by
     show (A rsp0).toNat = rsp0; simp only [A, BitVec.toNat_ofNat]; omega
   rw [hA0] at hsp2 hfr2

@@ -27,7 +27,8 @@ Then, on `R` as mode `5` left it (the solution's bytes again as the input, not r
 * `ca_start_c` (**the sequential compared run**): `ca_start_a6` (mode `6`): the same with the
   buffer's header only, `2^63 + kC`; then `ca_check_seq` in place with the mode word `8` for the
   solution's jobs `[0, kS)`, and unless that returns `rdx = 0`, `rax = ACCEPT`, the result; then
-  with the mode word `9` for the challenge's jobs `[0, kC)`, whose result is the result.
+  with the mode word `9` for the challenge's jobs `[0, kC)` on the region as that run left it
+  (`ca_check_seq_g`: the table is in place), whose result is the result.
 
 The two share the front by a flag in save word `7` (`0`: sequential, `1`: threaded). Like
 `ca_start`, the front pops its return address before each `call` (so each callee's machine stack
@@ -110,7 +111,7 @@ def cmpSeqTail (tab : Tab) : Program :=
    i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz abiCmpDoneL,
    movRI .rcx 71757147230292, i64 (.cmp (.reg (rr .rax)) (oR .rcx)), jccL .nz abiCmpDoneL] ++
   cmpSaveRax tab ++
-  [movRM .rdx (mb .rax 56), movRI .r10 9, movRI .rsi 0, movRR .r8 .r15, callL abiCheckSML,
+  [movRM .rdx (mb .rax 56), movRI .r10 9, movRI .rsi 0, movRR .r8 .r15, callL abiCheckSGL,
    jmpL abiCmpDoneL]
 
 /-- The threaded run's entry 1 after the front: mode `7`, `2^63 + kS + kC`. -/

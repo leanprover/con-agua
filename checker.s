@@ -18162,6 +18162,7 @@ movq $9021330427866345593, %rax
 movq %rax, 35384(%r8)
 movq $175996253, %rax
 movq %rax, 35392(%r8)
+ca_check_seq_g:
 movq %rsi, 35504(%r8)
 movq %rdx, 35520(%r8)
 movq %r10, 35496(%r8)
@@ -247497,7 +247498,7 @@ movq 56(%rax), %rdx
 movq $9, %r10
 movq $0, %rsi
 movq %r15, %r8
-call ca_check_seq_m
+call ca_check_seq_g
 jmp ca_cmp_done
 ca_cmp_thr:
 movq $6768868458496, %rax

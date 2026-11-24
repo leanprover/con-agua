@@ -310,10 +310,14 @@ def seqMem0 (m : Mem) (out hdrf ctlf : ArrId) (hw : Nat) : Mem where
   words s := if s = ↑out ∨ s = ↑ctlf then #[] else if s = ↑hdrf then (m.arr64 out).extract 0 hw else m.words s
   glob := m.glob
 
+/-- `M` with `plo := lo`, `phi := hi`, `mode := w` (what `ca_check_seq_g` stores). -/
+def seqNext (M : Mem) (mode plo phi : GVar) (w lo hi : Word) : Mem :=
+  ((M.setG plo lo).setG phi hi).setG mode w
+
 /-- **The memory `ca_check_seq_m` runs `check` on**: `seqMem0 m` with `plo := lo`, `phi := hi`,
 `mode := w`. -/
 def seqMemW (m : Mem) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat) (w lo hi : Word) : Mem :=
-  (((seqMem0 m out hdrf ctlf hw).setG plo lo).setG phi hi).setG mode w
+  seqNext (seqMem0 m out hdrf ctlf hw) mode plo phi w lo hi
 
 /-- **The memory `ca_check_seq` runs `check` on**: `seqMem0 m` with `plo := lo`, `phi := hi`,
 `mode := 2`. -/

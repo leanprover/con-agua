@@ -184,7 +184,7 @@ def cmpStubL (tab : Tab) (mode : GVar) : Program :=
    movRI .r10 9,
    movRI .rsi 0,
    movRR .r8 .r15,
-   callL abiCheckSML,
+   callL abiCheckSGL,
    jmpL abiCmpDoneL,
    .label abiCmpThrL,
    movRI .rax (cmpSave tab).toUInt64,
