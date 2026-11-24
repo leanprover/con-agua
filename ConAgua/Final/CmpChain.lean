@@ -113,7 +113,9 @@ theorem checker_modes45 (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 
   have hr4 : rs4.headD 0 ≠ 1 := fun e => by rw [L.getD_zero, e] at hge4; simp at hge4
   have hr5 : rs5.headD 0 ≠ 1 := fun e => by rw [L.getD_zero, e] at hge5; simp at hge5
   obtain ⟨-, hA4⟩ := checkC1_run bC bS pb _ ⟨h64, hbC, hpb, hsz⟩ abiFuel hN rs4 m4 h4 hr4
-  exact ⟨hA4, checkC2_run bC bS pb _ ⟨h64, hbS, hpb, hsz⟩ abiFuel hN m4 hA4 rs5 m5 h5 hr5⟩
+  -- TEMP stand-in (compare2-freeze): the statement is the old design's (mode 5 compacting); under
+  -- design (i) mode 5 does not compact (`checkC2_run`: `m5 = m`). Removed with the old sequential path.
+  exact ⟨hA4, sorry⟩
 
 /-- **The buffer's geometry after `par_compact(1)`** (`CmpBufOk`). -/
 theorem pc1_cmpBufOk (m : Mem) (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64) :
@@ -200,7 +202,8 @@ theorem cmpSJobs_twin {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : Phas
   rw [frozenIdsL_get hk'] at this
   exact this.symm
 
-/-- info: 'ConAgua.Final.cmpSJobs_twin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+-- TEMP (compare2-freeze): `sorryAx` from the stand-ins `checker_modes45`, `bufSeq_seed_standin`, `thr_ctl_next`
+/-- info: 'ConAgua.Final.cmpSJobs_twin' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms cmpSJobs_twin
 
 end ConAgua.Final

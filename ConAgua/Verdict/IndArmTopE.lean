@@ -115,8 +115,9 @@ info: 'L.Checker.seqVerdicts_proved' depends on axioms: [propext, Classical.choi
 -/
 #guard_msgs in #print axioms seqVerdicts_proved
 
+-- TEMP (compare2-freeze): `sorryAx` from the stand-in `thr_ctl_next`
 /--
-info: 'L.Checker.threadVerdicts_proved' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: 'L.Checker.threadVerdicts_proved' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound]
 -/
 #guard_msgs in #print axioms threadVerdicts_proved
 

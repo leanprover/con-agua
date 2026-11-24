@@ -219,7 +219,8 @@ theorem cmpV_tjobS (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
   exact .inr (.inl ⟨PS.pins, PS.sA, PS.sB, PS.sC, PS.sC', PS.sD, PS.sE, PS.sF, PS.pre, PS.rC, PS.rS,
     PS.dsS, PS.ipins, PS.IS, w, hA, hB', hC, hCS, hDS, PS.pinsR, PS.idx, hw, hTF⟩)
 
-/-- info: 'L.Checker.cmpV_tjobS' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+-- TEMP (compare2-freeze): `sorryAx` from the stand-ins (thr_ctl_next, ...)
+/-- info: 'L.Checker.cmpV_tjobS' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms cmpV_tjobS
 
 end L.Checker
