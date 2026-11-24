@@ -89,4 +89,19 @@ theorem cq_copy64_hi {d s : ArrId} (hds : d ≠ s) (m : Mem) {n k : Nat} (hn : n
     exact congrArg some h
   · rw [Array.getElem?_eq_none (by rw [size_copy64]; omega), Array.getElem?_eq_none (by omega)]
 
+theorem cqBack_spec (p : Prog) {f : FnName} {c d : ArrId}
+    (hp : p.lookup f = some (cqBackG c d)) (n : Nat) (s₀ : St) (k : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) f [k]
+    ⦃fun _ s' => LocEq s' s₀ ∧ k.toNat ≤ (s₀.mem.arr64 c).size ∧ k.toNat ≤ (s₀.mem.arr64 d).size ∧
+      s'.mem = s₀.mem.copy64 d 0 c 0 k.toNat; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, cqBackG]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, warr]
+    all_goals simp only [UInt64.toNat_zero, Locals.init, Nat.zero_add, size_copy64,
+      List.getD_cons_zero] at *
+    all_goals first | exact rfl | grind
+
 end L.Checker
