@@ -10,6 +10,8 @@ import all ConAgua.Arena.FreezeCmp
 import all ConAgua.Checker.CmpSeqEntry
 import ConRon.Bridge.Checker.Install
 import ConAgua.Arena.IWFrame
+public import ConAgua.Checker.CmpSStash
+import ConAgua.L.Blocks
 
 @[expose] public section
 

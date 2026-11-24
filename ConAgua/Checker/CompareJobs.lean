@@ -146,6 +146,8 @@ theorem checkB_seqR {m : Mem} (hJ0 : FlushOK m → JobR ipins dn ds J I (flushMe
       obtain ⟨-, hfx, hm⟩ := ‹LocEq _ _ ∧ FlushOK _ ∧ _›
       first
         | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, fun a ha => hw a ha⟩
+        | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm,
+            fun a ha => by rw [L.St.setLocs_mem]; simp_all [Mem.arr64]⟩
         | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp_all)
 
 /-- **Entry 2 in place, `check` with the mode word `2`** (`checkMode2_seqO` at any job relation). -/
