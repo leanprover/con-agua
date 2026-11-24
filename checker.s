@@ -18211,9 +18211,6 @@ jb ca_check_b_min
 movq 40(%rdi), %rax
 cmpq $0, %rax
 je ca_check_b_min
-movq $7696581394432, %rax
-cmpq %rax, %r8
-jb ca_abi_decline
 movq %rdx, %rax
 subq 16(%rdi), %rax
 movq %rax, %rdx
@@ -18221,13 +18218,6 @@ movq 40(%rdi), %rax
 shlq $3, %rax
 addq %rdi, %rax
 movq %rax, %rdi
-movq $3848290697216, %rax
-addq %rcx, %rax
-movq %rax, %rcx
-movq $3848290697216, %r9
-movq %r8, %rax
-subq %r9, %rax
-movq %rax, %r8
 ca_check_b_min:
 cmpq $4, 72(%rdi)
 jb ca_abi_decline
