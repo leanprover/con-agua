@@ -350,7 +350,7 @@ theorem cq_recordJobE_frame0 {p : Prog} (hcl : closedA p cqA cqC cqF0 = true) {n
   have f6 := f5.trans (cq_callE_frame hcl (mem _ (by simp)) c6)
   split at h; · cases h
   have e224 : rdW (m6.arr64 CTL) 224 = 0 := by rw [f6.ctl 224 n224]; exact h224
-  rw [ite_cond_eq_false _ _ (by simp [e224])] at h
+  rw [ite_eq_right_of_eq_false _ _ (by simp [e224])] at h
   rcases c7 : callE p n "check_decl" [k, 0] m6 with e | ⟨r7, m7⟩
   · rw [c7] at h; simp [recordJobE.k_check_record_sol] at h
   rw [c7] at h; simp only [recordJobE.k_check_record_sol, recordJobE.j1] at h
