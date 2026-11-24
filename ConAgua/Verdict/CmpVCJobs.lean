@@ -294,7 +294,7 @@ theorem cmpV_cjob (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
     {rs6 : List Word} {m6 : Mem}
     (h6 : cmpRun checkerProg (cmpM6 MODE OUT m5 (bufSeq frozenIdsL (cmpBuf OUT m5) rm
       (rs5.getD 0 0 - 9223372036854775808).toNat)) = .ok (rs6, m6))
-    {e : Err} (h7 : cmpRun checkerProg (seqMem m6 MODE PLO PHI OUT HDRF CTLF 138 0
+    {e : Err} (h7 : cmpRun checkerProg (seqMem m6 MODE PLO PHI OUT HDRF CTLF hdrHw 0
       (rs6.getD 0 0 - 9223372036854775808)) = .error e)
     (hk : e.cls ≠ 0) : TwinCompareVerdict bC bS e.cls := by
   have hsz : ∀ s, abiSz checkerTab s < 2 ^ 64 := fun s => by
@@ -332,7 +332,7 @@ theorem cmpV_cjob (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
   have hhi : (rs6.getD 0 0 - 9223372036854775808) = c := by
     rw [L.getD_zero, hres6, UInt64.add_comm, UInt64.add_sub_cancel]
   obtain ⟨m2, m3, dsC, sG, res, m4', I, a', hS6, hI, hCJ⟩ := cmpCJobs_err hpb PS hF ⟨s'', hSJ⟩ hF6 hb9
-    (w := seqMem (parCompactMem m9 0) MODE PLO PHI OUT HDRF CTLF 138 0 (rs6.getD 0 0 - 9223372036854775808))
+    (w := seqMem (parCompactMem m9 0) MODE PLO PHI OUT HDRF CTLF hdrHw 0 (rs6.getD 0 0 - 9223372036854775808))
     (fun a ha => by
       rw [seqMem_arr64]
       have h1 : ¬ (a = ↑OUT ∨ a = ↑CTLF) := by
@@ -349,7 +349,7 @@ last one failing with the code `k`) with a code of class other than `0` gives
 `TwinCompareVerdict bC bS` at that class: mode `4` (`cmpV_a4`), mode `5` (`cmpV_a5`), a solution
 job (`cmpV_sjob`), mode `6` (class `0`, `cmpV_a6`), the challenge's jobs (`cmpV_cjob`). -/
 theorem cmpErr_twin (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64) (k : Word)
-    (h : CmpErr checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF 138 frozenIdsL parOwnedL bC bS pb k)
+    (h : CmpErr checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF hdrHw frozenIdsL parOwnedL bC bS pb k)
     (hk : k &&& 3 ≠ 0) : TwinCompareVerdict bC bS (k &&& 3) := by
   obtain ⟨hbC, hpb, h⟩ := h
   rcases h with ⟨e, he, rfl⟩ | ⟨rs4, m4, h4, hge4, hbS, h⟩
