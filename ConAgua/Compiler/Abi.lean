@@ -353,7 +353,7 @@ def cpProStub (own : List TieredArray) : Program :=
 /-- `ca_check_b`'s entry: the phase prologue (`cpProStub`), the length tests (`bufMinChk`), then
 the stub proper (`parStub0`). -/
 def bufMinStub (tab : Tab) (fz own : List TieredArray) : Program :=
-  [.label abiCheckBL] ++ cpProStub own ++ [.label abiCheckB0L] ++ bufMinChk tab 0 fz ++ [jmpL abiCheckB1L]
+  [.label abiCheckBL] ++ cpProStub own ++ ([.label abiCheckB0L] ++ bufMinChk tab 0 fz ++ [jmpL abiCheckB1L])
 
 /-- The parallel mode's entries, for the globals `mode`, `plo`, `phi`, the buffer array `out`, the
 frozen arrays `fz` and the owned arrays `own` (`ca_check_b`'s length tests apart, `parStub`). -/

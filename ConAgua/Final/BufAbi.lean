@@ -768,7 +768,7 @@ theorem abiB_outcome0 [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : 
   simp only [parStub] at hcP
   have hX := hcP.right
   unfold bufMinStub at hX
-  replace hX := hX.right.right
+  replace hX := hX.right
   have hcT := hcode.right.left.right
   simp only [abiTail] at hcT
   have hg := hc.geom
@@ -860,7 +860,8 @@ theorem abiB_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : a
     have h := abiB_outcome0 q p hq tab hok hAX hwf mode plo phi out hdrf ctlf hw fz own hngm hngl hngh h12 h13 h23
       hfzl k0 hcode fd hentry hnp B r { dm with regs := dm.regs.set64 .rax v, status := st } ra
       (hc.congr rfl (by rsimp) (by rsimp) (by rsimp) (by rsimp)) (by rsimp; exact hr) hmo
-    rw [entryPost_congr rfl (by rsimp) (by rsimp) (by rsimp) (by rsimp) (by rsimp) (by rsimp) (by rsimp)] at h
+    rw [entryPost_congr (dm' := { dm with regs := dm.regs.set64 .rax v, status := st }) (dm := dm) rfl
+      (by rsimp) (by rsimp) (by rsimp) (by rsimp) (by rsimp) (by rsimp) (by rsimp)] at h
     simpa only [Reg64s.set64_rax] using h
   rw [Code.label (i := 0) hX rfl]
   refine ev_label (Code.get (i := 0) hX rfl) ?_
@@ -874,7 +875,7 @@ theorem abiB_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : a
     rcases hns with h | h
     · exact absurd (UInt64.lt_iff_toNat_lt.mp h) (by omega)
     · exact h
-  refine ev_movRM (Code.get (i := 4) hX rfl) (by constructor <;> decide) (v := B.getD 5 0) (by simpa using hB5) ?_
+  refine ev_movRM (Code.get (i := 4) hX rfl) (by constructor <;> decide) (v := B.getD 5 0) (by rsimp; simpa using hB5) ?_
   refine ev_cmpRO (r := .rax) (o := oI 0) (v := 0) (Code.get (i := 5) hX rfl) (Or.inl rfl) ?_
   refine ev_jcc (Code.get (i := 6) hX rfl) (fun _ => ?_) (fun hnz => ?_)
   · have := hgo (B.getD 5 0).toBitVec (cmpFlags (B.getD 5 0).toBitVec (0 : Word).toBitVec)
@@ -883,6 +884,35 @@ theorem abiB_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : a
     simp only [CondCode.interp, cmpFlags_zf] at hnz
     rsimp at hnz
     rw [h0] at hnz; exact absurd hnz (by decide)
+
+theorem ev_gen_st [Host] {Q : MachineState → Prop} {S : MachineData} {pc : Int64}
+    (h : ∀ s, s = S → Ev Q s pc) : Ev Q S pc := h S rfl
+
+/-- `abiB_outcome0` from a state `s` that agrees with the call `dm'` (as `abiB_outcome0` takes it) on
+`rdi`, `rcx`, `r8`, and with the caller's call `dm` on the memory, `rsp` and the callee-saved
+registers. -/
+theorem abiB_outcome0' [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
+    {X : AsmTab} (hAX : AsmOkT q tab X)
+    (hwf : Prog.wf tab q = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
+    (fz own : List TieredArray) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng) (hngh : phi.id < tab.ng)
+    (h12 : plo ≠ phi) (h13 : plo ≠ mode) (h23 : phi ≠ mode) (hfzl : fz.length < 2 ^ 20) (k0 : Nat)
+    (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProgX X tab q "check")) k0)
+    (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+    (B' : Array Word) (r : Mem) (dm dm' s : MachineData) (ra j : Word)
+    (hc : BufCall tab fz own B' dm' ra) (hd : dm'.dmem = dm.dmem) (hsp : dm'.regs.rsp = dm.regs.rsp)
+    (hr : RegionRel tab dm'.regs.rcx.toNat own r dm.dmem) (hmo : bufMinOk tab fz own = true)
+    (hsd : s.dmem = dm.dmem) (hsdi : s.regs.rdi.toNat = dm'.regs.rdi.toNat)
+    (hscx : s.regs.rcx.toNat = dm'.regs.rcx.toNat) (hs8 : s.regs.r8.toNat = dm'.regs.r8.toNat)
+    (hssp : s.regs.rsp = dm.regs.rsp) (hsbp : s.regs.rbp = dm.regs.rbp) (hs14 : s.regs.r14 = dm.regs.r14)
+    (hs15 : s.regs.r15 = dm.regs.r15) (hsbx : s.regs.rbx = dm.regs.rbx) (hs12 : s.regs.r12 = dm.regs.r12)
+    (hs13 : s.regs.r13 = dm.regs.r13) (hsdx : s.regs.rdx = j) :
+    Ev (EntryPost (bufLayout tab dm'.regs.rdi.toNat B' dm'.regs.rcx.toNat fz own) dm ra
+        (L.run p abiFuel "check" [] (bufMemG fz own plo phi mode B' r j)))
+      s (label abiCheckB0L) := by
+  have h := abiB_outcome0 q p hq tab hok hAX hwf mode plo phi out hdrf ctlf hw fz own hngm hngl hngh h12 h13 h23
+    hfzl k0 hcode fd hentry hnp B' r s ra
+    (hc.congr (by rw [hsd, hd]) hsdi hscx hs8 (by rw [hssp, hsp])) (by rw [hscx, hsd]; exact hr) hmo
+  rwa [entryPost_congr (dm' := s) (dm := dm) hsd hssp hsbp hs14 hs15 hsbx hs12 hs13, hsdi, hscx, hsdx] at h
 
 /-- **From `ca_check_b`, the second phase**: a job index `j` at least the buffer's word `2` (the
 first phase's job count `kS`) and a nonzero word `5` (the second phase's offset `LS`, in words):
@@ -915,7 +945,8 @@ theorem abiB_outcome2 [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : 
   have hge' := UInt64.le_iff_toNat_le.mp hge
   have hfit := hc.geom.fits
   have hbe := hc.geom.bend
-  have hwn : workerNeed own < 2 ^ 64 := by omega
+  have h8lt : dm.regs.r8.toNat < 2 ^ 64 := dm.regs.r8.toNat_lt
+  have hwn : 2 * workerNeed own < 2 ^ 64 := by omega
   rw [Code.label (i := 0) hX rfl]
   refine ev_label (Code.get (i := 0) hX rfl) ?_
   refine ev_movRM (Code.get (i := 1) hX rfl) (by constructor <;> decide) (v := B.getD 2 0) (by simpa using hB2) ?_
@@ -925,13 +956,13 @@ theorem abiB_outcome2 [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : 
   · exfalso
     simp only [CondCode.interp, cmpFlags_cf, decide_eq_true_eq] at hlt
     rsimp at hlt; omega
-  refine ev_movRM (Code.get (i := 4) hX rfl) (by constructor <;> decide) (v := B.getD 5 0) (by simpa using hB5) ?_
+  refine ev_movRM (Code.get (i := 4) hX rfl) (by constructor <;> decide) (v := B.getD 5 0) (by rsimp; simpa using hB5) ?_
   refine ev_cmpRO (r := .rax) (o := oI 0) (v := 0) (Code.get (i := 5) hX rfl) (Or.inl rfl) ?_
   refine ev_jcc (Code.get (i := 6) hX rfl) (fun hz => ?_) (fun _ => ?_)
   · exfalso
     simp only [CondCode.interp, cmpFlags_zf] at hz
     rsimp at hz
-    exact hL (by simpa using hz)
+    exact hL (UInt64.toBitVec_inj.mp (by simpa using hz))
   refine ev_movRI (Code.get (i := 7) hX rfl) ?_
   refine ev_cmpRO (r := .r8) (o := oR .rax) (v := (2 * workerNeed own).toUInt64) (Code.get (i := 8) hX rfl)
     (Or.inr (Or.inr ⟨.rax, rfl, rfl⟩)) ?_
@@ -959,7 +990,30 @@ theorem abiB_outcome2 [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : 
   refine ev_binO (op := .sub) (o := oR .r9) rfl (Code.get (i := 22) hX rfl)
     (Or.inr (Or.inr ⟨.r9, rfl, rfl⟩)) fun st5 => ?_
   refine ev_movRR (Code.get (i := 23) hX rfl) ?_
+  have hL8 : 8 * (B.getD 5 0).toNat + dm.regs.rdi.toNat < 2 ^ 64 := by omega
+  have hus : UInt64.size = 2 ^ 64 := rfl
+  refine ev_gen_st fun s hs => ?_
   rw [← Code.label (i := 24) hX rfl]
-  sorry
+  refine abiB_outcome0' q p hq tab hok hAX hwf mode plo phi out hdrf ctlf hw fz own hngm hngl hngh h12 h13 h23
+    hfzl k0 hcode fd hentry hnp B' r dm dm' s ra _ hc hd hsp hr hmo (by rw [hs]) ?_ ?_ ?_ (by rw [hs]; rsimp)
+    (by rw [hs]; rsimp) (by rw [hs]; rsimp) (by rw [hs]; rsimp) (by rw [hs]; rsimp) (by rw [hs]; rsimp)
+    (by rw [hs]; rsimp) ?_
+  all_goals rw [hs]
+  · rsimp
+    simp only [BinOp.eval, hdi]
+    rw [UInt64.toNat_add, UInt64.toNat_shiftLeft]
+    simp only [UInt64.toNat_ofNat', Nat.shiftLeft_eq, Nat.reduceMod, Nat.reducePow]
+    omega
+  · rsimp
+    simp only [BinOp.eval, hcx]
+    rw [UInt64.toNat_add, Nat.toUInt64, UInt64.toNat_ofNat_of_lt' (by omega)]
+    omega
+  · rsimp
+    simp only [BinOp.eval, h8]
+    rw [UInt64.toNat_sub_of_le, Nat.toUInt64, UInt64.toNat_ofNat_of_lt' (by omega)]
+    rw [UInt64.le_iff_toNat_le, Nat.toUInt64, UInt64.toNat_ofNat_of_lt' (by omega)]
+    omega
+  · rsimp
+    simp only [BinOp.eval]
 
 end ConAgua.Final
