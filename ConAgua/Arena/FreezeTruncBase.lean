@@ -125,9 +125,9 @@ theorem frozen_drop1 : frozen.drop 1 =
      (TIXS, ⟨TIXS, .bin .mul (fzC 2) (fzCtl nstrCS.ca.toNat)⟩),
      (TIXN, ⟨TIXN, .bin .mul (fzC 2) (fzCtl nnumCS.ca.toNat)⟩),
      (EREC, ⟨EREC, fzCtl 129⟩),
-     (FIRSTS, ⟨FIRSTS, fzDecl⟩),
-     (L.Front.DECL, ⟨L.Front.DECL, .bin .add (fzC 1) (.bin .mul (fzC 8) fzDecl)⟩),
-     (L.Front.DLP, ⟨L.Front.DLP, .bin .add (fzC 1) (.ld64 L.Front.DLP (fzC 0))⟩)] ++
+     (FIRSTS, ⟨FIRSTS, fzDeclX⟩),
+     (L.Front.DECL, ⟨L.Front.DECL, .bin .add (fzC 1) (.bin .mul (fzC 8) fzDeclX)⟩),
+     (L.Front.DLP, ⟨L.Front.DLP, .bin .add (fzC 1) fzDlpX⟩)] ++
     [(SIXA, ⟨SIXA, fzSolExt nanonCS.ca.toNat⟩), (SIXS, ⟨SIXS, fzSolExt nstrCS.ca.toNat⟩),
      (SIXN, ⟨SIXN, fzSolExt nnumCS.ca.toNat⟩), (STXA, ⟨STXA, fzSolExt nanonCS.ca.toNat⟩),
      (STXS, ⟨STXS, fzSolExt nstrCS.ca.toNat⟩), (STXN, ⟨STXN, fzSolExt nnumCS.ca.toNat⟩),
@@ -247,32 +247,51 @@ theorem truncFrozen_erec (m : Mem) : (truncFrozen m).arr64 EREC = (m.arr64 EREC)
   have := truncFrozen_mem m (x := EREC) (z := ⟨EREC, fzCtl 129⟩) (by rw [frozen_drop1]; simp)
   rw [this, fzExt_ctl]; rfl
 
+/-- The compared run's extent form at `m`: `e` with the flag `CTL[cmpCW]` off, `CTL[k]` with it
+on (`fzCmpOr`). -/
+def cmpOrW (m : Mem) (e : Word) (k : Nat) : Word :=
+  e + rdW (m.arr64 CTL) (UInt64.ofNat cmpCW) * (rdW (m.arr64 CTL) (UInt64.ofNat k) - e)
+
+/-- The extent of `FIRSTS` (`fzDeclX`). -/
+def xD (m : Mem) : Word := cmpOrW m (rdW (m.arr64 L.Front.DECL) 0) cmpKD
+
+/-- The pool top the extent of `DLP` covers (`fzDlpX`). -/
+def xP (m : Mem) : Word := cmpOrW m (rdW (m.arr64 L.Front.DLP) 0) cmpKP
+
+theorem cmpOrW_off {m : Mem} (h : rdW (m.arr64 CTL) (UInt64.ofNat cmpCW) = 0) (e : Word) (k : Nat) :
+    cmpOrW m e k = e := by
+  simp [cmpOrW, h]
+
+theorem cmpOrW_on {m : Mem} (h : rdW (m.arr64 CTL) (UInt64.ofNat cmpCW) = 1) (e : Word) (k : Nat) :
+    cmpOrW m e k = rdW (m.arr64 CTL) (UInt64.ofNat k) := by
+  simp only [cmpOrW, h, UInt64.one_mul]; grind
+
 theorem truncFrozen_firsts (m : Mem) :
-    (truncFrozen m).arr64 FIRSTS = (m.arr64 FIRSTS).extract 0 (rdW (m.arr64 L.Front.DECL) 0).toNat := by
-  have := truncFrozen_mem m (x := FIRSTS) (z := ⟨FIRSTS, fzDecl⟩) (by rw [frozen_drop1]; simp)
-  rw [this]; simp only [fzExt, fzDecl, fzC, Expr.pval, rd64, rdW, Array.getD_eq_getD_getElem?]; rfl
+    (truncFrozen m).arr64 FIRSTS = (m.arr64 FIRSTS).extract 0 (xD m).toNat := by
+  have := truncFrozen_mem m (x := FIRSTS) (z := ⟨FIRSTS, fzDeclX⟩) (by rw [frozen_drop1]; simp)
+  rw [this]; simp only [fzExt, fzDeclX, fzDlpX, fzCmpOr, fzDecl, fzCtl, fzC, Expr.pval, BinOp.eval, rd64, rdW, xD, xP, cmpOrW, cmpCW, cmpKD, cmpKP, Array.getD_eq_getD_getElem?]; rfl
 
 theorem truncFrozen_decl (m : Mem) : (truncFrozen m).arr64 L.Front.DECL =
-    (m.arr64 L.Front.DECL).extract 0 (1 + 8 * rdW (m.arr64 L.Front.DECL) 0).toNat := by
+    (m.arr64 L.Front.DECL).extract 0 (1 + 8 * xD m).toNat := by
   have := truncFrozen_mem m (x := L.Front.DECL)
-    (z := ⟨L.Front.DECL, .bin .add (fzC 1) (.bin .mul (fzC 8) fzDecl)⟩) (by rw [frozen_drop1]; simp)
-  rw [this]; simp only [fzExt, fzDecl, fzC, Expr.pval, BinOp.eval, rd64, rdW, Array.getD_eq_getD_getElem?]; rfl
+    (z := ⟨L.Front.DECL, .bin .add (fzC 1) (.bin .mul (fzC 8) fzDeclX)⟩) (by rw [frozen_drop1]; simp)
+  rw [this]; simp only [fzExt, fzDeclX, fzDlpX, fzCmpOr, fzDecl, fzCtl, fzC, Expr.pval, BinOp.eval, rd64, rdW, xD, xP, cmpOrW, cmpCW, cmpKD, cmpKP, Array.getD_eq_getD_getElem?]; rfl
 
 theorem truncFrozen_dlp (m : Mem) : (truncFrozen m).arr64 L.Front.DLP =
-    (m.arr64 L.Front.DLP).extract 0 (1 + rdW (m.arr64 L.Front.DLP) 0).toNat := by
+    (m.arr64 L.Front.DLP).extract 0 (1 + xP m).toNat := by
   have := truncFrozen_mem m (x := L.Front.DLP)
-    (z := ⟨L.Front.DLP, .bin .add (fzC 1) (.ld64 L.Front.DLP (fzC 0))⟩) (by rw [frozen_drop1]; simp)
-  rw [this]; simp only [fzExt, fzC, Expr.pval, BinOp.eval, rd64, rdW, Array.getD_eq_getD_getElem?]; rfl
+    (z := ⟨L.Front.DLP, .bin .add (fzC 1) fzDlpX⟩) (by rw [frozen_drop1]; simp)
+  rw [this]; simp only [fzExt, fzDeclX, fzDlpX, fzCmpOr, fzDecl, fzCtl, fzC, Expr.pval, BinOp.eval, rd64, rdW, xD, xP, cmpOrW, cmpCW, cmpKD, cmpKP, Array.getD_eq_getD_getElem?]; rfl
 
-/-- **A solution row** (`SIX*`, `STX*`, `MAT*`) with the flag `CTL[224] = 1`: its prefix of
-`2 · CTL[k]` words. -/
+/-- **A solution row** (`SIX*`, `STX*`, `MAT*`) with the compare flag `CTL[cmpCW] = 1`: its
+prefix of `2 · CTL[k]` words. -/
 theorem truncFrozen_sol (m : Mem) {a : ArrId} {k : Nat} (h : (a, ⟨a, fzSolExt k⟩) ∈ frozen.drop 1)
-    (hf : rdW (m.arr64 CTL) 224 = 1) :
+    (hf : rdW (m.arr64 CTL) (UInt64.ofNat cmpCW) = 1) :
     (truncFrozen m).arr64 a = (m.arr64 a).extract 0 (2 * rdW (m.arr64 CTL) (UInt64.ofNat k)).toNat := by
   rw [truncFrozen_mem m h]
   simp only [fzExt, fzSolExt, fzCtl, fzC, Expr.pval, BinOp.eval, rd64, rdW,
     Array.getD_eq_getD_getElem?] at hf ⊢
-  have e : (Nat.toUInt64 224).toNat = (224 : Word).toNat := rfl
+  have e : (Nat.toUInt64 cmpCW).toNat = (UInt64.ofNat cmpCW).toNat := rfl
   rw [e, hf, UInt64.one_mul]; rfl
 
 end L.Arena

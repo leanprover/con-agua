@@ -78,10 +78,10 @@ theorem checkerProg_fzs : ∀ x ∈ fzsImgs, checkerProg.lookup (fzsName x.1) = 
   · show checkerProg.lookup "fzs_61" = some (fzsF 61); chk_lk
   · show checkerProg.lookup "fzs_62" = some (fzsF 62); chk_lk
 
-/-- **Mode `6`'s end** before `par_compact(0)`: the challenge's index build (`G6`), then the flag;
+/-- **Mode `6`'s end** before `par_compact(0)`: the challenge's index build (`G6`), then the flag and the extent words (`cmp_ext`);
 the solution's stash (`cmp_sstash`) kept (`CsStash`). -/
 def F6 {bC bS : ByteArray} (PS : PhaseS bC bS) (m : Mem) (c : Word) (m9 : Mem) : Prop :=
-  ∃ m6, G6 PS m c m6 ∧ m9 = m6.set64 CTL 224 1 ∧ CsStash m m9
+  ∃ m6, G6 PS m c m6 ∧ m9 = cmpExtM (m6.set64 CTL 224 1) ∧ CsStash m m9
 
 /-- **The solution's stash in mode `6`'s frozen memory.** -/
 theorem F6.csStash {bC bS : ByteArray} {PS : PhaseS bC bS} {m : Mem} {c : Word} {m9 : Mem}
@@ -157,8 +157,8 @@ theorem checkC3_run {bC bS pb : ByteArray} {sz : TieredArray → Nat} (PS : Phas
     let P : Word → Mem → Prop := fun x m'' => ∃ c, PostC3 k (F6 PS m c) m'' ∧ x = 9223372036854775808 + c
     have hC : ∀ s₁ : St, ⦃fun s => s = s₁⦄ invoke checkerProg (exec checkerProg n) "check_c3" [k]
         ⦃fun r s' => s₁.mem = s₀.mem → P (r.headD 0) s'.mem; ⊤⦄ := fun s₁ =>
-      triple_post (checkC3_of_stages hc3 hpc checkerProg_fz (by chk_lk) hfs h0 h1 h2 h3 h4 h5 h6
-        (F := F6 PS m) (fun c x hx => ⟨x, hx.1, rfl, hx.2.setCtl 224 1⟩) k n hn s₁)
+      triple_post (checkC3_of_stages hc3 hpc checkerProg_fz (by chk_lk) hfs (by chk_lk) h0 h1 h2 h3 h4 h5 h6
+        (F := F6 PS m) (fun c x hx => ⟨x, hx.1, rfl, (((hx.2.setCtl 224 1).setCtl 229 1).setCtl 230 _).setCtl 231 _⟩) k n hn s₁)
         fun _ _ h e => h (by rw [e]; exact ⟨hO, hO.bytes⟩)
     exact run_post (Q := fun x m'' => s₀.mem.glob MODE = md → P (x.headD 0) m'') hrun
       (check_dispatch67 hlc n s₀ md k hmk P hC) hmode

@@ -8,6 +8,7 @@ import all ConAgua.Arena.FreezeCmp
 public import ConAgua.Arena.FreezeCmpSpec
 import all ConAgua.Checker.CmpSeqEntry
 public import ConAgua.Checker.CompareEntry
+public import ConAgua.Checker.CmpSStash
 meta import ConAgua.Checker.LoopProgTac
 public import ConAgua.Checker.ParEntryA
 
@@ -53,13 +54,14 @@ def PostC3 (k : Word) (F : Mem → Prop) (m' : Mem) : Prop :=
 
 set_option experimental.vcgen true in
 /-- **`check_c3(k)` from its steps**: the solution's stash, the stages, the flag
-`CTL[224] := 1` (a memory `F c`, `c` the challenge's count read after the preparation), then the
+`CTL[224] := 1` and the extent words (`cmp_ext`) (a memory `F c`, `c` the challenge's count read after the preparation), then the
 compaction(s) (`PostC3`); the result is `2^63 + c`. -/
 theorem checkC3_of_stages {p : Prog} (hp : p.lookup "check_c3" = some checkC3L)
     (hpc : p.lookup "par_compact" = some parCompactL)
     (hfz : ∀ i < frozen.length, p.lookup (fzName i) = some (fzF i))
     (hhs : p.lookup "cmp_hdr_s" = some cmpHdrSL)
     (hfs : ∀ x ∈ fzsImgs, p.lookup (fzsName x.1) = some (fzsF x.1))
+    (hce : p.lookup "cmp_ext" = some cmpExtL)
     {Q00 Q0 Q1 Q2 Q3 : Mem → Prop} {Q4 Q5 G F : Word → Mem → Prop}
     (h0 : StageSpec p "cmp_sstash" Q00 fun _ => Q0)
     (h1 : StageSpecC p "index_to_solution" (fun c m => Q0 m ∧ CntAt c m) fun _ m => Q1 m)
@@ -68,7 +70,7 @@ theorem checkC3_of_stages {p : Prog} (hp : p.lookup "check_c3" = some checkC3L)
     (h4 : StageSpecC p "side_records" (fun c m => Q3 m ∧ CntAt c m) Q4)
     (h5 : StageSpecC p "solution_of" Q4 Q5)
     (h6 : StageSpecC p "build_index" Q5 G)
-    (hG : ∀ c m, G c m → F c (m.set64 CTL 224 1))
+    (hG : ∀ c m, G c m → F c (cmpExtM (m.set64 CTL 224 1)))
     (k : Word) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_c3" [k]
     ⦃fun r s' => Q00 s₀.mem → ∃ c, PostC3 k (F c) s'.mem ∧ r.headD 0 = (9223372036854775808 : Word) + c;
@@ -80,12 +82,12 @@ theorem checkC3_of_stages {p : Prog} (hp : p.lookup "check_c3" = some checkC3L)
   | succ n =>
     have hn' : n ≤ 2 ^ 62 := by omega
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, (h0 n hn' ·),
-      (h1 n hn' · ·), (h2 n hn' ·), (h3 n hn' ·), (h4 n hn' · ·), (h5 n hn' · ·), (h6 n hn' · ·),
+      (h1 n hn' · ·), (h2 n hn' ·), (cmpExt_spec p hce n ·), (h3 n hn' ·), (h4 n hn' · ·), (h5 n hn' · ·), (h6 n hn' · ·),
       (parCompact_spec hpc hfz n · · ·), (cmpHdrS_spec hhs (hfz 0 (by rw [frozen_length]; decide)) hfs n · ·)]
     all_goals (try simp only [Sig.retVal, Sig.retOr, L.St.setLoc_mem, List.headD_cons,
       St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, BinOp.eval, ite_true,
       UInt64.toNat_zero] at *)
-    all_goals clear h0 h1 h2 h3 h4 h5 h6 hfz hp hpc hhs hfs
+    all_goals clear h0 h1 h2 h3 h4 h5 h6 hfz hp hpc hhs hfs hce
     all_goals (try simp only [SOLC] at *)
     all_goals grind (gen := 30) (ematch := 40) [lang_grind, Locals.init_cons_zero, PostC3, PostPC, cntAt_self]
 

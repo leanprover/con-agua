@@ -26,18 +26,21 @@ section
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration}
   {I : IStreamIndex} {a : AState}
 
-/-- **Setting the solution's flag keeps the jobs' memory half** (as `JobM.cut`), at the solution
-the flag's memory holds. -/
+/-- The `CTL` words mode `6`'s end sets: the solution's flag and the extent words (`cmp_ext`). -/
+def flagC : List Word := [224, 229, 230, 231]
+
+/-- **Setting the solution's flag and the extent words keeps the jobs' memory half** (as
+`JobM.cut`), at the solution the flag's memory holds. -/
 theorem _root_.L.Arena.JobM.setFlag {J J' : Option ISolution} {t t' : Mem} (h : JobM pins dn ds J I t a)
-    (hf : MemFrame [] [224] t t') (hs : JSol J' t') : JobM pins dn ds J' I t' a := by
+    (hf : MemFrame [] flagC t t') (hs : JSol J' t') : JobM pins dn ds J' I t' a := by
   have hA : ∀ b ∈ ([] : List TieredArray), False := fun _ h => absurd h (by simp)
-  have hC : ∀ x ∈ ([224] : List Word), x = 224 := fun x hx => by simpa using hx
+  have hC : ∀ x ∈ flagC, x = 224 ∨ x = 229 ∨ x = 230 ∨ x = 231 := fun x hx => by simpa [flagC] using hx
   have he : erecP t' = erecP t :=
     erecP_congr' (hf.arr EREC (by simp) (by decide)) (hf.arr _ (by simp) (by decide))
       (hf.ctl 129 (by decide)) (hf.ctl 130 (by decide))
-  exact ⟨⟨ArenaR.frame_ext [] _ (by simp) (fun x hx => by rw [hC x hx]; decide) _ _ hf _ h.arena.base,
+  exact ⟨⟨ArenaR.frame_ext [] _ (by simp) (fun x hx => by rcases hC x hx with rfl | rfl | rfl | rfl <;> decide) _ _ hf _ h.arena.base,
       DerR.frameM [] _ _ _ hf (by simp) _ h.arena.der⟩,
-    h.core.frame (fun b hb => (hA b hb).elim) (fun x hx => by rw [hC x hx]; decide) hf,
+    h.core.frame (fun b hb => (hA b hb).elim) (fun x hx => by rcases hC x hx with rfl | rfl | rfl | rfl <;> decide) hf,
     h.pinsR.frame (fun b hb => (hA b hb).elim) hf, h.mode.frame hf (by decide) (by decide),
     h.idx.grow (fun b _ hr => hf.arr b (by simp) (fun e => by subst e; revert hr; decide)) (hf.ctl 128 (by decide))
       (by rw [he]; exact fun _ _ h => h),
@@ -53,8 +56,8 @@ theorem _root_.L.Arena.JobM.setFlag {J J' : Option ISolution} {t t' : Mem} (h : 
         ⟨by decide, by decide, by decide⟩ (by simp)
         ⟨by decide, by decide, by decide⟩ (by simp) (by decide), h.mem.dnN⟩,
     by rw [pinW_frame hf (by simp)]; exact h.flag,
-    h.memos.frame hf (fun b hb => (hA b hb).elim) (fun x hx => by rw [hC x hx]; decide), h.fsize,
-    h.frozen.frame (fun x hx => not_mem_frozenCtl (by rw [hC x hx]; decide)) hf, hs⟩
+    h.memos.frame hf (fun b hb => (hA b hb).elim) (fun x hx => by rcases hC x hx with rfl | rfl | rfl | rfl <;> decide), h.fsize,
+    h.frozen.frame (fun x hx => by rcases hC x hx with rfl | rfl | rfl | rfl <;> exact not_mem_frozenCtl (by decide)) hf, hs⟩
 
 /-- **The flush after the jobs' memory half** (`FoldOn.jobRJ`'s flush, at any memory half): the
 job relation at the flushed memory and the twin state with its caches emptied. -/
@@ -109,16 +112,17 @@ theorem _root_.L.Arena.SolIdxR.frameX {A : List TieredArray} {C : List Word} {m 
   · rw [ctlW, hf.ctl _ h225]; exact h.next
   · rw [ctlW, hf.ctl _ h226]; exact h.size
 
-/-- **`SolR` across the solution's flag** (`CTL[224]`, which `SolR` does not read). -/
-theorem _root_.L.Arena.SolR.setFlag {m : Mem} {J : ISolution} (h : SolR m J) (v : Word) : SolR (m.set64 CTL 224 v) J := by
-  have hf := MemFrame.setCtl m 224 v
-  have he : erecP (m.set64 CTL 224 v) = erecP m :=
+/-- **`SolR` across the solution's flag and the extent words** (`CTL[224]`, `CTL[229‥231]`, which
+`SolR` does not read). -/
+theorem _root_.L.Arena.SolR.flagFrame {m m' : Mem} {J : ISolution} (h : SolR m J) (hf : MemFrame [] flagC m m') :
+    SolR m' J := by
+  have he : erecP m' = erecP m :=
     erecP_congr' (hf.arr EREC (by simp) (by decide)) (hf.arr _ (by simp) (by decide))
       (hf.ctl 129 (by decide)) (hf.ctl 130 (by decide))
-  have hm : ∀ w, matRow (m.set64 CTL 224 v) w = matRow m w := fun w => by
+  have hm : ∀ w, matRow m' w = matRow m w := fun w => by
     simp only [matRow, hf.arr _ (by simp) (show (matArr (rowTag w) : TieredArray) ≠ CTL by
       unfold matArr; split <;> (try split) <;> decide)]
-  have hl : ∀ w, matList (m.set64 CTL 224 v) w = matList m w := fun w => by
+  have hl : ∀ w, matList m' w = matList m w := fun w => by
     unfold matList; rw [hm, he]
   exact SolR.ofIdx (SolIdxR.frameX ⟨h.base, h.btbl, h.next, h.size, h.rows⟩ hf (by simp) (by decide)
       (by decide) (by rw [he]; exact fun _ _ x => x))
@@ -156,7 +160,7 @@ theorem F6.jobM (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) 
   obtain ⟨m6, ⟨m2, m3, dsC, sG, res, m4, m5, h, hMt, hMI, hK, I, a', hI, hB, hFz, hfs, hBK, hfr, -⟩,
     rfl, -⟩ := h6
   refine ⟨m2, m3, dsC, sG, res, m4, I, a', h, hI, ?_, hB.drv.state.wf, hB.off, fun t => by
-    rw [(MemFrame.setCtl m6 224 1).size, hfr.size, hK.frame.size, h.frameM.size]⟩
+    rw [(cmpExt_frame _).size, (MemFrame.setCtl m6 224 1).size, hfr.size, hK.frame.size, h.frameM.size]⟩
   have hS := hB.stage
   have hctl : 228 < (m.arr64 CTL).size := by
     rw [hF.sizeAt]
@@ -217,15 +221,20 @@ theorem F6.jobM (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) 
   have hW : WalkMem m := ⟨⟨∅, memoRV_zeroAt ndSch bmKey _ m (by simp [ndSch]; omega) h220
       (hz NDM (by decide))⟩, ⟨∅, memoRV_zeroAt csSch nmKey _ m (by simp [csSch]; omega) h222
       (hz CSM (by decide))⟩, by simp [NTOPC]; omega, by simp [CTOPC]; omega⟩
-  have hf9 := MemFrame.setCtl m6 224 1
-  have hW9 : WalkMem (m6.set64 CTL 224 1) :=
+  have hf9 : MemFrame [] flagC m6 (cmpExtM (m6.set64 CTL 224 1)) :=
+    ((MemFrame.setCtl m6 224 1).mono (by simp) (by simp [flagC])).trans
+      ((cmpExt_frame _).mono (by simp) (by simp [flagC]))
+  have hW9 : WalkMem (cmpExtM (m6.set64 CTL 224 1)) :=
     ((((hW.frame h.frameM (not_mem_A64 (by decide)) (not_mem_A64 (by decide)) (not_mem_C64 (by decide))
       (not_mem_C64 (by decide))).frame hK.frame (by decide) (by decide) (by decide) (by decide)).frame
       hfr (fun hm => (biA_not_sol hm).2.1 rfl) (fun hm => (biA_not_sol hm).2.2 rfl)
       (not_mem_biC (by decide)) (not_mem_biC (by decide))).frame hf9 (by simp) (by simp) (by decide)
       (by decide))
-  have hJS : JSol (some (solutionOf PS.IS res)) (m6.set64 CTL 224 1) :=
-    ⟨⟨by simp only [ctlW, SOLC]; exact rdW_set64_self _ _ _ _ (by rw [hsz6]; simp; omega), hSol6.setFlag 1⟩,
+  have hJS : JSol (some (solutionOf PS.IS res)) (cmpExtM (m6.set64 CTL 224 1)) :=
+    ⟨⟨by
+        simp only [ctlW, SOLC]
+        rw [(cmpExt_frame _).ctl _ (by decide)]
+        exact rdW_set64_self _ _ _ _ (by rw [hsz6]; simp; omega), hSol6.flagFrame hf9⟩,
       fun J' e => by
         cases e
         refine ⟨hW9, ?_⟩
