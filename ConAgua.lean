@@ -137,6 +137,7 @@ public import ConAgua.Checker.CompareChain6
 public import ConAgua.Checker.CmpHdrKeep
 public import ConAgua.Checker.CmpSJobs
 public import ConAgua.Checker.CmpThreadsPool
+public import ConAgua.Arena.C1Pool
 public import ConAgua.Checker.CmpThreadsC
 public import ConAgua.Checker.CmpSPhase
 public import ConAgua.Checker.CmpSPhaseT
