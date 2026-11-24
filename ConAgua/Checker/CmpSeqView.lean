@@ -319,4 +319,17 @@ theorem _root_.L.Arena.JobM.csBack {J : ISolution} {IS IC : IStreamIndex} {dsS d
 
 end
 
+/-! ## The solution's view by prefix copies -/
+
+/-- **What the frozen memory `m9` keeps of the solution's index build `m`** (`cmp_sstash`'s copies,
+kept through the challenge's stages): its records' words (`SDECL`, below `1 + 8 · count`), its
+index's firsts (`SFIRSTS`, below the count), its declaration pool (`SDLP`, below `1 + DLP[0]`) and
+its frozen index words (`SCTL`). -/
+structure CsStash (m m9 : Mem) : Prop where
+  decl : ∀ j, j < 1 + 8 * (rdW (m.arr64 L.Front.DECL) 0).toNat →
+    (m9.arr64 SDECL)[j]? = (m.arr64 L.Front.DECL)[j]?
+  firsts : ∀ j, j < (rdW (m.arr64 L.Front.DECL) 0).toNat → (m9.arr64 SFIRSTS)[j]? = (m.arr64 FIRSTS)[j]?
+  dlp : ∀ j, j < 1 + (rdW (m.arr64 L.Front.DLP) 0).toNat → (m9.arr64 SDLP)[j]? = (m.arr64 L.Front.DLP)[j]?
+  frz : ∀ x ∈ frozenCtl, rdW (m9.arr64 SCTL) x = rdW (m.arr64 CTL) x
+
 end L.Checker
