@@ -316,4 +316,45 @@ theorem CsStash.setCtl {m x : Mem} (h : CsStash m x) (c v : Word) : CsStash m (x
   h.of_eq (Mem.arr64_set64_ne _ _ _ _ _ (by decide)) (Mem.arr64_set64_ne _ _ _ _ _ (by decide))
     (Mem.arr64_set64_ne _ _ _ _ _ (by decide)) (Mem.arr64_set64_ne _ _ _ _ _ (by decide))
 
+/-- **Right after `cmp_sstash()`** from a memory that agrees with `m` but in `OUT` and the stash
+(`OutEq`), the stash holds `m`'s prefixes (the pool's top below `2^63 - 1`, as `DeclsF` gives). -/
+theorem csStash_sstash {m M : Mem} (hO : OutEq m M) (hok : SStashOK M)
+    (hp : (rdW (m.arr64 L.Front.DLP) 0).toNat + 1 < 2 ^ 63) : CsStash m (sstashM M) := by
+  obtain ⟨hw, h1s, h1d, h2s, h2d, h3s, h3d, h4s, h4d⟩ := hok
+  have eD : M.arr64 L.Front.DECL = m.arr64 L.Front.DECL := hO.arr _ (by simp [sstA]; decide)
+  have eF : M.arr64 FIRSTS = m.arr64 FIRSTS := hO.arr _ (by simp [sstA]; decide)
+  have eP : M.arr64 L.Front.DLP = m.arr64 L.Front.DLP := hO.arr _ (by simp [sstA]; decide)
+  have eC : M.arr64 CTL = m.arr64 CTL := hO.arr _ (by simp [sstA]; decide)
+  have n1 : (sstN1 M).toNat = 1 + 8 * (rdW (M.arr64 L.Front.DECL) 0).toNat := by
+    simp only [sstN1, UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
+  have n2 : (sstN2 M).toNat = (rdW (M.arr64 L.Front.DECL) 0).toNat := rfl
+  have n3 : (sstN3 M).toNat = 1 + (rdW (M.arr64 L.Front.DLP) 0).toNat := by
+    have hp' : (rdW (M.arr64 L.Front.DLP) 0).toNat + 1 < 2 ^ 63 := by rw [eP]; exact hp
+    simp only [sstN3, UInt64.toNat_add]; simp; omega
+  rw [eD] at n1 n2 hw; rw [eP] at n3
+  refine ⟨fun j hj => ?_, fun j hj => ?_, fun j hj => ?_, fun x hx => ?_⟩
+  · simp only [sstashM]
+    rw [arr64_copy64_ne _ _ _ _ _ _ (by decide), arr64_copy64_ne _ _ _ _ _ _ (by decide),
+      arr64_copy64_ne _ _ _ _ _ _ (by decide), cq_copy64_lo (by decide) M (by omega) h1s h1d (by omega), eD]
+  · simp only [sstashM]
+    rw [arr64_copy64_ne _ _ _ _ _ _ (by decide), arr64_copy64_ne _ _ _ _ _ _ (by decide),
+      cq_copy64_lo (by decide) _ (by omega) (by simpa using h2s) (by rw [arr64_copy64_ne _ _ _ _ _ _ (by decide)]; exact h2d)
+        (by omega), arr64_copy64_ne _ _ _ _ _ _ (by decide), eF]
+  · simp only [sstashM]
+    rw [arr64_copy64_ne _ _ _ _ _ _ (by decide),
+      cq_copy64_lo (by decide) _ (by omega) (by simpa using h3s)
+        (by rw [arr64_copy64_ne _ _ _ _ _ _ (by decide), arr64_copy64_ne _ _ _ _ _ _ (by decide)]; exact h3d)
+        (by omega), arr64_copy64_ne _ _ _ _ _ _ (by decide), arr64_copy64_ne _ _ _ _ _ _ (by decide), eP]
+  · have hx' : x.toNat < 256 := by
+      simp only [frozenCtl, List.mem_cons, List.not_mem_nil, or_false] at hx
+      rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+    have h := congrArg some (cq_copy64_lo (d := SCTL) (s := CTL) (k := x.toNat) (by decide)
+      (((M.copy64 SDECL 0 L.Front.DECL 0 (sstN1 M).toNat).copy64 SFIRSTS 0 FIRSTS 0 (sstN2 M).toNat).copy64
+        SDLP 0 L.Front.DLP 0 (sstN3 M).toNat) (n := 256) (by decide) (by simpa using h4s)
+      (by simpa using h4d) hx')
+    simp only [Option.some.injEq] at h
+    simp only [L.Arena.rdW, sstashM]
+    rw [h, arr64_copy64_ne _ _ _ _ _ _ (by decide), arr64_copy64_ne _ _ _ _ _ _ (by decide),
+      arr64_copy64_ne _ _ _ _ _ _ (by decide), eC]
+
 end L.Checker

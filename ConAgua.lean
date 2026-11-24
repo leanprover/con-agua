@@ -114,6 +114,7 @@ public import ConAgua.Verdict.CmpVSPhase
 public import ConAgua.Checker.CmpVerdictNv
 public import ConAgua.Checker.CompareStash
 public import ConAgua.Checker.CmpSStash
+public import ConAgua.Checker.CmpStashFrame
 public import ConAgua.Arena.FreezeView
 public import ConAgua.Arena.FreezeCmp
 public import ConAgua.Arena.FreezeCmpSpec

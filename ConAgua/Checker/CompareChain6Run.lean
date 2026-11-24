@@ -9,6 +9,7 @@ import all ConAgua.Arena.FreezeCmp
 import all ConAgua.Checker.CmpSeqEntry
 import ConAgua.Checker.CheckARun
 import ConAgua.Checker.CmpSStash
+public import ConAgua.Checker.CmpStashFrame
 import ConAgua.L.Blocks
 meta import ConAgua.Checker.LoopProgTac
 import ConAgua.Checker.LoopProgTac
@@ -77,9 +78,30 @@ theorem checkerProg_fzs : ∀ x ∈ fzsImgs, checkerProg.lookup (fzsName x.1) = 
   · show checkerProg.lookup "fzs_61" = some (fzsF 61); chk_lk
   · show checkerProg.lookup "fzs_62" = some (fzsF 62); chk_lk
 
-/-- **Mode `6`'s end** before `par_compact(0)`: the challenge's index build (`G6`), then the flag. -/
+/-- **Mode `6`'s end** before `par_compact(0)`: the challenge's index build (`G6`), then the flag;
+the solution's stash (`cmp_sstash`) kept (`CsStash`). -/
 def F6 {bC bS : ByteArray} (PS : PhaseS bC bS) (m : Mem) (c : Word) (m9 : Mem) : Prop :=
-  ∃ m6, G6 PS m c m6 ∧ m9 = m6.set64 CTL 224 1
+  ∃ m6, G6 PS m c m6 ∧ m9 = m6.set64 CTL 224 1 ∧ CsStash m m9
+
+/-- **The solution's stash in mode `6`'s frozen memory.** -/
+theorem F6.csStash {bC bS : ByteArray} {PS : PhaseS bC bS} {m : Mem} {c : Word} {m9 : Mem}
+    (h : F6 PS m c m9) : CsStash m m9 := by
+  obtain ⟨_, _, _, h⟩ := h; exact h
+
+/-- **A stage of mode `6` keeps the solution's stash** (`checkerProg_ssW`). -/
+theorem StageSpecC.keepS {f : FnName} {Pre Post : Word → Mem → Prop}
+    (h : StageSpecC checkerProg f Pre Post) (hf : f ∈ c3StageFns) (m : Mem) :
+    StageSpecC checkerProg f (fun c x => Pre c x ∧ CsStash m x) (fun c x => Post c x ∧ CsStash m x) := by
+  intro n hn s₀ c
+  exact triple_post (L.Arena.triple_and (h n hn s₀ c) (invoke_memFrame checkerProg_ssW n hf [c] s₀))
+    fun _ _ ⟨⟨hl, hP⟩, hfr, _⟩ => ⟨hl, fun ⟨h1, h2⟩ => ⟨hP h1, h2.frame hfr⟩⟩
+
+theorem StageSpec.keepS {f : FnName} {Pre : Mem → Prop} {Post : List Word → Mem → Prop}
+    (h : StageSpec checkerProg f Pre Post) (hf : f ∈ c3StageFns) (m : Mem) :
+    StageSpec checkerProg f (fun x => Pre x ∧ CsStash m x) (fun r x => Post r x ∧ CsStash m x) := by
+  intro n hn s₀
+  exact triple_post (L.Arena.triple_and (h n hn s₀) (invoke_memFrame checkerProg_ssW n hf [] s₀))
+    fun _ _ ⟨⟨hl, hP⟩, hfr, _⟩ => ⟨hl, fun ⟨h1, h2⟩ => ⟨hP h1, h2.frame hfr⟩⟩
 
 /-- **Mode `6` in L**: after the solution's index build (`FoldOn`, the challenge's records
 `Stash`, `Keep6`), a run of `check` from a memory `M` that agrees with it but in `OUT`, with the
@@ -99,24 +121,29 @@ theorem checkC3_run {bC bS pb : ByteArray} {sz : TieredArray → Nat} (PS : Phas
   have hpc : checkerProg.lookup "par_compact" = some parCompactL := by chk_lk
   let B : Mem → Prop := fun x => x.bytes = m.bytes
   have hB : ∀ x y, L.Keep x y → B x → B y := fun x y hk hx => hk.1.trans hx
-  have h0 : StageSpec checkerProg "cmp_sstash" (fun x => OutEq m x ∧ B x) (fun _ x => OutEq m x ∧ B x) :=
+  have hpD : (rdW (m.arr64 L.Front.DLP) 0).toNat + 1 < 2 ^ 63 := by
+    have := hF.build.decls.ptop; have := hF.build.decls.psize
+    simp only [L.Arena.rdW, UInt64.toNat_zero]; omega
+  let S : Mem → Prop := CsStash m
+  have h0 : StageSpec checkerProg "cmp_sstash" (fun x => OutEq m x ∧ B x)
+      (fun _ x => (OutEq m x ∧ B x) ∧ S x) :=
     fun n _ s₀ => triple_post (cmpSStash_spec checkerProg (by chk_lk) n s₀) fun _ _ h =>
       ⟨h.1, fun hp => by
         rw [h.2.2]
-        exact ⟨hp.1.sstash, by
+        exact ⟨⟨hp.1.sstash, by
           show (sstashM s₀.mem).bytes = m.bytes
-          simp only [sstashM, Mem.copy64_bytes]; exact hp.2⟩⟩
+          simp only [sstashM, Mem.copy64_bytes]; exact hp.2⟩, csStash_sstash hp.1 h.2.1 hpD⟩⟩
   have hfs := checkerProg_fzs
-  have h1 := ((moveStep6 (PS := PS) (m₇ := m₇) hF hsz6).keepB B hB).mono
-    (Pre' := fun c x => (OutEq m x ∧ B x) ∧ CntAt c x) (Post' := fun _ x => Q61 PS m x ∧ B x)
-    (fun _ _ ⟨⟨a, b⟩, c⟩ => ⟨⟨a, c⟩, b⟩) (fun _ _ h => h)
-  have h2 := (restoreStep6 (PS := PS) (m := m)).keepB B hB
-  have h3 := (prepStep6 hF hst hk6).keepB B hB
-  have h4 := ((sideStep6 hF hst hk6).keepB B hB).mono
-    (Pre' := fun c x => (Q63 PS m x ∧ B x) ∧ CntAt c x) (Post' := fun c x => Q64 PS m c x ∧ B x)
-    (fun _ _ ⟨⟨a, b⟩, c⟩ => ⟨⟨a, c⟩, b⟩) (fun _ _ h => h)
-  have h5 := (matesStep6 hF).keepB B hB
-  have h6 := buildStep6 hF hst hk6 hsz hpb
+  have h1 := (((moveStep6 (PS := PS) (m₇ := m₇) hF hsz6).keepB B hB).keepS (by decide) m).mono
+    (Pre' := fun c x => ((OutEq m x ∧ B x) ∧ S x) ∧ CntAt c x) (Post' := fun _ x => (Q61 PS m x ∧ B x) ∧ S x)
+    (fun _ _ ⟨⟨⟨a, b⟩, s⟩, c⟩ => ⟨⟨⟨a, c⟩, b⟩, s⟩) (fun _ _ h => h)
+  have h2 := ((restoreStep6 (PS := PS) (m := m)).keepB B hB).keepS (by decide) m
+  have h3 := ((prepStep6 hF hst hk6).keepB B hB).keepS (by decide) m
+  have h4 := (((sideStep6 hF hst hk6).keepB B hB).keepS (by decide) m).mono
+    (Pre' := fun c x => ((Q63 PS m x ∧ B x) ∧ S x) ∧ CntAt c x) (Post' := fun c x => (Q64 PS m c x ∧ B x) ∧ S x)
+    (fun _ _ ⟨⟨⟨a, b⟩, s⟩, c⟩ => ⟨⟨⟨a, c⟩, b⟩, s⟩) (fun _ _ h => h)
+  have h5 := ((matesStep6 hF).keepB B hB).keepS (by decide) m
+  have h6 := (buildStep6 hF hst hk6 hsz hpb).keepS (by decide) m
   cases N with
   | zero =>
     exfalso
@@ -131,7 +158,7 @@ theorem checkC3_run {bC bS pb : ByteArray} {sz : TieredArray → Nat} (PS : Phas
     have hC : ∀ s₁ : St, ⦃fun s => s = s₁⦄ invoke checkerProg (exec checkerProg n) "check_c3" [k]
         ⦃fun r s' => s₁.mem = s₀.mem → P (r.headD 0) s'.mem; ⊤⦄ := fun s₁ =>
       triple_post (checkC3_of_stages hc3 hpc checkerProg_fz (by chk_lk) hfs h0 h1 h2 h3 h4 h5 h6
-        (F := F6 PS m) (fun c x hx => ⟨x, hx, rfl⟩) k n hn s₁)
+        (F := F6 PS m) (fun c x hx => ⟨x, hx.1, rfl, hx.2.setCtl 224 1⟩) k n hn s₁)
         fun _ _ h e => h (by rw [e]; exact ⟨hO, hO.bytes⟩)
     exact run_post (Q := fun x m'' => s₀.mem.glob MODE = md → P (x.headD 0) m'') hrun
       (check_dispatch67 hlc n s₀ md k hmk P hC) hmode
