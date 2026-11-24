@@ -24,7 +24,7 @@ in place, on the one store:
   `SCTL`'s, the flag `CTL[224] := 0`); then the solution's jobs `PLO‥PHI - 1` as `check_b`.
 * mode `9`, `check_bc()`: the **switch back**: the challenge's view restored from the stash at the
   extents mode `8` used; then the challenge's jobs as `check_b`, on the worker state the
-  solution's jobs left (the twin's `TwinComparesAcceptsSeqI`).
+  solution's jobs left (the twin's `TwinComparesAccepts`).
 
 The jobs never store to the stream index's rows, `FIRSTS`, the solution's rows or those `CTL`
 words (`Checker/CmpSeqW.lean`), nor to the stash arrays, so the restore is exact.

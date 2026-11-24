@@ -107,8 +107,6 @@ public import ConAgua.Arena.CmpVRoots
 public import ConAgua.Arena.CmpVCone
 public import ConAgua.Verdict.CmpVModes
 public import ConAgua.Verdict.CmpVSJobs
-public import ConAgua.Verdict.CmpVCJobs
-public import ConAgua.Verdict.CmpVTJobs
 public import ConAgua.Verdict.CmpVTJobsC
 public import ConAgua.Verdict.CmpVSPhase
 public import ConAgua.Checker.CmpVerdictNv
@@ -135,7 +133,6 @@ public import ConAgua.Final.CmpEntry1
 public import ConAgua.Final.CmpC
 public import ConAgua.Final.CompareTwin
 public import ConAgua.Final.CompareTwinVerdict
-public import ConAgua.Final.CompareTwinI
 public import ConAgua.Final.CompareTwinSeq
 public import ConAgua.Final.CompareTwinThr
 public import ConAgua.Final.CmpChain
@@ -184,7 +181,5 @@ public import ConAgua.Checker.CompareChain6R
 public import ConAgua.Checker.CompareChain6B
 public import ConAgua.Checker.CompareChain6Run
 public import ConAgua.Arena.PoolJobsJ
-public import ConAgua.Checker.CompareJobs
-public import ConAgua.Checker.CompareTwinJ
 public import ConAgua.Checker.CompareChain6J
 public import ConAgua.Final.CmpChainC

@@ -4,7 +4,7 @@ public import ConAgua.Checker.CmpSPhaseThr
 public import ConAgua.Checker.C1Back
 public import ConAgua.Arena.C1Pool
 public import ConAgua.Final.CpThreads
-public import ConAgua.Final.CompareTwinI
+public import ConAgua.Final.CompareTwinVerdict
 import ConAgua.Checker.CmpThreadsC
 import ConAgua.Checker.CmpThreadsPool
 import ConAgua.Checker.CmpSPhaseT
@@ -32,7 +32,7 @@ over header C on the region as they left it.
   `sI.worker`, ending in a worker state where the thread's region is the solution's jobs' relation
   with `c1Q` (what the solution's jobs keep), and the twin's pool of the solution's jobs.
 * `c1Thr_accepts`: then the switch (`c1_thrBack`) and the challenge's phase from each thread's end
-  (`pool_twinJW`): `TwinComparesAcceptsThr`.
+  (`pool_twinJW`): `TwinComparesAcceptsPooled`.
 -/
 
 open ConRon.Arena ConRon.Bridge
@@ -72,7 +72,7 @@ theorem c1Thr_accepts {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : Phas
     (hcovC : ∀ j : Word, j < c → ∃ t ∈ ths, ∃ c' ∈ t.2.2, c'.1 = j)
     (hincS : ∀ t ∈ ths, (t.2.1.map (·.1)).Pairwise (· < ·))
     (hincC : ∀ t ∈ ths, (t.2.2.map (·.1)).Pairwise (· < ·)) :
-    TwinComparesAcceptsThr bC bS := by
+    TwinComparesAcceptsPooled bC bS := by
   obtain ⟨m2, m3, dsC, sG, res, m4, I, a', h, hI, -⟩ := F6.jobM hF h6
   obtain ⟨hJM9, hwf, hoff, -⟩ := F6.jobMAt hF h6 h hI
   have hJM : JobM PS.ipins (dnOf sG.store) PS.dsS none PS.IS mS a' :=

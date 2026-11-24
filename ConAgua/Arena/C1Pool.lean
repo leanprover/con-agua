@@ -102,7 +102,7 @@ variable {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPinSet}
   {matesU : Std.HashMap ConLeche.Name (Array ConLeche.Name)}
   {σ : Type} {Rel : σ → AState → Prop} {Call : Nat → σ → σ → Prop}
 
-/-- **The challenge's induction, each worker from its own start, up to `n`** (`pool_prefixJ`):
+/-- **The challenge's induction, each worker from its own start, up to `n`**:
 workers, each a start state (a worker's state of the driver state) related to its chain's start,
 with claims increasing and covering the positions below `n`: every prefix up to `n` a mixed run. -/
 theorem pool_prefixJW (H : PoolHypsJ (pins := pins) (pinsP := pinsP) (ds := ds) (dsP := dsP) (I := I)
@@ -147,7 +147,7 @@ theorem pool_prefixJW (H : PoolHypsJ (pins := pins) (pinsP := pinsP) (ds := ds) 
       exact MixedPrefix.step hk' (hbelow k (Nat.le_refl _)) hd
   exact fun k hk => main n (Nat.le_refl _) k hk
 
-/-- **The challenge's pool, each worker from its own start** (`pool_twinJT`): every worker's list
+/-- **The challenge's pool, each worker from its own start**: every worker's list
 accepted by the twin's `checkJobList` at the solution from its start. -/
 theorem pool_twinJW (H : PoolHypsJ (pins := pins) (pinsP := pinsP) (ds := ds) (dsP := dsP) (I := I)
       (s₁ := s₁) (J := J) (dsS := dsS) (matesU := matesU) Rel Call)

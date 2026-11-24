@@ -4,7 +4,7 @@ public import ConAgua.Final.CpThreads
 public import ConAgua.Final.C1Threads
 public import ConAgua.Final.CmpEntry1
 public import ConAgua.Final.CmpAbi
-public import ConAgua.Final.CompareTwinI
+public import ConAgua.Final.CompareTwinVerdict
 import ConAgua.Final.CompareTwinThr
 public import ConAgua.Checker.CmpSPhaseThr
 import ConAgua.Final.DrvFinal
@@ -26,7 +26,7 @@ with two headers in `OUT` and returns `2^63 + kS + kC`; then the threads claim t
 jobs (header S) and the others to the challenge's jobs (header C, at the buffer's word `5`), on
 the thread's one region: a thread's solution jobs come first (its claims increase), then its
 challenge jobs continue on the region as they left it. If every call reports accept, the twin
-accepts the comparison as the threaded run does (`TwinComparesAcceptsThr bC bS`: the stages up to
+accepts the comparison as the threaded run does (`TwinComparesAcceptsPooled bC bS`: the stages up to
 the challenge's index state, then each worker its solution jobs from there and, continuing, its
 challenge jobs).
 
@@ -79,7 +79,7 @@ with the caller's registers. -/
 theorem cmpThreadsRun_twinThr_regs [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
-    (hR : ThreadsRun bC (some bS) pb dm₀ ra₀ st₀ B ths) : TwinComparesAcceptsThr bC bS ∧
+    (hR : ThreadsRun bC (some bS) pb dm₀ ra₀ st₀ B ths) : TwinComparesAcceptsPooled bC bS ∧
       RegsRestored dm₀.regs st₀.data.regs ∧
       ∀ t ∈ ths, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs := by
   obtain ⟨hRR₀, hpb, PS, m₇, m, c, m9, mS, hF, h6, hb9, hV, hsz, hS, hfS, hk2S, hL5, -, hC, hfC, hext, hk, hnov⟩ :=
@@ -118,11 +118,11 @@ theorem cmpThreadsRun_twinThr_regs [Host] (k0 : Nat) (hcode : Code checkerFile k
 
 /-! ## The final statements -/
 
-/-- **The compared threads' accept** (`TwinComparesAcceptsThr`). -/
+/-- **The compared threads' accept** (`TwinComparesAcceptsPooled`). -/
 theorem checkerFile_compare_threads_accept [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
-    (hR : ThreadsRun bC (some bS) pb dm₀ ra₀ st₀ B ths) : TwinComparesAcceptsThr bC bS :=
+    (hR : ThreadsRun bC (some bS) pb dm₀ ra₀ st₀ B ths) : TwinComparesAcceptsPooled bC bS :=
   (cmpThreadsRun_twinThr_regs k0 hcode bC bS pb h64 dm₀ ra₀ st₀ B ths hR).1
 
 /-- **The compared threads' registers**: entry 1 and every `ca_check_b` call return with the
@@ -143,7 +143,7 @@ theorem checkerFile_compare_threads_model (V : Type w) [ConLeche.SetTheory V] [H
       ConLeche.Frontend.parseChunks [bC] = .ok rcC ∧
       Nonempty (ConLeche.Model V (ConLeche.streamEnv
         ((ConLeche.Frontend.preparePrelude preC rcC.decls).toList.map ConLeche.Cached.sideRecord))) :=
-  twinComparesAcceptsThr_model V
+  twinComparesAcceptsPooled_model V
     (checkerFile_compare_threads_accept k0 hcode bC bS pb h64 dm₀ ra₀ st₀ B ths hR)
 
 /-- **No compared threaded run accepts a challenge with a theorem of type `False`** (relative to set
@@ -153,7 +153,7 @@ theorem checkerFile_compare_threads_no_False (V : Type w) [ConLeche.SetTheory V]
     (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
     (hR : ThreadsRun bC (some bS) pb dm₀ ra₀ st₀ B ths) : False :=
-  twinComparesAcceptsThr_no_False V hfalse
+  twinComparesAcceptsPooled_no_False V hfalse
     (checkerFile_compare_threads_accept k0 hcode bC bS pb h64 dm₀ ra₀ st₀ B ths hR)
 
 end ConAgua.Final

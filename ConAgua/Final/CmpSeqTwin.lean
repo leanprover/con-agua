@@ -3,7 +3,7 @@ module
 public import ConAgua.Checker.CmpSPhaseThr
 public import ConAgua.Checker.CmpSeqJobs
 public import ConAgua.Checker.CmpSeqErr
-public import ConAgua.Final.CompareTwinI
+public import ConAgua.Final.CompareTwinVerdict
 import ConAgua.Checker.CrsProgPB
 import ConAgua.Checker.RomProgInit
 import ConAgua.Checker.RomProg0
@@ -27,7 +27,7 @@ word `8` (the solution's jobs, `check_bs`) and `9` (the challenge's, `check_bc`)
 
 * `cmpFront_run`: the front returning `2^63 + |dsS|` is the solution's index build (`checkC1_run`,
   `checkC2_run`); `cmpFrontAcc45_false`: the front never accepts.
-* `cmpAccS_twin`: an accept is `TwinComparesAcceptsSeqI`: the solution's jobs in order from
+* `cmpAccS_twin`: an accept is `TwinComparesAccepts`: the solution's jobs in order from
   `sI.worker` (mode `8`: `JobM.csViewS`, `cq_jobsOk`), then the challenge's continuing on that
   worker (mode `9`: `cq_phaseC`, `cq_jobsOk`).
 -/
@@ -151,7 +151,7 @@ theorem cq_seq (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (h6 : cmpRun checkerProg (m5.setG MODE 6) = .ok (rs6, m6)) :
     ∃ (pins : List ConLeche.NatOpPinSet) (ipins : List INatOpPinSet) (dsS : Array IDeclaration)
       (recsC : List IDeclaration) (IS IC : IStreamIndex) (sI : AState),
-      CmpStagesI bC bS pins ipins dsS recsC IS IC sI ∧ rs6.getD 0 0 ≠ ACCEPT ∧
+      CmpStages bC bS pins ipins dsS recsC IS IC sI ∧ rs6.getD 0 0 ≠ ACCEPT ∧
       (∀ e, cmpRun checkerProg (seqMemW m6 MODE PLO PHI OUT HDRF CTLF hdrHw 8 0
           (rs5.getD 0 0 - 9223372036854775808)) = .error e → e.cls ≠ 0 →
         TwinFailsV (checkJobList VM ipins none IS dsS (List.range dsS.size)) sI.worker e.cls) ∧
@@ -313,11 +313,11 @@ theorem cq_seq (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
       (cq_jobsErr hJPC ho.front hLDC hdn hppJ hdenJ hPDJ hspec hcrs ⟨hJG _, crsG_checker _⟩ hcnt hk2
         ⟨hJRC hCC hFl2, hP1.2.1, hP1.2.2⟩ (fold_sameEnter hse1 (seq_foldJ HJ hwJ)) hcall2 hk0)
 
-/-- **The sequential compared run's accept is the twin's** (`TwinComparesAcceptsSeqI`, `cq_seq`). -/
+/-- **The sequential compared run's accept is the twin's** (`TwinComparesAccepts`, `cq_seq`). -/
 theorem cmpAccS_twin (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (hQ : CqSeqProg checkerProg)
     (h : CmpAccS checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF hdrHw bC bS pb) :
-    TwinComparesAcceptsSeqI bC bS := by
+    TwinComparesAccepts bC bS := by
   rcases h with hA | ⟨rs5, m5, hf, rs6, m6, h6, hor⟩
   · exact (cmpFrontAcc45_false bC bS pb h64 hA).elim
   obtain ⟨pins, ipins, dsS, recsC, IS, IC, sI, hSt, hA6, -, hS⟩ := cq_seq bC bS pb h64 hQ hf h6
@@ -328,12 +328,12 @@ theorem cmpAccS_twin (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
   exact ⟨pins, ipins, dsS, recsC, IS, IC, sI, sJ, sK, hSt, hSacc, hCacc⟩
 
 /-- **A failing sequential compared run with a class other than `0` is the twin's**
-(`TwinCompareVerdictSeqI`): the front's stages (`cmpV_a4`, `cmpV_a5`), mode `6` (class `0` only),
+(`TwinCompareVerdict`): the front's stages (`cmpV_a4`, `cmpV_a5`), mode `6` (class `0` only),
 or the solution's or (those accepting) the challenge's jobs (`cq_seq`). -/
 theorem cmpErrS_twin (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (hQ : CqSeqProg checkerProg) {k : Word}
     (h : CmpErrS checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF hdrHw bC bS pb k) (hk : k &&& 3 ≠ 0) :
-    TwinCompareVerdictSeqI bC bS (k &&& 3) := by
+    TwinCompareVerdict bC bS (k &&& 3) := by
   rcases h with ⟨hbC, hpb, ⟨e, he, hc'⟩ | ⟨rs4, m4, h4, hge4, hbS, e, he, hc'⟩⟩ |
       ⟨rs5, m5, hf, ⟨e, he, hc'⟩ | ⟨rs6, m6, h6, -, hor⟩⟩
   · have hcls : e.cls = k &&& 3 := by rw [Err.cls, hc']

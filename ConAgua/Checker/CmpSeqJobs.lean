@@ -140,13 +140,6 @@ theorem seq_prefixJ (H : PoolHypsJ (pins := pins) (pinsP := pinsP) (ds := ds) (d
       have := ih (t + 1) a₁ a' hw₁ (MixedPrefix.step htk' hP hst) (by omega) hl
       rwa [show t + 1 + c = t + (c + 1) by omega] at this
 
-/-- **The challenge's jobs in order end in a worker's state.** -/
-theorem seq_workerJ (H : PoolHypsJ (pins := pins) (pinsP := pinsP) (ds := ds) (dsP := dsP) (I := I)
-      (s₁ := s₁) (J := J) (dsS := dsS) (matesU := matesU) Rel Call) {a a' : AState} (hw : WorkerOK s₁ a)
-    (hl : checkJobList V pins (some J) I ds (List.range ds.size) a = .ok (.ok (), a')) : WorkerOK s₁ a' := by
-  rw [List.range_eq_range'] at hl
-  exact (seq_prefixJ H ds.size 0 a a' hw (MixedPrefix.zero _ _ _) (by omega) hl).1
-
 /-- **The challenge's fold invariant at each job** from a worker's state `a`. -/
 theorem seq_foldJ (H : PoolHypsJ (pins := pins) (pinsP := pinsP) (ds := ds) (dsP := dsP) (I := I)
       (s₁ := s₁) (J := J) (dsS := dsS) (matesU := matesU) Rel Call) {a : AState} (hw : WorkerOK s₁ a) :

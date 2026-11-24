@@ -19,7 +19,7 @@ the code `k` (`ThreadsFail bC (some bS) pb`: entry 1 returned `rdx = 2` with `ra
 and some thread's call `i` returned `rdx = 2` with `rax = k`, its earlier calls accepted, and every
 job index below call `i`'s was claimed by an accepting call), then for a class `k &&& 3` of `1`
 (reject) or `2` (decline) the twin's comparison, run as the threads do, fails with that class
-(`TwinCompareVerdictThr bC bS`): a stage fails, or some worker's list of the solution's jobs fails
+(`TwinCompareVerdictPooled bC bS`): a stage fails, or some worker's list of the solution's jobs fails
 from the challenge's index state, or the solution's jobs are accepted by workers covering them and
 some worker, after its list of the solution's jobs, fails on its list of the challenge's jobs.
 
@@ -47,14 +47,14 @@ theorem cmpThreadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
     (t : ThreadM) (i : Nat) (hR : ThreadFail bC (some bS) pb dm₀ ra₀ st₀ B ths t i)
     (hk : (t.st i).data.regs.rax &&& 3 ≠ 0) :
-    TwinCompareVerdictThr bC bS ((t.st i).data.regs.rax &&& 3) := by
+    TwinCompareVerdictPooled bC bS ((t.st i).data.regs.rax &&& 3) := by
   obtain ⟨-, hpb, PS, m₇, m, c, m9, mS, hF, h6, hb9, hV, hsz, hS, hfS, hk2S, hL5, -, hC, hfC, hext, hkC, hnov⟩ :=
     (cmpEntry1_out k0 hcode bC bS pb h64 (solAddr dm₀) dm₀ ra₀ st₀ hR.call₀.cmp hR.ret₀ hR.rdx₀ hR.rax₀ B hR.bufw hR.buflen)
   have hL0 : (B.getD 5 0).toNat ≠ 0 := fun h => hL5 (UInt64.toNat_inj.mp (by rw [h]; rfl))
   obtain ⟨e, hrax, hcase⟩ := cpThreadFail_runs k0 hcode dm₀ B hS _ rfl hL0 hC (B.getD 2 0) rfl t i
     hR.calls hR.zero hR.ret hR.acc hR.rdx hR.kept hR.next hR.incr
   rw [hrax] at hk ⊢
-  change TwinCompareVerdictThr bC bS e.cls
+  change TwinCompareVerdictPooled bC bS e.cls
   have hk0 : e.cls ≠ 0 := hk
   -- the other threads' chains
   have hthr := cpThreadsAcc_runs k0 hcode dm₀ st₀ B ths hR.others hS _ rfl hL0 hC (B.getD 2 0) c rfl hkC hnov
@@ -117,12 +117,12 @@ theorem cmpThreadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
 /-- **The verdict theorem for the threaded compared run of `checker.s`**: when the trusted
 threaded harness's compared run reports a failure with the code `k` (`ThreadsFail bC (some bS) pb`) of class
 `1` (reject) or `2` (decline), the twin's comparison, run as the threads do, fails with that class
-(`TwinCompareVerdictThr`). -/
+(`TwinCompareVerdictPooled`). -/
 theorem checkerFile_compare_threads_verdict [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (k : Word)
     (hF : ThreadsFail bC (some bS) pb dm₀ ra₀ st₀ k) (hk : k &&& 3 ≠ 0) :
-    TwinCompareVerdictThr bC bS (k &&& 3) := by
+    TwinCompareVerdictPooled bC bS (k &&& 3) := by
   rcases hF with ⟨hE, rfl⟩ | ⟨B, ths, t, i, hT, rfl⟩
   · exact .inl (cmpEntry1_fail k0 hcode bC bS pb h64 (solAddr dm₀) dm₀ ra₀ st₀ hE.call₀.cmp hE.ret₀ hE.rdx₀ hk)
   · exact cmpThreadFail_twin k0 hcode bC bS pb h64 dm₀ ra₀ st₀ B ths t i hT hk
