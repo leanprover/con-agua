@@ -214,6 +214,27 @@ theorem cq_jobsErr (hP : JobProg pins dn ds p) (hFD : FrontDecls ds) (hLD : Decl
     (fun e h0 => ErrClaimV.of_cls0 h0) trivial hG h hc
   simpa only [UInt64.toNat_zero, Nat.sub_zero, hhi, ← List.range_eq_range'] using h'
 
+/-- **An accepting list from a state that enters alike**, with the end states entering alike. -/
+theorem checkJobList_ok_sameEnter {J : Option ISolution} {l : List Nat} {a b a' : AState}
+    (h : SameEnter a b) (hl : checkJobList V pins J I ds l a = .ok (.ok (), a')) :
+    ∃ b', checkJobList V pins J I ds l b = .ok (.ok (), b') ∧ SameEnter a' b' := by
+  rcases l with _ | ⟨t, rest⟩
+  · cases hl; exact ⟨b, rfl, h⟩
+  · exact ⟨a', by rw [← checkJobList_sameEnter h (by simp)]; exact hl, SameEnter.refl _⟩
+
+/-- **The fold invariant before each job carries over to a state that enters alike.** -/
+theorem fold_sameEnter {J : Option ISolution} {a b : AState} (h : SameEnter a b)
+    (hf : ∀ (t : Nat) (b' : AState), t < ds.size →
+      checkJobList V pins J I ds (List.range' 0 t) b = .ok (.ok (), b') →
+      ∃ env, FoldOK env (I.view t) (AM.st enterScratch b')) :
+    ∀ (t : Nat) (a' : AState), t < ds.size →
+      checkJobList V pins J I ds (List.range' 0 t) a = .ok (.ok (), a') →
+      ∃ env, FoldOK env (I.view t) (AM.st enterScratch a') := by
+  intro t a' ht hl
+  obtain ⟨b', hb, hs⟩ := checkJobList_ok_sameEnter h hl
+  rw [hs.st]
+  exact hf t b' ht hb
+
 end jobs
 
 end L.Checker
