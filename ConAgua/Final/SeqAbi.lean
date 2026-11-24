@@ -34,9 +34,9 @@ structure SeqCall (tab : Tab) (base blen : Nat) (dm : MachineData) (ra : Word) :
   hcs24 : 24 ≤ dm.regs.rsp.toNat
   hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64
 
-/-- **From `ca_check_seq`**: on a region that holds `m` in the partition layout, the run of
-`check` from `seqMem m … lo hi` (`lo`, `hi` from `rsi`, `rdx`) in `ca_check_seq`'s layout. -/
-theorem abiS_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
+/-- **From `ca_check_seq_m`**: on a region that holds `m` in the partition layout, the run of
+`check` from `seqMemW m … w lo hi` (the mode word `w`, `lo`, `hi` from `r10`, `rsi`, `rdx`) in `ca_check_seq`'s layout. -/
+theorem abiSM_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
     {X : AsmTab} (hAX : AsmOkT q tab X)
     (hwf : Prog.wf tab q = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (fz own : List TieredArray) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng) (hngh : phi.id < tab.ng)
@@ -46,8 +46,8 @@ theorem abiS_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : a
     {base blen inp n pins np : Nat} (m : Mem) (dm : MachineData) (ra : Word)
     (hc : SeqCall tab base blen dm ra) (hm : MemRel (abiLayout tab base inp n pins np) m dm.dmem) :
     Ev (EntryPost (seqLayout tab base out hdrf ctlf hw) dm ra
-        (L.run p abiFuel "check" [] (seqMem m mode plo phi out hdrf ctlf hw dm.regs.rsi dm.regs.rdx)))
-      dm (label abiCheckSL) := by
+        (L.run p abiFuel "check" [] (seqMemW m mode plo phi out hdrf ctlf hw dm.regs.r10 dm.regs.rsi dm.regs.rdx)))
+      dm (label abiCheckSML) := by
   obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
   have hneed := hc.need
   have hfits := hc.fits
@@ -84,8 +84,8 @@ theorem abiS_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : a
       omega
   have hoffG : ∀ g : GVar, g.id < tab.ng → SmallOff (tab.globOff g) := fun g hg => by
     simp only [Tab.globOff, Tab.globBase]; constructor <;> omega
-  rw [Code.label (i := 7) hL2 rfl]
-  refine ev_label (Code.get (i := 7) hL2 rfl) ?_
+  rw [Code.label (i := 9) hL2 rfl]
+  refine ev_label (Code.get (i := 9) hL2 rfl) ?_
   refine ev_congr (sim_stores _ dm.regs base hc.hbase (seqVals tab out hdrf ctlf hw) 0 _ dm hS (fun _ _ => rfl)
     (seqVals_noRax tab out hdrf ctlf hw) (by rw [hLen]; omega) (by simpa using hend)
     (fun j hj => hc.hmap _ (by omega) (by rw [hLen] at hj; omega)) ?_)
@@ -102,6 +102,7 @@ theorem abiS_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : a
   have hRbp : s1.regs.rbp = dm.regs.rbp := UInt64.toBitVec_inj.mp (by simpa using hR1 .rbp (by decide))
   have hR14 : s1.regs.r14 = dm.regs.r14 := UInt64.toBitVec_inj.mp (by simpa using hR1 .r14 (by decide))
   have hR15 : s1.regs.r15 = dm.regs.r15 := UInt64.toBitVec_inj.mp (by simpa using hR1 .r15 (by decide))
+  have hR10 : s1.regs.r10 = dm.regs.r10 := UInt64.toBitVec_inj.mp (by simpa using hR1 .r10 (by decide))
   have e8r : s1.regs.r8.toNat = base := by rw [hR8]; exact hc.hbase
   have hgb : ∀ g : GVar, g.id < tab.ng → ∀ j < 8,
       (s1.dmem.get? (A ((s1.regs.get64 .r8).toNat + (tab.globOff g).toNat + j))).isSome := fun g hg j hj => by
@@ -112,15 +113,14 @@ theorem abiS_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : a
     (isSome_rdW fun j hj => by rw [A_add]; exact hgb plo hngl j hj) ?_
   refine ev_movMR (Code.get (i := 1) hL3 rfl) (hoffG phi hngh)
     (isSome_rdW fun j hj => by rw [A_add]; exact isSome_get?_storeInt (hgb phi hngh j hj)) ?_
-  refine ev_movRI (Code.get (i := 2) hL3 rfl) ?_
-  refine ev_movMR (Code.get (i := 3) hL3 rfl) (hoffG mode hngm)
+  refine ev_movMR (Code.get (i := 2) hL3 rfl) (hoffG mode hngm)
     (isSome_rdW fun j hj => by
       rw [A_add]; exact isSome_get?_storeInt (isSome_get?_storeInt (hgb mode hngm j hj))) ?_
-  refine ev_movRR (Code.get (i := 4) hL3 rfl) ?_
-  refine ev_movRI (Code.get (i := 5) hL3 rfl) ?_
-  refine ev_jmp (Code.get (i := 6) hL3 rfl) ?_
+  refine ev_movRR (Code.get (i := 3) hL3 rfl) ?_
+  refine ev_movRI (Code.get (i := 4) hL3 rfl) ?_
+  refine ev_jmp (Code.get (i := 5) hL3 rfl) ?_
   simp only [Reg64s.set64_rax, Reg64s.set64_rdi, Reg64s.set64_rsi, Reg64s.get64_r8, Reg64s.get64_rax,
-    Reg64s.get64_rsi, Reg64s.get64_rdx, UInt64.toNat_toBitVec]
+    Reg64s.get64_rsi, Reg64s.get64_rdx, Reg64s.get64_r10, UInt64.toNat_toBitVec]
   rw [e8r, hgA plo, hgA phi, hgA mode]
   have hOw : ∀ (d : DataMem) (g : GVar) (v : BitVec 64), g.id < tab.ng →
       Only (base + 16) (seqLayout tab base out hdrf ctlf hw).tabEnd d
@@ -129,14 +129,14 @@ theorem abiS_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : a
     refine (Only.wrW (by omega)).mono ?_ h2
     simp only [Layout.globAddr, Layout.globStart, seqLayout_T]; omega
   have hOg := ((hOw s1.dmem plo s1.regs.rsi.toBitVec hngl).union (hOw _ phi s1.regs.rdx.toBitVec hngh)
-    (Nat.le_refl _) (Nat.le_refl _) (Nat.le_refl _) (Nat.le_refl _)).union (hOw _ mode (UInt64.toBitVec 2) hngm)
+    (Nat.le_refl _) (Nat.le_refl _) (Nat.le_refl _) (Nat.le_refl _)).union (hOw _ mode s1.regs.r10.toBitVec hngm)
     (Nat.le_refl _) (Nat.le_refl _) (Nat.le_refl _) (Nat.le_refl _)
   have hOall := hO1.union (a := base) (b := (seqLayout tab base out hdrf ctlf hw).tabEnd) hOg
     (Nat.le_refl _) (by omega) hSE (Nat.le_refl _)
   have hm0 := seq_memRel (out := out) (hdrf := hdrf) (ctlf := ctlf) (hw := hw) hok hp hfit dm.regs hc.hbase m dm.dmem hm
   have hcs := hc.hcs
   refine eventually_weaken _ _ _ _ ?_ (compile_correct_frame_ref q p hq "check" _ hG X (hAX _ hG rfl) hwf _ hcC fd hentry []
-    (by simp [hnp]) rfl (seqMem m mode plo phi out hdrf ctlf hw dm.regs.rsi dm.regs.rdx) abiFuelM _ ra ?_ ?_ ?_ ?_ ?_
+    (by simp [hnp]) rfl (seqMemW m mode plo phi out hdrf ctlf hw dm.regs.r10 dm.regs.rsi dm.regs.rdx) abiFuelM _ ra ?_ ?_ ?_ ?_ ?_
     (fun i h => absurd h (by simp)) ?_ ?_ ?_ ?_ ?_ ?_)
   · intro st ⟨hpc, hsp, hbp, h14, h15, ⟨hbx, h12, h13⟩, hfr, hout⟩
     refine ⟨hpc, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, MemFrame.only_tab (show MemFrame _ dm.regs.rsp.toNat _ _ by rw [← hRsp]; exact hfr) hOall, hout⟩
@@ -150,10 +150,10 @@ theorem abiS_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : a
   · exact e8r
   · show (abiFuelM.toUInt64).toNat = abiFuelM
     simp [abiFuelM, abiFuel, abiInl]
-  · show MemRel _ _ (wrW (wrW (wrW s1.dmem _ s1.regs.rsi.toBitVec) _ s1.regs.rdx.toBitVec) _ (UInt64.toBitVec 2))
-    rw [hs1, hRsi, hRdx]
+  · show MemRel _ _ (wrW (wrW (wrW s1.dmem _ s1.regs.rsi.toBitVec) _ s1.regs.rdx.toBitVec) _ s1.regs.r10.toBitVec)
+    rw [hs1, hRsi, hRdx, hR10]
     exact ((hm0.storeG hG (g := plo) hngl dm.regs.rsi).storeG hG (g := phi) hngh dm.regs.rdx).storeG hG
-      (g := mode) hngm 2
+      (g := mode) hngm dm.regs.r10
   · simp only [seqLayout_lo, seqLayout_hi, abiStack]; omega
   · show rdW (wrW (wrW (wrW s1.dmem _ _) _ _) _ _) _ = _
     rw [hOg.rdW_eq (by simp only [seqLayout_T]; omega) (Or.inl (by simp only [seqLayout_T]; omega))]
@@ -187,5 +187,37 @@ theorem abiS_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : a
     rcases (hcs x (by omega) (by omega)).2 with h | h <;> omega
   · have := seq_save (x := (seqLayout tab base out hdrf ctlf hw).tabEnd) hok hp (Nat.le_refl _) (by omega)
     omega
+
+/-- **From `ca_check_seq`**: on a region that holds `m` in the partition layout, the run of
+`check` from `seqMem m … lo hi` (`lo`, `hi` from `rsi`, `rdx`; the mode word `2`) in
+`ca_check_seq`'s layout. -/
+theorem abiS_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
+    {X : AsmTab} (hAX : AsmOkT q tab X)
+    (hwf : Prog.wf tab q = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
+    (fz own : List TieredArray) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng) (hngh : phi.id < tab.ng)
+    (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
+    (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProgX X tab q "check")) k0)
+    (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+    {base blen inp n pins np : Nat} (m : Mem) (dm : MachineData) (ra : Word)
+    (hc : SeqCall tab base blen dm ra) (hm : MemRel (abiLayout tab base inp n pins np) m dm.dmem) :
+    Ev (EntryPost (seqLayout tab base out hdrf ctlf hw) dm ra
+        (L.run p abiFuel "check" [] (seqMem m mode plo phi out hdrf ctlf hw dm.regs.rsi dm.regs.rdx)))
+      dm (label abiCheckSL) := by
+  have hcP := hcode.left
+  simp only [parStub] at hcP
+  replace hcP := hcP.left
+  simp only [parStub0] at hcP
+  have hL2 := hcP.left.left.right
+  rw [Code.label (i := 7) hL2 rfl]
+  refine ev_label (Code.get (i := 7) hL2 rfl) ?_
+  refine ev_movRI (Code.get (i := 8) hL2 rfl) ?_
+  rw [← Code.label (i := 9) hL2 rfl]
+  have hc' : SeqCall tab base blen { dm with regs := dm.regs.set64 .r10 (2 : Word).toBitVec } ra :=
+    ⟨hc.need, hc.fits, by simpa [Reg64s.set64_r10] using hc.hbase, hc.hmap, by simpa [Reg64s.set64_r10] using hc.hra,
+      by simpa [Reg64s.set64_r10] using hc.hcs, by simpa [Reg64s.set64_r10] using hc.hcs24,
+      by simpa [Reg64s.set64_r10] using hc.hcs8⟩
+  refine eventually_weaken _ _ _ _ (fun st h => ?_) (abiSM_outcome q p hq tab hok hAX hwf mode plo phi out hdrf ctlf hw
+    fz own hngm hngl hngh hp k0 hcode fd hentry hnp m _ ra hc' hm)
+  simpa [EntryPost, RegsRestored, Reg64s.set64_r10, seqMem] using h
 
 end ConAgua.Final
