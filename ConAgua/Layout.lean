@@ -218,6 +218,22 @@ declare_arrays checkerArrays
   | /-- `NeedsSt.acc`: a needs walk's names (top `CTL[227]`). -/ Arena.NACC : word := 221
   | /-- `coneGo`'s work list, as a stack (top `CTL[228]`). -/ Arena.CWK : word := 222
   | /-- The first parse's records, kept across the second (`cmp_stash`). -/ Checker.CDECL : word := 223
+  | /-- The solution's records, kept across the challenge's preparation (`cmp_sstash`). -/
+    Checker.SDECL : word := 224
+  | /-- The solution's index firsts (`cmp_sstash`). -/ Checker.SFIRSTS : word := 225
+  | /-- The solution's declaration pool (`cmp_sstash`). -/ Checker.SDLP : word := 226
+  | /-- The solution's `CTL[0‥256)` (`cmp_sstash`). -/ Checker.SCTL : word := 227
+  -- the sequential compared run's bank switch (`Checker/CmpSeqEntry.lean`): the challenge's view
+  -- kept while the solution's jobs run in place
+  | /-- The challenge's constant rows of `anonymous` names (`check_bs`). -/ Checker.CEIXA : word := 228
+  | /-- The challenge's constant rows of `str` names. -/ Checker.CEIXS : word := 229
+  | /-- The challenge's constant rows of `num` names. -/ Checker.CEIXN : word := 230
+  | /-- The challenge's table rows of `anonymous` names. -/ Checker.CTIXA : word := 231
+  | /-- The challenge's table rows of `str` names. -/ Checker.CTIXS : word := 232
+  | /-- The challenge's table rows of `num` names. -/ Checker.CTIXN : word := 233
+  | /-- The challenge's index firsts. -/ Checker.CFIRSTS : word := 234
+  | /-- The challenge's declaration pool. -/ Checker.CDLP : word := 235
+  | /-- The challenge's index words and the copies' extents. -/ Checker.CCTL : word := 236
 
 /-- **The checker's word arrays**: tier 0 of every word array of the table and tier 1 of every
 tiered one. Write sets "every array but …" are filters of this list. -/

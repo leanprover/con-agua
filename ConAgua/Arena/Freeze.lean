@@ -149,17 +149,18 @@ def hdrW : Nat := 10 + 2 * frozen.length
 
 /-- con-ron: none — the phase boundary's copy of a prefix (con-ron moves its tables, `freeze_tier`)
 
-`fz_i(o, c)` for the prefix image of `src` with extent `e` in header entry `i`: writes `(o, e)` into
-the header and, if `c ≠ 0`, the image at `OUT[o‥o+e)`; returns `o + e`. Locals `o c e`. -/
+`fz_i(o, c, b)` for the prefix image of `src` with extent `e` in header entry `i` of the header at
+`OUT[b‥)` (`o` relative to `b`): writes `(o, e)` into the header and, if `c ≠ 0`, the image at
+`OUT[b+o‥b+o+e)`; returns `o + e`. Locals `o c b e`. -/
 @[no_expose] def fzPreG (src : ArrId) (e : Expr) (i : Nat) : FunDecl :=
   let body : Stmt :=
-    .seq (.set 2 e) <|
+    .seq (.set 3 e) <|
     .seq (.ite (.cmp .ne (.var 1) (fzC 0))
-      (.copy64 (.plain OUT) (.var 0) (.plain src) (.const 0) (.var 2)) .skip) <|
-    .seq (.st64 OUT (fzC (10 + 2 * i)) (.var 0)) <|
-    .seq (.st64 OUT (fzC (11 + 2 * i)) (.var 2)) <|
-    .ret [.bin .add (.var 0) (.var 2)]
-  { nparams := 2, nlocals := 3, body }
+      (.copy64 (.plain OUT) (.bin .add (.var 2) (.var 0)) (.plain src) (.const 0) (.var 3)) .skip) <|
+    .seq (.st64 OUT (.bin .add (.var 2) (fzC (10 + 2 * i))) (.var 0)) <|
+    .seq (.st64 OUT (.bin .add (.var 2) (fzC (11 + 2 * i))) (.var 3)) <|
+    .ret [.bin .add (.var 0) (.var 3)]
+  { nparams := 3, nlocals := 4, body }
 
 /-- The name of frozen entry `i`'s function. -/
 def fzName (i : Nat) : FnName := "fz_" ++ toString i
@@ -170,26 +171,31 @@ The image function of frozen entry `i` (`entryProg` binds `fz_i` to it). -/
 @[no_expose] def fzF (i : Nat) : FunDecl :=
   match frozen[i]? with
   | some (_, z) => fzPreG z.src z.e i
-  | none => { nparams := 2, nlocals := 2, body := .abort (.const 0) }
+  | none => { nparams := 3, nlocals := 3, body := .abort (.const 0) }
 
-/-- The calls of the image functions, in order: `o := fz_i(o, c)`. -/
-def fzCalls : List Stmt := (List.range frozen.length).map fun i => .call [1] (fzName i) [.var 1, .var 0]
+/-- The calls of the image functions, in order: `o := fz_i(o, c, b)` (locals `c b o`). -/
+def fzCalls : List Stmt := (List.range frozen.length).map fun i => .call [2] (fzName i) [.var 2, .var 0, .var 1]
+
+/-- `OUT[b + k] := v`. -/
+def fzSt (k : Nat) (v : Expr) : Stmt := .st64 OUT (.bin .add (.var 1) (fzC k)) v
 
 /-- con-ron: none — the phase boundary's copy (con-ron moves its persistent tables, `freeze_tier`)
 
-`par_compact(c)`: the frozen buffer (the images if `c ≠ 0`, then the header); returns its
-length. Locals `c o`. -/
+`par_compact(c, b)`: the frozen buffer at `OUT[b‥)` (the images if `c ≠ 0`, then the header;
+offsets relative to `b`; word `5`, the next phase's header, `0`); returns its length. Locals
+`c b o`. -/
 @[no_expose] def parCompactL : FunDecl :=
   let tail : Stmt :=
-    .seq (.st64 OUT (fzC 0) (.const fzMagic)) <|
-    .seq (.st64 OUT (fzC 1) (.var 1)) <|
-    .seq (.st64 OUT (fzC 2) fzDecl) <|
-    .seq (.st64 OUT (fzC 3) (fzCtl 128)) <|
-    .seq (.st64 OUT (fzC 4) (fzC frozen.length)) <|
-    .seq (.st64 OUT (fzC 8) (fzC 0)) <|
-    .seq (.st64 OUT (fzC 9) (fzC hdrW)) <|
-    .ret [.var 1]
-  { nparams := 1, nlocals := 2, body := .seq (.set 1 (fzC hdrW)) (fzCalls.foldr .seq tail) }
+    .seq (fzSt 0 (.const fzMagic)) <|
+    .seq (fzSt 1 (.var 2)) <|
+    .seq (fzSt 2 fzDecl) <|
+    .seq (fzSt 3 (fzCtl 128)) <|
+    .seq (fzSt 4 (fzC frozen.length)) <|
+    .seq (fzSt 5 (fzC 0)) <|
+    .seq (fzSt 8 (fzC 0)) <|
+    .seq (fzSt 9 (fzC hdrW)) <|
+    .ret [.var 2]
+  { nparams := 2, nlocals := 3, body := .seq (.set 2 (fzC hdrW)) (fzCalls.foldr .seq tail) }
 
 /-- `frozenIds` as a literal (what the entry stub is built from: the kernel checks the committed
 file's stub against it, and a computed list would be re-evaluated in every piece). -/
