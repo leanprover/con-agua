@@ -36,7 +36,7 @@ open L L.Compiler L.Checker L.Arena ConRon.Arena
 /-- **Stand-in (L level, lane compare2 H7)**: a thread whose solution calls over header S ran from
 a fresh region, and whose challenge calls over header C, continuing from the memory those left,
 ran and then failed on the challenge's job `j < c` with `e` of class other than `0`, its earlier
-challenge calls below `j`; threads `ths` as in `c1Thr_accepts_standin` (every solution job and
+challenge calls below `j`; threads `ths` as in `c1Thr_accepts` (every solution job and
 every challenge job below `j` claimed): the twin's threaded comparison fails with that class. -/
 theorem c1Thr_failC_standin {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS bC bS)
     {m₇ m : Mem} (hF : FoldOn bS pb (abiSz checkerTab) PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m)

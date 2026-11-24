@@ -176,6 +176,87 @@ theorem c1Thr_accepts {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : Phas
         obtain ⟨t, ht, rfl⟩ := List.mem_map.mp hw
         obtain ⟨a'', hl, -⟩ := hE t ht
         exact ⟨a'', hl⟩⟩
-  sorry
+  -- the challenge's phase
+  let J := solutionOf PS.IS res
+  obtain ⟨hdfC, hindC⟩ := checkerCdG_proved pb PS.ipins (dnOf sG.store) res.toArray hpb hpre hinj
+  have hcdC := checkerProg_cdProgPB pb.data.toList hr hpre hinj hq hdfC hindC
+  have hJPC := checkerProg_jobProgPB pb.data.toList hr hpre hcdC (checkerProg_canonPB _)
+  have hcnt : c.toNat = res.toArray.size := by simpa using h.count.1
+  have hdsC : res.toArray.size < 2 ^ 63 := by
+    have := h.decls.room; have := h.decls.dsize; simp only [List.size_toArray] at *; omega
+  let RelC : Mem → AState → Prop := fun r a =>
+    ∀ j, ThrAt PS.ipins (dnOf sG.store) res.toArray I a₀ pb.data.toList (L.Checker.seedMem (bufMem BC r j)) a (some J)
+  let CallC : Nat → Mem → Mem → Prop := fun k r r' => ∃ n rs, n ≤ 2 ^ 62 ∧
+    L.run checkerProg n "check" [] (bufMem BC r (UInt64.ofNat k)) = .ok (rs, r') ∧ BufKept BC r'
+  obtain ⟨pinsPC, dsPC, dsSPC, matesU, hstC, hspec, hppC, hdenC, hPDC, hHC⟩ :=
+    poolHypsJ_ofPI h.phase hI hPS RelC CallC
+  have hRSC : RecStep PS.ipins (dnOf sG.store) res.toArray I a₀ (Prog.subPB pb.data.toList checkerProg) (some J) :=
+    recCall_stepE (J := some J) hJPC ho.front (declsLpsDn_dnOf ho.pd ho.den) hdn hppC (by omega) hdenC hPDC
+      hspec (fun _ => checkerProg_crsSpecPB pb.data.toList hr hpre hcdC)
+  have hstepC : ∀ (k : Nat) (r r' : Mem) (a : AState) (hk : k < res.toArray.size), RelC r a → CallC k r r' →
+      (∃ env, FoldOK env (I.view k) (AM.st enterScratch a)) →
+      ∃ a', recordJob VM PS.ipins (some J) I k res.toArray[k] a = .ok ((), a') ∧ RelC r' a' := by
+    intro k r r' a hk hR ⟨n, rs, hn, hrun, hkept⟩ hfo
+    have hk' : (UInt64.ofNat k).toNat = k := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
+    obtain ⟨⟨a', hrj, X, hJ, hPB, hX⟩, hI'⟩ := runThr hJPC.check_jobs hRSC hdsC n hn a (UInt64.ofNat k)
+      (by rw [hk']; exact hk) (by rw [hk']; exact hfo) _ rfl (hR _) rfl rfl hrun
+    refine ⟨a', ?_, fun j => ⟨X, hJ, hPB, fun t ht => (thr_next _ j hI' hkept (thr_ctl_next hrun) t ht).trans (hX t ht)⟩⟩
+    have e : res.toArray[(UInt64.ofNat k).toNat]'(by rw [hk']; exact hk) = res.toArray[k] := by simp only [hk']
+    rw [← e]; simp only [hk'] at hrj ⊢; exact hrj
+  have HC := hHC hstepC
+  have hKIC := indexKeysIn_of hJM9.arena.base HC.hI HC.hpI
+  have hSK : SolKeysIn m9 J := solKeysIn_of hJM9.arena.base HC.hIS HC.hpIS HC.hmates
+  have hJRC := JobM.fresh (hJM9.truncJ hoff hKIC (fun J' e => by cases e; exact hSK)) hwf hoff
+  -- each thread's worker state after its solution calls
+  have hW : ∀ t : Mem × List (Word × Nat × Mem) × List (Word × Nat × Mem), ∃ w : AState, t ∈ ths →
+      checkJobList VM PS.ipins none PS.IS PS.dsS (t.2.1.map (·.1.toNat)) a'.worker = .ok (.ok (), w) ∧
+        RelS (runsEnd t.1 t.2.1) w ∧ WorkerOK a' w := fun t => by
+    by_cases ht : t ∈ ths
+    · obtain ⟨w, hw⟩ := hE _ (List.mem_map_of_mem ht)
+      exact ⟨w, fun _ => hw⟩
+    · exact ⟨a', fun h => absurd h ht⟩
+  obtain ⟨W, hWf⟩ := Classical.axiomOfChoice hW
+  let thsC : List (Mem × AState × List Nat) := ths.map fun t => (runsEnd t.1 t.2.1, W t, t.2.2.map (·.1.toNat))
+  have hincC' : ∀ t ∈ thsC, t.2.2.Pairwise (· < ·) := by
+    intro t ht
+    obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp ht
+    have := hincC t₀ ht₀
+    rw [List.pairwise_map] at this ⊢
+    exact this.imp fun h => UInt64.lt_iff_toNat_lt.mp h
+  have hrangeC : ∀ t ∈ thsC, ∀ k ∈ t.2.2, k < res.toArray.size := by
+    intro t ht k hk'
+    obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp ht
+    obtain ⟨c', hc, rfl⟩ := List.mem_map.mp hk'
+    have := (hth t₀ ht₀).2.2.2.2.2 c' hc
+    rw [UInt64.lt_iff_toNat_lt, hcnt] at this
+    exact this
+  have hcovC' : ∀ k < res.toArray.size, ∃ t ∈ thsC, k ∈ t.2.2 := by
+    intro k hk'
+    have hk64 : (UInt64.ofNat k).toNat = k := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
+    obtain ⟨t, ht, c', hc, hcj⟩ := hcovC (UInt64.ofNat k) (by rw [UInt64.lt_iff_toNat_lt, hcnt, hk64]; exact hk')
+    exact ⟨_, List.mem_map_of_mem ht, List.mem_map.mpr ⟨c', hc, by rw [hcj, hk64]⟩⟩
+  have hacc := pool_twinJW HC thsC
+    (fun t ht => by
+      obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp ht
+      exact ⟨fun j => c1_thrBack hV.frame hext hBS hBC hJRC.toJobM j ((hWf t₀ ht₀).2.1 j), (hWf t₀ ht₀).2.2⟩)
+    (fun t ht => by
+      obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp ht
+      exact threadRuns_chain BC _ _ (hth t₀ ht₀).2.2.2.2.1) hincC' hrangeC hcovC'
+  refine ⟨PS.pins, PS.ipins, PS.dsS, res, PS.IS, I, a', h.stagesI hI,
+    ths.map fun t => (t.2.1.map (·.1.toNat), t.2.2.map (·.1.toNat)), fun k hk' => ?_, fun k hk' => ?_,
+    fun q hq => ?_, fun q hq => ?_, fun q hq => ?_⟩
+  · obtain ⟨t, ht, hkt⟩ := hcov' k hk'
+    obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp ht
+    exact ⟨_, List.mem_map_of_mem ht₀, hkt⟩
+  · obtain ⟨t, ht, hkt⟩ := hcovC' k hk'
+    obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp ht
+    exact ⟨_, List.mem_map_of_mem ht₀, hkt⟩
+  · obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp hq
+    exact ⟨hrange _ (List.mem_map_of_mem ht₀), hrangeC _ (List.mem_map_of_mem ht₀)⟩
+  · obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp hq
+    exact ⟨hinc' _ (List.mem_map_of_mem ht₀), hincC' _ (List.mem_map_of_mem ht₀)⟩
+  · obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp hq
+    obtain ⟨w', hw'⟩ := hacc _ (List.mem_map_of_mem ht₀)
+    exact ⟨W t₀, w', ((hWf t₀ ht₀).1), hw'⟩
 
 end ConAgua.Final

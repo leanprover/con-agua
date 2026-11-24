@@ -160,6 +160,7 @@ public import ConAgua.Checker.CmpSeqSpec
 public import ConAgua.Checker.SeedReread
 public import ConAgua.Final.CpThreads
 public import ConAgua.Final.CpThreadFail
+public import ConAgua.Final.C1Threads
 public import ConAgua.Final.CmpThreads
 public import ConAgua.Final.CmpThreadsVerdict
 public import ConAgua.Checker.CompareTwinC
