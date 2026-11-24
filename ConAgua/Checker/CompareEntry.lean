@@ -95,14 +95,14 @@ parse left them). -/
 kept: its records `DECL` in `SDECL`, its index firsts `FIRSTS` in `SFIRSTS`, its declaration pool
 `DLP` in `SDLP`, `CTL[0‥256)` in `SCTL`. -/
 -- con-ron: none — L keeps one driver state; the twin's driver holds the solution's `ParseResultD` and index
-@[no_expose] def cmpSStashL : FunDecl := lfn () locals (n) {
+@[no_expose] def cmpSStashL : FunDecl := lfn () locals (a, b, c) {
   if 576460752303423488 <= DECL.u64[0] { abort };
-  n := 1 + 8 * DECL.u64[0];
-  copy!(SDECL.u64, 0, DECL.u64, 0, n);
-  n := DECL.u64[0];
-  copy!(SFIRSTS.u64, 0, FIRSTS.u64, 0, n);
-  n := 1 + DLP.u64[0];
-  copy!(SDLP.u64, 0, DLP.u64, 0, n);
+  a := 1 + 8 * DECL.u64[0];
+  b := DECL.u64[0];
+  c := 1 + DLP.u64[0];
+  copy!(SDECL.u64, 0, DECL.u64, 0, a);
+  copy!(SFIRSTS.u64, 0, FIRSTS.u64, 0, b);
+  copy!(SDLP.u64, 0, DLP.u64, 0, c);
   copy!(SCTL.u64, 0, CTL.u64, 0, 256);
   return 0
 }

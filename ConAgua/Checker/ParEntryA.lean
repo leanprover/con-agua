@@ -64,10 +64,10 @@ def PostPC (c : Word) (F : Mem → Prop) (m' : Mem) : Prop :=
 theorem parCompact_stage {p : Prog} (hpc : p.lookup "par_compact" = some parCompactL)
     (hfz : ∀ i < frozen.length, p.lookup (fzName i) = some (fzF i)) (c : Word)
     (F : Mem → Prop) (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "par_compact" [c]
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "par_compact" [c, 0]
     ⦃fun _ s' => LocEq s' s₀ ∧ s'.mem.arr64 L.Front.DECL = s₀.mem.arr64 L.Front.DECL ∧
       (F s₀.mem → PostPC c F s'.mem); ⊤⦄ :=
-  triple_post (parCompact_spec hpc hfz n s₀ c) fun _ _ ⟨hl, hok, hm, _⟩ =>
+  triple_post (parCompact_spec hpc hfz n s₀ c 0) fun _ _ ⟨hl, hok, hm, _⟩ =>
     ⟨hl, by rw [hm]; exact (parCompactMem_out _ _).arr _ (by decide), fun hF => ⟨_, hF, hok, hm⟩⟩
 
 /-- **`check_a(c)` from its stages**: the eight stage specs (the twin's seven and the tables'
