@@ -606,10 +606,10 @@ def cdA : List TieredArray := checkerWordArrays.filter fun b => !IdxArr b && b !
 
 /-- The `CTL` words `check_decl` (and `check_record_sol`) may write: all but the index's counter,
 the frozen index's literal names and thresholds (`CTL[162‥173]`) and the solution's words
-(`solCtl`: `CTL[224‥226]`). -/
+(`solCtl`: `CTL[224‥226]`) and the compared run's extent words `CTL[229‥231]`. -/
 def cdC : List Word :=
   ((List.range 1024).filter fun x => (decide (x < 162) || decide (173 < x)) && x != 128 &&
-    x != 224 && x != 225 && x != 226).map UInt64.ofNat
+    x != 224 && x != 225 && x != 226 && x != 229 && x != 230 && x != 231).map UInt64.ofNat
 
 theorem apA_mem {b : TieredArray} (h : b ∈ apA) : b ∈ leafA ∧ apP b = true := List.mem_filter.mp h
 theorem apC_mem {x : Word} (h : x ∈ apC) : x ∈ leafC ∧ apQ x = true := List.mem_filter.mp h

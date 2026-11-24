@@ -16,12 +16,14 @@ over the same images:
 
 * the store arrays, the pool, the columns, `PINS`, `EREC`: header C's entries (the offsets moved
   by `hdrW`, header S sitting `hdrW` words before header C);
-* `EIX*`/`TIX*` (the stream index the jobs read): the images of the solution's rows `SIX*`/`STX*`;
-  the solution's rows themselves `(·, 0)` (the solution's jobs run with no solution);
+* `EIX*`/`TIX*` (the stream index the jobs read): the images of the solution's rows `SIX*`/`STX*`
+  (the solution's rows themselves as in header C: the solution's jobs run with no solution and do
+  not read them);
 * `CTLF`, `FIRSTS`, `DECL`, `DLP`: four more images after header C's buffer: the seed (`CTL[0‥256)`
   with the solution's words patched: `128` := the solution's index counter `CTL[225]`,
   `162‥173` := `SCTL`'s, `224` := `0`), and the solution's stashed `SFIRSTS`, `SDECL`, `SDLP`
-  (`cmp_sstash`);
+  (`cmp_sstash`) at header C's extents (`CTL[cmpKD]`, `CTL[cmpKP]`, the larger of the two phases'),
+  so every entry has the same length under both headers;
 * word `1` the whole buffer's length, `2` the solution's records `SDECL[0]`, `3` `CTL[225]`, `5`
   header C's offset `hdrW` (a flat buffer has `0`).
 -/
@@ -31,10 +33,9 @@ namespace L.Arena
 open L
 
 /-- How header S's entry `i` is made from header C's: `same j` (entry `j`'s offset and length),
-`zero j` (entry `j`'s offset, length `0`), `extra` (an image of its own). -/
+`extra` (an image of its own). -/
 inductive HsE where
   | same (j : Nat)
-  | zero (j : Nat)
   | extra
   deriving DecidableEq, Repr
 
@@ -50,8 +51,6 @@ def hsE (i : Nat) : HsE :=
     else if a = EIXA then .same (fzIdx SIXA) else if a = EIXS then .same (fzIdx SIXS)
     else if a = EIXN then .same (fzIdx SIXN) else if a = TIXA then .same (fzIdx STXA)
     else if a = TIXS then .same (fzIdx STXS) else if a = TIXN then .same (fzIdx STXN)
-    else if a = SIXA ∨ a = SIXS ∨ a = SIXN ∨ a = STXA ∨ a = STXS ∨ a = STXN ∨ a = MATA ∨ a = MATS ∨
-      a = MATN then .zero i
     else .same i
 
 /-- Header C's word `k` (header C at `OUT[hdrW‥)`). -/
@@ -62,15 +61,14 @@ def hsStmt (i : Nat) : Stmt :=
   match hsE i with
   | .same j => .seq (.st64 OUT (fzC (10 + 2 * i)) (.bin .add (hcW (10 + 2 * j)) (fzC hdrW)))
       (.st64 OUT (fzC (11 + 2 * i)) (hcW (11 + 2 * j)))
-  | .zero j => .seq (.st64 OUT (fzC (10 + 2 * i)) (.bin .add (hcW (10 + 2 * j)) (fzC hdrW)))
-      (.st64 OUT (fzC (11 + 2 * i)) (fzC 0))
   | .extra => .skip
 
-/-- The solution's images of header S (`cmp_hdr_s`'s calls `fzs_i`): (header entry, source, extent). -/
+/-- The solution's images of header S (`cmp_hdr_s`'s calls `fzs_i`): (header entry, source, extent;
+header C's extents of `FIRSTS`, `DECL`, `DLP` on a compared run). -/
 def fzsImgs : List (Nat × Fz) :=
-  [(fzIdx FIRSTS, ⟨L.Checker.SFIRSTS, .ld64 L.Checker.SDECL (fzC 0)⟩),
-   (fzIdx L.Front.DECL, ⟨L.Checker.SDECL, .bin .add (fzC 1) (.bin .mul (fzC 8) (.ld64 L.Checker.SDECL (fzC 0)))⟩),
-   (fzIdx L.Front.DLP, ⟨L.Checker.SDLP, .bin .add (fzC 1) (.ld64 L.Checker.SDLP (fzC 0))⟩)]
+  [(fzIdx FIRSTS, ⟨L.Checker.SFIRSTS, fzCtl cmpKD⟩),
+   (fzIdx L.Front.DECL, ⟨L.Checker.SDECL, .bin .add (fzC 1) (.bin .mul (fzC 8) (fzCtl cmpKD))⟩),
+   (fzIdx L.Front.DLP, ⟨L.Checker.SDLP, .bin .add (fzC 1) (fzCtl cmpKP)⟩)]
 
 /-- The name of the solution's image function for header entry `i`. -/
 def fzsName : Nat → FnName

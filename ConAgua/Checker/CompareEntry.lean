@@ -107,8 +107,26 @@ kept: its records `DECL` in `SDECL`, its index firsts `FIRSTS` in `SFIRSTS`, its
   return 0
 }
 
+/-- `cmp_ext()`: the compared run's extent words (`Arena/Freeze.lean`): the flag `CTL[229]`
+(`cmpCW`) := `1`, `CTL[230]` (`cmpKD`) := the larger of the two phases' record counts (the
+challenge's `DECL[0]`, the solution's `SDECL[0]`), `CTL[231]` (`cmpKP`) := the larger of their pool
+tops (`DLP[0]`, `SDLP[0]`): every frozen array then has one extent under both headers. -/
+-- con-ron: none — con-ron's two driver states keep their own tables; L shares one image set
+@[no_expose] def cmpExtL : FunDecl := lfn () locals (a, b) {
+  CTL.u64[229] := 1;
+  a := DECL.u64[0];
+  b := SDECL.u64[0];
+  if a < b { a := b };
+  CTL.u64[230] := a;
+  a := DLP.u64[0];
+  b := SDLP.u64[0];
+  if a < b { a := b };
+  CTL.u64[231] := a;
+  return 0
+}
+
 /-- `check_c3(c)`: the solution's index moved out, the challenge's records back and prepared, its
-side records, the record mates, its index, the flag, the frozen buffer (`par_compact(c)`: the
+side records, the record mates, its index, the flag, the extent words (`cmp_ext`), the frozen buffer (`par_compact(c)`: the
 header only for mode `6`, `c = 0`, whose jobs run in place; header and images for mode `7`,
 `c = 1`, whose jobs run on the threads' regions). -/
 -- con-ron: none — the Rust driver `compare_json` (h8S's thaw, h4, hside, hsol, h6, h7), which the twin states as premises
@@ -123,6 +141,7 @@ header only for mode `6`, `c = 0`, whose jobs run in place; header and images fo
   z := call solution_of(cnt);
   z := call build_index(cnt);
   CTL.u64[⟪SOLC⟫] := 1;
+  z := call cmp_ext();
   if c != 0 {
     z := call par_compact(1, ⟪hdrWW⟫);
     z := call cmp_hdr_s(z)
@@ -136,6 +155,6 @@ header only for mode `6`, `c = 0`, whose jobs run in place; header and images fo
 def compareEntryProg : Prog :=
   [("cmp_stash", cmpStashL), ("cmp_restore", cmpRestoreL), ("check_c1", checkC1L),
    ("check_c2", checkC2L), ("check_c3", checkC3L), ("cmp_sstash", cmpSStashL),
-   ("cmp_hdr_s", cmpHdrSL), ("fzs_60", fzsF 60), ("fzs_61", fzsF 61), ("fzs_62", fzsF 62)]
+   ("cmp_ext", cmpExtL), ("cmp_hdr_s", cmpHdrSL), ("fzs_60", fzsF 60), ("fzs_61", fzsF 61), ("fzs_62", fzsF 62)]
 
 end L.Checker

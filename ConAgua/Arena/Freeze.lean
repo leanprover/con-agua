@@ -97,9 +97,28 @@ def fzPExt (k : Nat) : Expr := .bin .shr (.bin .add (fzCtl k) (fzC 1)) (fzC 1)
 def fzSlotExt (sa : ArrId) : Expr :=
   .bin .add (fzC 2) (.bin .add (.ld64 sa (fzC 0)) (.const SN0))
 
+/-- The compared run's `CTL` words the extents read (`cmp_ext`, mode `6`/`7`; `0` on a flat run,
+never written elsewhere, not patched in the solution's seed): the compare flag, the larger of the
+two record counts, the larger of the two declaration pool tops. -/
+def cmpCW : Nat := 229
+def cmpKD : Nat := 230
+def cmpKP : Nat := 231
+
+/-- `e` on a flat run, `CTL[k]` on a compared one (`e + CTL[cmpCW] · (CTL[k] − e)`): the same
+under both headers of a compared run, whatever `e` reads. -/
+def fzCmpOr (e : Expr) (k : Nat) : Expr :=
+  .bin .add e (.bin .mul (fzCtl cmpCW) (.bin .sub (fzCtl k) e))
+
+/-- The extent of `FIRSTS` (and `DECL`'s, `1 + 8 ·` it): the number of the front's records, on a
+compared run the larger of the two phases'. -/
+def fzDeclX : Expr := fzCmpOr fzDecl cmpKD
+
+/-- The pool top `DLP[0]`, on a compared run the larger of the two phases'. -/
+def fzDlpX : Expr := fzCmpOr (.ld64 L.Front.DLP (fzC 0)) cmpKP
+
 /-- The extent of a solution row (`SIX*`, `STX*`, `MAT*`, by the name handle's index): `2 · count`
-of its name store while the challenge's jobs run (`CTL[224] = 1`), else `0`. -/
-def fzSolExt (ca : Nat) : Expr := .bin .mul (fzCtl 224) (.bin .mul (fzC 2) (fzCtl ca))
+of its name store on a compared run (`CTL[cmpCW] = 1`), else `0`. -/
+def fzSolExt (ca : Nat) : Expr := .bin .mul (fzCtl cmpCW) (.bin .mul (fzC 2) (fzCtl ca))
 
 /-- **The frozen arrays**, in header order: (the id entry 2 reads it as, how entry 1 makes it). -/
 def frozen : List (ArrId × Fz) :=
@@ -116,9 +135,9 @@ def frozen : List (ArrId × Fz) :=
    (TIXS, ⟨TIXS, .bin .mul (fzC 2) (fzCtl nstrCS.ca.toNat)⟩),
    (TIXN, ⟨TIXN, .bin .mul (fzC 2) (fzCtl nnumCS.ca.toNat)⟩),
    (EREC, ⟨EREC, fzCtl 129⟩),
-   (FIRSTS, ⟨FIRSTS, fzDecl⟩),
-   (L.Front.DECL, ⟨L.Front.DECL, .bin .add (fzC 1) (.bin .mul (fzC 8) fzDecl)⟩),
-   (L.Front.DLP, ⟨L.Front.DLP, .bin .add (fzC 1) (.ld64 L.Front.DLP (fzC 0))⟩)] ++
+   (FIRSTS, ⟨FIRSTS, fzDeclX⟩),
+   (L.Front.DECL, ⟨L.Front.DECL, .bin .add (fzC 1) (.bin .mul (fzC 8) fzDeclX)⟩),
+   (L.Front.DLP, ⟨L.Front.DLP, .bin .add (fzC 1) fzDlpX⟩)] ++
   [(SIXA, ⟨SIXA, fzSolExt nanonCS.ca.toNat⟩), (SIXS, ⟨SIXS, fzSolExt nstrCS.ca.toNat⟩),
    (SIXN, ⟨SIXN, fzSolExt nnumCS.ca.toNat⟩), (STXA, ⟨STXA, fzSolExt nanonCS.ca.toNat⟩),
    (STXS, ⟨STXS, fzSolExt nstrCS.ca.toNat⟩), (STXN, ⟨STXN, fzSolExt nnumCS.ca.toNat⟩),

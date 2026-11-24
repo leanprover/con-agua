@@ -252,9 +252,9 @@ def biA : List TieredArray := checkerWordArrays.filter fun b =>
 /-- The `CTL` words `build_index` may write: all but the pin sets' words, the solution's flag
 (`CTL[224]`), the solution's counters and the walks' memo stamps and stack tops (`CTL[220‥228]`,
 `Arena/JustifyIface.lean`), the preparation's memo stamps (`CTL[73]`, `CTL[75]`) and the
-prelude's record count (`CTL[240]`). -/
+prelude's record count (`CTL[240]`) and the compared run's extent words (`CTL[229‥231]`). -/
 def biC : List Word := ((List.range 1024).filter fun x => x != 150 && x != 151 && x != 224 &&
-  x != 73 && x != 75 && x != 240 && !(220 ≤ x && x ≤ 228)).map UInt64.ofNat
+  x != 73 && x != 75 && x != 240 && !(220 ≤ x && x ≤ 231)).map UInt64.ofNat
 
 /-- The arrays of `biA`, as a test. -/
 def biPa (b : TieredArray) : Bool := checkerWordArrays.contains b && b != PINS && b != L.Front.DECL &&
@@ -263,7 +263,7 @@ def biPa (b : TieredArray) : Bool := checkerWordArrays.contains b && b != PINS &
 /-- The `CTL` words of `biC`, as a test. -/
 def biPc (x : Word) : Bool := decide (x.toNat < 1024) && x.toNat != 150 && x.toNat != 151 &&
   x.toNat != 224 && x.toNat != 73 && x.toNat != 75 && x.toNat != 240 &&
-    !(decide (220 ≤ x.toNat) && decide (x.toNat ≤ 228))
+    !(decide (220 ≤ x.toNat) && decide (x.toNat ≤ 231))
 
 theorem biPa_mem (b : TieredArray) (h : biPa b = true) : b ∈ biA := by
   simp only [biPa, Bool.and_eq_true, List.contains_iff_mem] at h

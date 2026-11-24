@@ -490,7 +490,7 @@ def cdPa (b : TieredArray) : Bool := checkerWordArrays.contains b && !IdxArr b &
 /-- The `CTL` words of `cdC`, as a test. -/
 def cdPc (x : Word) : Bool :=
   decide (x.toNat < 1024) && ((decide (x.toNat < 162) || decide (173 < x.toNat)) && x.toNat != 128 &&
-    x.toNat != 224 && x.toNat != 225 && x.toNat != 226)
+    x.toNat != 224 && x.toNat != 225 && x.toNat != 226 && x.toNat != 229 && x.toNat != 230 && x.toNat != 231)
 
 theorem apPa_mem (b : TieredArray) (h : apPa b = true) : b ∈ apA := by
   simp only [apPa, Bool.and_eq_true, bne_iff_ne, ne_eq, List.contains_iff_mem] at h
