@@ -78,12 +78,12 @@ theorem flushCaches_specNV (n : Nat) (s₀ : St) :
 
 /-- A job accepted at the head of a list: the list's failure claim is the rest's, from the job's
 state. -/
-theorem ErrClaimV.cons_ok {pins : List INatOpPinSet} {I : IStreamIndex} {ds : Array IDeclaration}
+theorem ErrClaimV.cons_ok {pins : List INatOpPinSet} {I : IStreamIndex} {ds : Array IDeclaration} {J : Option ISolution}
     {t : Nat} (ht : t < ds.size) {rest : List Nat} {a a₁ : AState} {e : Err}
-    (h : recordJob VM pins none I t ds[t] a = .ok ((), a₁))
-    (hr : ErrClaimV (checkJobList VM pins none I ds rest) a₁ e) :
-    ErrClaimV (checkJobList VM pins none I ds (t :: rest)) a e := fun hk => by
-  have e1 : (checkJobList VM pins none I ds (t :: rest)).run a = (checkJobList VM pins none I ds rest).run a₁ :=
+    (h : recordJob VM pins J I t ds[t] a = .ok ((), a₁))
+    (hr : ErrClaimV (checkJobList VM pins J I ds rest) a₁ e) :
+    ErrClaimV (checkJobList VM pins J I ds (t :: rest)) a e := fun hk => by
+  have e1 : (checkJobList VM pins J I ds (t :: rest)).run a = (checkJobList VM pins J I ds rest).run a₁ :=
     checkJobList_cons_ok ht h
   unfold TwinFailsV; rw [e1]; exact hr hk
 
@@ -95,11 +95,11 @@ variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : A
 
 /-- **`check_jobs(j, j + 1)` failing claims record `j`'s failure**, from the jobs' relation (up to
 the scratch entry) and con-ron's fold invariant at the record's view. -/
-def CjStepE (p : Prog) : Prop :=
+def CjStepE (p : Prog) (J : Option ISolution := none) : Prop :=
   ∀ (n : Nat) (m : Mem) (a : AState) (j : Word), n ≤ 2 ^ 62 → j.toNat < ds.size →
-    JobRel pins dn ds none I a₀ m a → (∃ env, FoldOK env (I.view j.toNat) (AM.st enterScratch a)) →
+    JobRel pins dn ds J I a₀ m a → (∃ env, FoldOK env (I.view j.toNat) (AM.st enterScratch a)) →
     ∀ {e : Err}, callE p n "check_jobs" [j, j + 1] m = .error e →
-    ErrClaimV (checkJobList VM pins none I ds [j.toNat]) a e
+    ErrClaimV (checkJobList VM pins J I ds [j.toNat]) a e
 
 variable {pins dn ds I a₀} in
 /-- `CjStepE` from the jobs' program facts and their error claims (`JobG`), by `checkJobs_ref`. -/
@@ -130,17 +130,17 @@ end step
 
 section thread
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration}
-  {I : IStreamIndex} {a₀ : AState} {bs : List UInt8}
+  {I : IStreamIndex} {a₀ : AState} {bs : List UInt8} {J : Option ISolution}
 
 /-- **`check_jobs(j, j + 1)` on a thread's memory, after the flush, error half of
 `checkJobs_thrT`.** -/
-theorem checkJobs_thrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg))
+theorem checkJobs_thrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg) J)
     (n : Nat) (hn : n ≤ 2 ^ 62) (a : AState) (j : Word) (hj : j.toNat < ds.size)
     (hF : ∃ env, FoldOK env (I.view j.toNat) (AM.st enterScratch a)) (x y : Word) :
     ⦃fun s => x = j ∧ y = j + 1 ∧ ∃ Y, FlushOK Y ∧ s.mem = flushMem Y ∧
-      ThrAt pins dn ds I a₀ bs Y a⦄
+      ThrAt pins dn ds I a₀ bs Y a J⦄
     invoke checkerProg (exec checkerProg n) "check_jobs" [x, y]
-    ⦃fun _ _ => True; ErrClaimV (checkJobList VM pins none I ds [j.toNat]) a⦄ := by
+    ⦃fun _ _ => True; ErrClaimV (checkJobList VM pins J I ds [j.toNat]) a⦄ := by
   apply M.triple_of_run' (fun _ _ _ _ _ => trivial)
   rintro s e ⟨hxj, hyj, Y, hfy, hsY, X, hJ, hPB, hYX⟩ hrun
   rw [hxj, hyj] at hrun
@@ -164,26 +164,26 @@ theorem checkJobs_thrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerPro
     show (flushMem X).bytes L.Rom.PB = _
     rw [flushMem_bytes]; exact hPB
   rw [← L.Rom.invoke_subPB (bs := bs) checkerProg_noSt8PB n _ _ (s := s₂) hPB₂] at hrun₂
-  have hJ2 : JobRel pins dn ds none I a₀ s₂.mem a := ⟨a₁, ⟨(hJR.flush hfx).setGlob _, hx, hp⟩, hSE⟩
+  have hJ2 : JobRel pins dn ds J I a₀ s₂.mem a := ⟨a₁, ⟨(hJR.flush hfx).setGlob _, hx, hp⟩, hSE⟩
   exact hE n s₂.mem a j hn hj hJ2 hF (L.Front.callE_of_run_err hrun₂)
 
 /-- **`check_b` on a thread's memory, error half of `checkB_thr`.** -/
-theorem checkB_thrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg))
+theorem checkB_thrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg) J)
     (n : Nat) (hn : n ≤ 2 ^ 62) (a : AState) (j : Word) (hj : j.toNat < ds.size)
     (hF : ∃ env, FoldOK env (I.view j.toNat) (AM.st enterScratch a)) (s₀ : St)
-    (hR : ThrAt pins dn ds I a₀ bs (seedMem s₀.mem) a)
+    (hR : ThrAt pins dn ds I a₀ bs (seedMem s₀.mem) a J)
     (hlo : s₀.mem.glob PLO = j) (hhi : s₀.mem.glob PHI = j + 1) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check_b" []
-    ⦃fun _ _ => True; ErrClaimV (checkJobList VM pins none I ds [j.toNat]) a⦄ := by
+    ⦃fun _ _ => True; ErrClaimV (checkJobList VM pins J I ds [j.toNat]) a⦄ := by
   have hlo' : s₀.mem.glob ⟨9⟩ = j := hlo
   have hhi' : s₀.mem.glob ⟨11⟩ = j + 1 := hhi
-  have hR0 : s₀.mem.glob ⟨10⟩ = 0 → ThrAt pins dn ds I a₀ bs
+  have hR0 : s₀.mem.glob ⟨10⟩ = 0 → ThrAt (J := J) pins dn ds I a₀ bs
       { bytes := (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).bytes,
         words := (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).words,
         glob := fun h => if h = ⟨10⟩ then 1
           else (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).glob h } a := by
     intro h0; have := hR; simp only [seedMem, ite_eq_left h0] at this; exact this
-  have hR1 : ¬ s₀.mem.glob ⟨10⟩ = 0 → ThrAt pins dn ds I a₀ bs s₀.mem a := by
+  have hR1 : ¬ s₀.mem.glob ⟨10⟩ = 0 → ThrAt pins dn ds I a₀ bs s₀.mem a J := by
     intro h0; have := hR; simp only [seedMem, ite_eq_right h0] at this; exact this
   rw [invoke_eq _ checkerProg_lookup_check_b]
   simp only [callFn, checkBL]
@@ -213,20 +213,20 @@ theorem checkB_thrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg))
       | (trace_state; fail "ThreadsE.checkB_thrE: no closing tactic applies")
 
 /-- **`check` with the mode word `2` on a thread's memory, error half of `checkThr`.** -/
-theorem checkThrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg))
+theorem checkThrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg) J)
     (n : Nat) (hn : n ≤ 2 ^ 62) (a : AState) (j : Word) (hj : j.toNat < ds.size)
     (hF : ∃ env, FoldOK env (I.view j.toNat) (AM.st enterScratch a)) (s₀ : St)
-    (hmode : s₀.mem.glob MODE = 2) (hR : ThrAt pins dn ds I a₀ bs (seedMem s₀.mem) a)
+    (hmode : s₀.mem.glob MODE = 2) (hR : ThrAt pins dn ds I a₀ bs (seedMem s₀.mem) a J)
     (hlo : s₀.mem.glob PLO = j) (hhi : s₀.mem.glob PHI = j + 1) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check" []
-    ⦃fun _ _ => True; ErrClaimV (checkJobList VM pins none I ds [j.toNat]) a⦄ := by
+    ⦃fun _ _ => True; ErrClaimV (checkJobList VM pins J I ds [j.toNat]) a⦄ := by
   rw [invoke_eq _ checkerProg_lookup_check']
   simp only [callFn, checkL]
   cases n with
   | zero => vcgen [exec] <;> simp [ErrClaimV.of_cls0]
   | succ n =>
     have hB : ⦃fun s => s.mem = s₀.mem⦄ invoke checkerProg (exec checkerProg n) "check_b" []
-        ⦃fun _ _ => True; ErrClaimV (checkJobList VM pins none I ds [j.toNat]) a⦄ := by
+        ⦃fun _ _ => True; ErrClaimV (checkJobList VM pins J I ds [j.toNat]) a⦄ := by
       apply M.triple_of_run' (fun _ _ _ _ _ => trivial)
       intro s₁ e hs hrun
       exact M.of_run_err (P := fun x => x = s₁) rfl hrun
@@ -244,13 +244,13 @@ theorem checkThrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg))
       | (trace_state; fail "ThreadsE.checkThrE: no closing tactic applies")
 
 /-- **One call, as a run, error half of `runThr`.** -/
-theorem runThrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg))
+theorem runThrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg) J)
     (n : Nat) (hn : n ≤ 2 ^ 62) (a : AState) (j : Word) (hj : j.toNat < ds.size)
     (hF : ∃ env, FoldOK env (I.view j.toNat) (AM.st enterScratch a)) (w : Mem)
-    (hmode : w.glob MODE = 2) (hR : ThrAt pins dn ds I a₀ bs (seedMem w) a)
+    (hmode : w.glob MODE = 2) (hR : ThrAt pins dn ds I a₀ bs (seedMem w) a J)
     (hlo : w.glob PLO = j) (hhi : w.glob PHI = j + 1) {e : Err}
     (hrun : L.run checkerProg n "check" [] w = .error e) :
-    ErrClaimV (checkJobList VM pins none I ds [j.toNat]) a e := by
+    ErrClaimV (checkJobList VM pins J I ds [j.toNat]) a e := by
   simp only [L.run] at hrun
   cases hq : (invoke checkerProg (exec checkerProg n) "check" []).run ⟨w, Locals.init []⟩ with
   | ok x => rw [hq] at hrun; cases hrun

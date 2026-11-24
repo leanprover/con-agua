@@ -10,7 +10,7 @@ import ConAgua.Arena.IWFrame
 /-!
 # The challenge's job relation after mode `6` (lane compare)
 
-`F6.jobR`: after mode `6`'s steps (`F6`: the challenge's index build `G6`, then the flag
+`F6.jobM`, `F6.jobR`: after mode `6`'s steps (`F6`: the challenge's index build `G6`, then the flag
 `CTL[224] := 1`), the flushed memory is in the job relation at the challenge's records, its index
 and the solution `solutionOf IS res` (the solution's index moved, the challenge's mates), from
 the twin's state after the challenge's index build with its caches emptied (as `FoldOn.jobRJ` for
@@ -143,18 +143,20 @@ theorem G6.ctl {c : Word} {m2 m3 : Mem} {dsC : Array IDeclaration} {sG : AState}
     rdW (m6.arr64 CTL) x = rdW (m.arr64 CTL) x := by
   rw [hfr.ctl _ hbi, hK.frame.ctl _ (by simpa using h129), h.frameM.ctl _ h64]
 
-/-- **The challenge's job relation after mode `6`**: the steps' twin facts, the challenge's index
-build, and the job relation at the flushed memory, at the solution `solutionOf IS res`. -/
-theorem F6.jobR (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) {c : Word} {m9 : Mem}
+/-- **The challenge's job memory half after mode `6`'s steps** (before the flush): the steps' twin
+facts, the challenge's index build, and the jobs' memory half at the memory `F6` ends in, at the
+solution `solutionOf IS res` (the twin's store well formed with the scratch tier off). -/
+theorem F6.jobM (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) {c : Word} {m9 : Mem}
     (h6 : F6 PS m c m9) :
     ∃ (m2 m3 : Mem) (dsC : Array IDeclaration) (sG : AState) (res : List IDeclaration) (m4 : Mem)
       (I : IStreamIndex) (a' : AState),
       Side6 PS m c m2 m3 dsC sG res m4 ∧ buildIndex res.toArray sG = .ok (.ok I, a') ∧
-      (FlushOK m9 → JobR PS.ipins (dnOf sG.store) res.toArray (some (solutionOf PS.IS res)) I
-        (flushMem m9) { a' with caches := Caches.empty }) := by
+      JobM PS.ipins (dnOf sG.store) res.toArray (some (solutionOf PS.IS res)) I m9 a' ∧
+      StoreWF a'.store ∧ a'.store.scratchOn = false ∧ ∀ t, (m9.arr64 t).size = (m.arr64 t).size := by
   obtain ⟨m6, ⟨m2, m3, dsC, sG, res, m4, m5, h, hMt, hMI, hK, I, a', hI, hB, hFz, hfs, hBK, hfr, -⟩,
     rfl⟩ := h6
-  refine ⟨m2, m3, dsC, sG, res, m4, I, a', h, hI, fun hfok => ?_⟩
+  refine ⟨m2, m3, dsC, sG, res, m4, I, a', h, hI, ?_, hB.drv.state.wf, hB.off, fun t => by
+    rw [(MemFrame.setCtl m6 224 1).size, hfr.size, hK.frame.size, h.frameM.size]⟩
   have hS := hB.stage
   have hctl : 228 < (m.arr64 CTL).size := by
     rw [hF.sizeAt]
@@ -230,7 +232,19 @@ theorem F6.jobR (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) 
         have := hF.build.nextLt
         show PS.IS.next + 1 < _
         omega⟩
-  exact (hJM6.setFlag hf9 hJS).flushR hB.drv.state.wf hB.off hfok
+  exact hJM6.setFlag hf9 hJS
+
+/-- **The challenge's job relation after mode `6`**: the steps' twin facts, the challenge's index
+build, and the job relation at the flushed memory, at the solution `solutionOf IS res`. -/
+theorem F6.jobR (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) {c : Word} {m9 : Mem}
+    (h6 : F6 PS m c m9) :
+    ∃ (m2 m3 : Mem) (dsC : Array IDeclaration) (sG : AState) (res : List IDeclaration) (m4 : Mem)
+      (I : IStreamIndex) (a' : AState),
+      Side6 PS m c m2 m3 dsC sG res m4 ∧ buildIndex res.toArray sG = .ok (.ok I, a') ∧
+      (FlushOK m9 → JobR PS.ipins (dnOf sG.store) res.toArray (some (solutionOf PS.IS res)) I
+        (flushMem m9) { a' with caches := Caches.empty }) := by
+  obtain ⟨m2, m3, dsC, sG, res, m4, I, a', h, hI, hJ, hwf, hoff, -⟩ := F6.jobM hF h6
+  exact ⟨m2, m3, dsC, sG, res, m4, I, a', h, hI, fun hfok => hJ.flushR hwf hoff hfok⟩
 
 end six
 

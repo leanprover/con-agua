@@ -294,3 +294,46 @@ order, `checkStreamJ`), `TwinCompareVerdict`, `TwinCompareVerdictPooled`.
   their mode's frozen image, so the twin statements stay. One pool for both phases: the reported
   failure is the smallest failing index, and every solution index is below every challenge
   index, so the verdict is con-ron's.
+* H2: the challenge's threads at `J = some` (`cmpThreadsC_pooledJ`, `Checker/CmpThreadsC.lean`,
+  `CmpThreadsPool.lean`: the multi-worker pool with a solution; `JobM.truncJ`, `SolR.trunc`,
+  `JSol.fresh`) merged (d28e0d7b9; 0 `sorry`, the whole tree builds).
+* A' in detail (H3's hand-over, H3b, H4, H2): shrinking `OUT` for mode 7 would cost days (the
+  mode-6 chain's frames fix every array's size), so L does the chaining: mode 7 reads
+  `base := OUT[1]`, writes the challenge's buffer at `OUT[base‥)` (`par_compact` with a base;
+  0 for the flat run and mode 6), sets `OUT[5] := base` and `OUT[1] := base + LC`. Entry 2
+  (`ca_check_b`) gets a prologue: `j ≥ buf[2]` and `buf[5] ≠ 0` shift the buffer, the index and
+  the region to the second phase and its worker sub-region (`ca_worker_size = 2 · workerNeed`);
+  the flat path never shifts. The solution's jobs see the whole buffer, which agrees with mode
+  5's on its prefix except header words 1 and 5 (`BufAgreeS`).
+* H1b: the challenge's threaded job failure at `J = some` (`cmpV_tjobC`, the error half of
+  `cmpThreadsC_pooledJ`) merged (463fa6d83). Every L-level verdict claim is now proved: modes 4,
+  5 (`cmpV_a4`, `cmpV_a5`), modes 6, 7 claim nothing (`cmpV_a67`, class 0), the solution's jobs
+  (`cmpV_sjob`, threaded `cmpV_tjobS`), the challenge's (`cmpV_cjob`, threaded `cmpV_tjobC`), and
+  `cmpErr_twin` for the sequential driver.
+* The user then asked for one frozen store image with two headers (the solution's terms not
+  duplicated) and an independent design review of the one-pool layout; the buffer/entry work
+  (H2b, H3b, H4) is on hold until it is decided.
+* **Decision (user, 2026-11-24): design (i)**, with an independent review's four amendments
+  (`_tmp/coordinator/compare-design-decision.md`): ONE frozen store image and two headers; both
+  phases' jobs start from the state after the challenge's index (`sI`); the solution's index
+  rows read through header S's `EIX*`/`TIX*` entries. The twin statements change accordingly
+  (`Final/CompareTwinI.lean`): `stagesCI_model` re-proves con-ron's `stagesC_model` with the
+  solution's pure fold at `sI` (`pooled_fold_records` is generic in its start state; its
+  hypotheses move from the solution's index state to `sI` by `Ext`/`PExt` monotonicity; checked
+  in Lean first, it went through at the first attempt). Helpers H2b (the compaction and the
+  headers), H4 (entry 2, `main.c`, the threaded theorems), H5 (the solution's phase at `sI`).
+* H5: the solution's phase at `sI` (`Checker/CmpSPhase*.lean`: the view of header S as a
+  hypothesis `CsViewS`, `cmpThreadsS_poolI`, `cmpThreadsC_poolI`, `cmpThreads_twinPooledI`;
+  `Verdict/CmpVSPhase.lean`: `cmpV_tjobSI`, `cmpV_tjobCI`) merged, 0 `sorry`.
+* **The sequential run (user's choice: in place, no harness hypotheses, peak about one store).**
+  H6 found H9's wall again: after the solution's jobs run in place, the challenge's jobs would
+  have to start from a memory related to `sI.worker`, i.e. tier 0 of the store unchanged by the
+  solution's jobs. The twin proves only `PExt` across a job (tier 0 unchanged holds by inspection:
+  interns append to the scratch tier), and the L job relation fixes tier-0 words only up to the
+  store relation; of the 1482 functions in `check_b`'s closure none stores to a frozen array at a
+  constant tier, but the cons pushes, `erec_put` (~40 callers) and ~35 pool writers store at a
+  runtime tier. Approved fix (user): in the sequential run the challenge's jobs continue on the
+  worker state the solution's jobs left (`sJ`): `TwinComparesAcceptsSeqI`,
+  `TwinCompareVerdictSeqI`; the threaded statements stay (`…I`). **Follow-up idea, not this lane:**
+  the full tier-0 invariant (no job stores below the tier-0 counts) would also discharge the
+  threaded mode's trusted `BufKept` premise (route A's `mprotect`).
