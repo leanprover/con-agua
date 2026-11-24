@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Final.CmpA
+public import ConAgua.Final.CmpC
 public import ConAgua.Final.CpThreads
 public import ConAgua.Final.CompareTwinI
 public import ConAgua.Checker.CmpSPhaseThr
@@ -157,5 +158,23 @@ theorem cmpEntry1_fail [Host] (k0 : Nat) (hcode : Code checkerFile k0) (bC bS pb
     exact .inl (cmpV_a5 bC bS pb h64 hbC hbS hpb rs4 m4 h4 hge4 e he hk)
   · have hcls : e.cls = st₀.data.regs.rax &&& 3 := by rw [Err.cls, hc']
     exact absurd (hcls ▸ cmpV_a67 (.inr (by simp [Mem.setG])) he) hk
+
+/-- **`ca_start_c` of `checker.s` on the machine** (the sequential compared run):
+`cmpC_outcome_regs` at the checker. From `ca_start_c`, called as `CmpCall` says, the machine
+returns to `ra` with the callee-saved registers restored; an accept and an error mean the L runs
+`CmpAccS`, `CmpErrS` say. -/
+theorem cmpSeq_regs [Host] (k0 : Nat) (hcode : Code checkerFile k0) (bC bS pb : ByteArray)
+    (sa : Word) (dm : MachineData) (ra : Word) (hc : CmpCall bC bS pb sa dm ra) :
+    Ev (CmpPostH dm ra (CmpAccS checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF hdrHw bC bS pb)
+      (CmpErrS checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF hdrHw bC bS pb) (fun _ _ => True))
+      dm (label abiStartCL) := by
+  obtain ⟨-, Kc, hC⟩ := code_of_checkerFile_cmpE hcode
+  exact cmpC_outcome_regs checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok
+    checkerTab_abiIO checkerProgI_wf (by decide) MODE PLO PHI OUT HDRF CTLF hdrHw frozenIdsL parOwnedL
+    (by decide) (by decide) (by decide) checker_seqParamsOk (by decide +kernel) k0
+    (code_of_checkerFile_par hcode) hC L.Checker.checkL checkerProg_lookup_check (by decide) bC bS pb sa dm ra hc
+
+/-- info: 'ConAgua.Final.cmpSeq_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms cmpSeq_regs
 
 end ConAgua.Final
