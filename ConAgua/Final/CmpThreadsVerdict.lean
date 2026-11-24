@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Final.CmpThreads
+import ConAgua.Final.C1ThreadsVerdict
 public import ConAgua.Final.ThreadsVerdict
 import ConAgua.Final.CpThreadFail
 import ConAgua.Verdict.CmpVSPhase
@@ -33,41 +34,13 @@ namespace ConAgua.Final
 
 open L L.Compiler L.Checker L.Arena ConRon.Arena
 
-/-- **Stand-in (L level, lane compare2 H7)**: a thread whose solution calls over header S ran from
-a fresh region, and whose challenge calls over header C, continuing from the memory those left,
-ran and then failed on the challenge's job `j < c` with `e` of class other than `0`, its earlier
-challenge calls below `j`; threads `ths` as in `c1Thr_accepts` (every solution job and
-every challenge job below `j` claimed): the twin's threaded comparison fails with that class. -/
-theorem c1Thr_failC_standin {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS bC bS)
-    {m₇ m : Mem} (hF : FoldOn bS pb (abiSz checkerTab) PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m)
-    {c : Word} {m9 mS : Mem} (h6 : F6 PS m c m9) (hb9 : m9.bytes = m.bytes) (hV : CsViewS m m9 mS)
-    (B : Array Word) (hBS : HdrView B mS) (khi : Word) (hk : khi.toNat = PS.dsS.size)
-    (BC : Array Word) (hBC : HdrView BC m9)
-    (hext : ∀ i < frozen.length, fzExt mS (fzAt i) = fzExt m9 (fzAt i))
-    (r₀ : Mem) (hz : ∀ b ∈ parOwnedL, r₀.arr64 b = zeros (mS.arr64 b).size) (hI0 : r₀.glob INIT = 0)
-    (csS : List (Word × Nat × Mem)) (hS : ThreadRuns B r₀ csS) (hcsS : ∀ c' ∈ csS, c'.1 < khi)
-    (hincS1 : (csS.map (·.1)).Pairwise (· < ·))
-    (j : Word) (csC : List (Word × Nat × Mem)) (n : Nat) (e : Err)
-    (hruns : ThreadFails BC j n e (runsEnd r₀ csS) csC) (hcs : ∀ c' ∈ csC, c'.1 < j)
-    (hj : j < c) (hk0 : e.cls ≠ 0)
-    (ths : List (Mem × List (Word × Nat × Mem) × List (Word × Nat × Mem)))
-    (hth : ∀ t ∈ ths, (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (mS.arr64 b).size) ∧ t.1.glob INIT = 0 ∧
-      ThreadRuns B t.1 t.2.1 ∧ (∀ c' ∈ t.2.1, c'.1 < khi) ∧
-      ThreadRuns BC (runsEnd t.1 t.2.1) t.2.2 ∧ ∀ c' ∈ t.2.2, c'.1 < c)
-    (hcovS : ∀ j' : Word, j' < khi → ∃ t ∈ ths, ∃ c' ∈ t.2.1, c'.1 = j')
-    (hcovC : ∀ j' : Word, j' < j → ∃ t ∈ ths, ∃ c' ∈ t.2.2, c'.1 = j')
-    (hincS : ∀ t ∈ ths, (t.2.1.map (·.1)).Pairwise (· < ·))
-    (hincC : ∀ t ∈ ths, (t.2.2.map (·.1)).Pairwise (· < ·)) :
-    TwinCompareVerdictThr bC bS e.cls := by
-  sorry
-
 theorem cp_lt_of_lt_le' {a b c : Word} (h1 : a < b) (h2 : b ≤ c) : a < c := cp_lt_of_lt_le h1 h2
 
 set_option linter.constructorNameAsVariable false in
 /-- **A thread's failing call in a compared run is the twin's threaded failure**: the failing
 call's phase by its index against `kS` (`cpThreadFail_runs`), the other threads' chains
 (`cpThreadsAcc_runs`), then the solution's failure (`cmpV_tjobSI`) or the challenge's failure
-after the thread's solution calls (`c1Thr_failC_standin`; every solution index lies below the
+after the thread's solution calls (`c1Thr_failC`; every solution index lies below the
 failing one). -/
 theorem cmpThreadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
@@ -115,7 +88,7 @@ theorem cmpThreadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
   · -- the challenge's job fails, after the thread's solution calls
     have hcl := hR.claimed i (Nat.le_refl _)
     rw [hkC] at hcl
-    refine c1Thr_failC_standin hpb PS hF h6 hb9 hV B hfS (B.getD 2 0) hk2S (B.extract (B.getD 5 0).toNat B.size) hfC hext
+    refine c1Thr_failC hpb PS hF h6 hb9 hV B hfS (B.getD 2 0) hk2S (B.extract (B.getD 5 0).toNat B.size) hfC hext
       (zeroMem checkerTab) (cp_zeroOwned fun b hb => (hsz b hb).1) rfl csS hRS hcsS hincS1 _ csC abiFuel e hruns hcs
       (cp_sub_lt hcl hge hnov) hk0 (ths.map fun t => (zeroMem checkerTab, fS t, fC t)) (fun t' ht' => ?_)
       (fun j hj => hcovS j (cp_lt_of_lt_le' hj hge) hj) (fun j hj => ?_) (fun t' ht' => ?_) (fun t' ht' => ?_)

@@ -175,6 +175,7 @@ public import ConAgua.Final.CpThreads
 public import ConAgua.Final.CpThreadFail
 public import ConAgua.Final.C1Threads
 public import ConAgua.Final.CmpThreads
+public import ConAgua.Final.C1ThreadsVerdict
 public import ConAgua.Final.CmpThreadsVerdict
 public import ConAgua.Checker.CompareTwinC
 public import ConAgua.Checker.CompareChain6S
