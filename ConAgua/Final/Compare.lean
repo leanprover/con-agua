@@ -98,9 +98,7 @@ theorem checkerFile_compare_no_False (V : Type w) [ConLeche.SetTheory V] [Host]
   twinComparesAcceptsSeqI_no_False V hfalse
     ((hret _ (checkerFile_compare_accepts k0 hcode bC bS pb h64 dm ra hc) (fun _ h => h.1)).2.1 hrdx hacc)
 
--- TEMP (compare2-seq): `sorryAx` from the stand-ins `F6.csStash_standin` (H2d) and H2d's
--- `checkC3_of_stages` last step, `checker_modes45`.
-/-- info: 'ConAgua.Final.checkerFile_compare_accepts_regs' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound] -/
+/-- info: 'ConAgua.Final.checkerFile_compare_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms checkerFile_compare_accepts_regs
 
 end ConAgua.Final

@@ -39,12 +39,6 @@ open ConRon.Arena ConRon.Bridge
 
 local notation "VM" => ConLeche.CheckMode.verified
 
-/-- **TEMP stand-in** (H2d, compare2-freeze): `cmp_sstash`'s copies of the solution's records,
-firsts, pool and frozen words survive mode `6`'s stages. -/
-theorem _root_.L.Checker.F6.csStash_standin {bC bS : ByteArray} {PS : PhaseS bC bS} {m : Mem} {c : Word}
-    {m9 : Mem} (h : F6 PS m c m9) : CsStash m m9 := by
-  sorry
-
 theorem cmp_absz : ∀ s, abiSz checkerTab s < 2 ^ 64 := fun s => by
   have := abiSz_le checkerTab_abiOk s; simp only [abiWords] at this; omega
 
@@ -241,7 +235,7 @@ theorem cq_seq (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
   have hJMN : JobM PS.ipins (dnOf sG.store) res.toArray (some (solutionOf PS.IS res)) I N a' :=
     hJM9.frame0 (memFrame_glob m9 _)
   have hStash : CsStash m5 N := by
-    have h := F6.csStash_standin hF6
+    have h := F6.csStash hF6
     exact ⟨h.decl, h.firsts, h.dlp, h.frz⟩
   obtain ⟨pinsP, dsP, hstI, hrec, hpp, hden, hPD, -, -, -, hH⟩ :=
     poolHypsS_I hS6.phase hI (fun (_ : Unit) (_ : AState) => False) (fun _ _ _ => False)
