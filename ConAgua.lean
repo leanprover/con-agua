@@ -161,6 +161,7 @@ public import ConAgua.Arena.JobStartX
 public import ConAgua.Checker.CmpSeqChain
 public import ConAgua.Checker.CmpSeqJobs
 public import ConAgua.Checker.CmpSeqErr
+public import ConAgua.Final.CmpSeqTwin
 public import ConAgua.Checker.SeedReread
 public import ConAgua.Final.CpThreads
 public import ConAgua.Final.CpThreadFail

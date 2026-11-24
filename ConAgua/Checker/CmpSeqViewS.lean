@@ -200,7 +200,7 @@ variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
 memory `m9` (its solution's index `IS`), what `m9` keeps of the solution's index build `m`
 (`CsStash`) and the solution's records `dsS`: the solution's (no solution, `CTL[224] = 0`) at the
 switched memory, at the same owned state. -/
-theorem _root_.L.Arena.JobM.csViewS {J : ISolution} {IS IC : IStreamIndex} {dsS dsC : Array IDeclaration}
+theorem _root_.L.Arena.JobM.cqViewS {J : ISolution} {IS IC : IStreamIndex} {dsS dsC : Array IDeclaration}
     {m m9 : Mem} {a : AState}
     (hC : JobM pins dn dsC (some J) IC m9 a) (hJI : J.idx = IS) (hSt : CsStash m m9)
     (hIS : IndexR m IS) (hDS : DeclsF (m.arr64 L.Front.DECL) (m.arr64 L.Front.DLP) dsS) (hFS : FrozenR m IS)
