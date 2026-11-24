@@ -117,8 +117,8 @@ theorem RowsP.hi {new src old : Array Word} {c : Nat} (h : RowsP new src old c) 
 solution's rows `SIX*`/`STX*` below `2 · count` and the challenge's past it (empty there: `hout`),
 the record pool, `FIRSTS` and the counter as `csIndexR`. -/
 theorem csIndexRP {m9 mS : Mem} {I : IStreamIndex} (hS : SolIdxR m9 I) (hK : IndexKeysIn m9 I)
-    (hout : ∀ w : Word, rowTag w ≤ 2 → rowTier w = 0 → ¬ (idxW w).toNat < nmCnt m9 (rowTag w) →
-      (baseRow m9 w).1 = 0 ∧ (baseTbl m9 w).1 = 0)
+    (hout : ∀ w : Word, w.toNat < 2 ^ 32 → rowTag w ≤ 2 → rowTier w = 0 →
+      ¬ (idxW w).toNat < nmCnt m9 (rowTag w) → (baseRow m9 w).1 = 0 ∧ (baseTbl m9 w).1 = 0)
     (heix : ∀ g ≤ 2, RowsP (mS.arr64 (eixArr g)) (m9.arr64 (sixArr g)) (m9.arr64 (eixArr g)) (nmCnt m9 g))
     (htix : ∀ g ≤ 2, RowsP (mS.arr64 (tixArr g)) (m9.arr64 (stxArr g)) (m9.arr64 (tixArr g)) (nmCnt m9 g))
     (hE : erecP mS = erecP m9)
@@ -132,22 +132,23 @@ theorem csIndexRP {m9 mS : Mem} {I : IStreamIndex} (hS : SolIdxR m9 I) (hK : Ind
     have h2 : rowIx w + 1 < 2 * nmCnt m9 (rowTag w) := by unfold rowIx; omega
     simp only [baseRow, baseTbl, solRow, solTbl, hg, ht, and_self, ite_true,
       (heix _ hg).lo h1, (heix _ hg).lo h2, (htix _ hg).lo h1, (htix _ hg).lo h2]
-  have hpast : ∀ w : Word, rowTag w ≤ 2 → rowTier w = 0 → ¬ (idxW w).toNat < nmCnt m9 (rowTag w) →
-      (baseRow mS w).1 = 0 ∧ (baseTbl mS w).1 = 0 := fun w hg ht hl => by
+  have hpast : ∀ w : Word, w.toNat < 2 ^ 32 → rowTag w ≤ 2 → rowTier w = 0 →
+      ¬ (idxW w).toNat < nmCnt m9 (rowTag w) → (baseRow mS w).1 = 0 ∧ (baseTbl mS w).1 = 0 :=
+    fun w hw hg ht hl => by
     have h1 : ¬ rowIx w < 2 * nmCnt m9 (rowTag w) := by unfold rowIx; omega
     have e1 : (baseRow mS w).1 = (baseRow m9 w).1 := by
       simp only [baseRow, hg, ht, and_self, ite_true, (heix _ hg).hi h1]
     have e2 : (baseTbl mS w).1 = (baseTbl m9 w).1 := by
       simp only [baseTbl, hg, ht, and_self, ite_true, (htix _ hg).hi h1]
-    rw [e1, e2]; exact hout w hg ht hl
+    rw [e1, e2]; exact hout w hw hg ht hl
   have hother : ∀ w : Word, ¬ (rowTag w ≤ 2 ∧ rowTier w = 0) →
       baseRow mS w = solRow m9 w ∧ baseTbl mS w = solTbl m9 w := fun w h => by
     simp only [baseRow, baseTbl, solRow, solTbl, h, ite_false, and_self]
-  refine ⟨fun n => ?_, fun n => ?_, hfst, hfsz, ?_, fun w _ => ?_⟩
+  refine ⟨fun n => ?_, fun n => ?_, hfst, hfsz, ?_, fun w hw => ?_⟩
   · by_cases hc : rowTag n.word.toUInt64 ≤ 2 ∧ rowTier n.word.toUInt64 = 0
     · by_cases hl : (idxW n.word.toUInt64).toNat < nmCnt m9 (rowTag n.word.toUInt64)
       · rw [(hin _ hc.1 hc.2 hl).1, hE]; exact hS.base n
-      · rw [ite_eq_left_of_eq_true _ _ (eq_true (hpast _ hc.1 hc.2 hl).1)]
+      · rw [ite_eq_left_of_eq_true _ _ (eq_true (hpast _ (by have := n.word.toNat_lt; simpa using this) hc.1 hc.2 hl).1)]
         cases e : I.base.idx[n]? with
         | none => rfl
         | some p => exact absurd (hK.idx n p e hc.1).2 hl
@@ -155,7 +156,7 @@ theorem csIndexRP {m9 mS : Mem} {I : IStreamIndex} (hS : SolIdxR m9 I) (hK : Ind
   · by_cases hc : rowTag n.word.toUInt64 ≤ 2 ∧ rowTier n.word.toUInt64 = 0
     · by_cases hl : (idxW n.word.toUInt64).toNat < nmCnt m9 (rowTag n.word.toUInt64)
       · rw [(hin _ hc.1 hc.2 hl).2, hE]; exact hS.btbl n
-      · rw [ite_eq_left_of_eq_true _ _ (eq_true (hpast _ hc.1 hc.2 hl).2)]
+      · rw [ite_eq_left_of_eq_true _ _ (eq_true (hpast _ (by have := n.word.toNat_lt; simpa using this) hc.1 hc.2 hl).2)]
         cases e : I.base.tbls[n]? with
         | none => rfl
         | some p => exact absurd (hK.tbls n p e hc.1).2 hl
@@ -164,7 +165,7 @@ theorem csIndexRP {m9 mS : Mem} {I : IStreamIndex} (hS : SolIdxR m9 I) (hK : Ind
   · by_cases hc : rowTag w ≤ 2 ∧ rowTier w = 0
     · by_cases hl : (idxW w).toNat < nmCnt m9 (rowTag w)
       · rw [(hin _ hc.1 hc.2 hl).1]; exact (hS.rows w).1
-      · rw [(hpast _ hc.1 hc.2 hl).1]; decide
+      · rw [(hpast _ ‹_› hc.1 hc.2 hl).1]; decide
     · rw [(hother _ hc).1]; exact (hS.rows w).1
 
 /-! ## Back to the challenge's view after the solution's jobs -/
