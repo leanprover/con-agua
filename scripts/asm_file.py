@@ -74,7 +74,7 @@ def main():
     if not a.no_build:
         r = subprocess.run([LAKE, "build", "ConAgua.Checker.Prog", "ConAgua.Checker.ProgTab",
                             "ConAgua.Checker.ProgI", "ConAgua.Checker.AsmX", "ConAgua.Compiler.Run",
-                            "ConAgua.Compiler.Abi", "ConAgua.AsmFile.CrossCheck", "romgen"],
+                            "ConAgua.Compiler.Abi", "ConAgua.Compiler.AbiCmp", "ConAgua.AsmFile.CrossCheck", "romgen"],
                            cwd=ROOT, capture_output=True, text=True)
         if r.returncode != 0:
             sys.exit(f"asm_file.py: build failed:\n{r.stdout[-3000:]}\n{r.stderr[-3000:]}")

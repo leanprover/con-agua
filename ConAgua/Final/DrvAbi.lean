@@ -12,7 +12,7 @@ public import ConAgua.Final.SeqLayout
 /-!
 # The sequential driver `ca_start` on the machine (lane parmode)
 
-`drv_outcome`: the harness calls the driver `ca_start` (`AbiCall`; the region must be 16 bytes
+`drv_outcome`: the harness calls the driver `ca_start` (`AbiCall`; the region must be 64 bytes
 larger than the setup stub's, `drvNeed`). The driver saves the caller's `r15` and its return
 address past the setup stub's region (`drvSave`), calls entry 1 (`ca_start_a0`, `abiA0_outcome`) on the region
 without them, and if that run returns `2^63 + k`, calls `ca_check_seq` (`abiS_outcome`) on the

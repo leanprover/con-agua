@@ -91,12 +91,13 @@ def abiOff (tab : Tab) (p : Nat) : Nat :=
 
 /-- The region size the stub needs. -/
 def abiNeed (tab : Tab) : Nat := abiSlot * tab.nslot
-/-- The driver's save area (the caller's `r15` and its return address): the 16 bytes past
-`ca_setup`'s region (`abiNeed`), which the driver needs in addition (`drvNeed`). Entry 1 is called
+/-- The driver's save area (the caller's `r15` and its return address): the first 16 of the 64
+bytes past `ca_setup`'s region (`abiNeed`), which the drivers need in addition (`drvNeed`; the
+compared run's entry 1 `ca_start_ac` uses all 64, `cmpSave`). Entry 1 is called
 on the region without them (`r9 := abiNeed`), so it sees a zero region. -/
 def drvSave (tab : Tab) : Nat := abiNeed tab
 /-- The region size the driver needs. -/
-def drvNeed (tab : Tab) : Nat := abiNeed tab + 16
+def drvNeed (tab : Tab) : Nat := abiNeed tab + 64
 
 /-! ## The stores
 
@@ -182,7 +183,7 @@ def abiStub (tab : Tab) : Program :=
 
 /-- The stub's symbols for the harness: `ca_region_size` (the least `base_len`), `ca_slot` and
 `ca_w0` (the offset of the first word position's slot; the harness advises huge pages for the
-slots from there). `ca_region_size` is the sequential driver's need (`drvNeed`, 16 bytes above
+slots from there). `ca_region_size` is the sequential driver's need (`drvNeed`, 64 bytes above
 `ca_setup`'s, which it covers). -/
 def abiSymbols (tab : Tab) : String :=
   s!".section .rodata\n.globl ca_region_size\n.globl ca_slot\n.globl ca_w0\nca_region_size: .quad {drvNeed tab}\nca_slot: .quad {abiSlot}\nca_w0: .quad {abiSlot * tab.slotOf tab.nb}\n"
@@ -228,7 +229,7 @@ arrays.
   result is the result. It needs no more memory than `ca_setup`: entry 2 runs on phase A's region,
   on the arrays as phase A left them.
   It keeps its return address and the caller's `r15` past `ca_setup`'s region (`drvSave`; the
-  driver's region is 16 bytes larger, `drvNeed`, the size `ca_region_size` names), pops its return
+  driver's region is 64 bytes larger, `drvNeed`, the size `ca_region_size` names), pops its return
   address off the machine stack before each `call` and holds `base` in `r15` (which `ca_enter`
   restores); so each callee's machine stack is the caller's (the 32 bytes `AbiCall` names) and
   the driver touches no callee-saved register but `r15`. -/

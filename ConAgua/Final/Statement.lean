@@ -21,8 +21,8 @@ environment has a model in every set theory, and a file declaring a theorem of t
 never accepted.
 
 `ca_start` is the sequential driver (`parStub`, `ConAgua/Compiler/Abi.lean`). It checks the
-region size (`drvNeed`: the setup stub's region plus 16 bytes), keeps its return address and the
-caller's `r15` in those 16 bytes past the setup stub's region (`drvSave`) and holds `base` in
+region size (`drvNeed`: the setup stub's region plus 64 bytes), keeps its return address and the
+caller's `r15` in the first 16 of those bytes past the setup stub's region (`drvSave`) and holds `base` in
 `r15`. Then it calls entry 1 (`ca_start_a0`: the mode word `3`, then the setup stub `ca_setup`,
 which lays out the table, the L stack and the arrays in the region and enters the trampoline
 `ca_enter`; `check` runs the stages and the stream index and writes the frozen buffer's header)
