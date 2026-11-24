@@ -79,8 +79,8 @@ twin accepts the comparison as the threaded run does. -/
 theorem c1Thr_accepts_standin {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS bC bS)
     {m₇ m : Mem} (hF : FoldOn bS pb (abiSz checkerTab) PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m)
     {c : Word} {m9 mS : Mem} (h6 : F6 PS m c m9) (hb9 : m9.bytes = m.bytes) (hV : CsViewS m m9 mS)
-    (B : Array Word) (hBS : CsFirst B mS) (khi : Word) (hk : khi.toNat = PS.dsS.size)
-    (BC : Array Word) (hBC : CsFirst BC m9)
+    (B : Array Word) (hBS : HdrView B mS) (khi : Word) (hk : khi.toNat = PS.dsS.size)
+    (BC : Array Word) (hBC : HdrView BC m9)
     (ths : List (Mem × List (Word × Nat × Mem) × List (Word × Nat × Mem)))
     (hth : ∀ t ∈ ths, (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (mS.arr64 b).size) ∧ t.1.glob INIT = 0 ∧
       ThreadRuns B t.1 t.2.1 ∧ (∀ c' ∈ t.2.1, c'.1 < khi) ∧

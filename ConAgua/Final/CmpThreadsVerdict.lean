@@ -4,6 +4,7 @@ public import ConAgua.Final.CmpThreads
 public import ConAgua.Final.ThreadsVerdict
 import ConAgua.Final.CpThreadFail
 import ConAgua.Verdict.CmpVSPhase
+import ConAgua.Checker.C1Hdr
 
 @[expose] public section
 
@@ -40,8 +41,8 @@ every challenge job below `j` claimed): the twin's threaded comparison fails wit
 theorem c1Thr_failC_standin {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS bC bS)
     {m₇ m : Mem} (hF : FoldOn bS pb (abiSz checkerTab) PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m)
     {c : Word} {m9 mS : Mem} (h6 : F6 PS m c m9) (hb9 : m9.bytes = m.bytes) (hV : CsViewS m m9 mS)
-    (B : Array Word) (hBS : CsFirst B mS) (khi : Word) (hk : khi.toNat = PS.dsS.size)
-    (BC : Array Word) (hBC : CsFirst BC m9)
+    (B : Array Word) (hBS : HdrView B mS) (khi : Word) (hk : khi.toNat = PS.dsS.size)
+    (BC : Array Word) (hBC : HdrView BC m9)
     (r₀ : Mem) (hz : ∀ b ∈ parOwnedL, r₀.arr64 b = zeros (mS.arr64 b).size) (hI0 : r₀.glob INIT = 0)
     (csS : List (Word × Nat × Mem)) (hS : ThreadRuns B r₀ csS) (hcsS : ∀ c' ∈ csS, c'.1 < khi)
     (hincS1 : (csS.map (·.1)).Pairwise (· < ·))
@@ -97,7 +98,7 @@ theorem cmpThreadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
   rcases hcase with ⟨hph, cs, hruns, hcs⟩ | ⟨hge, csS, csC, hRS, hcsS, hincS1, hruns, hcs⟩
   · -- the solution's job fails
     obtain ⟨m2, m3, dsC, sG, res, m4, I, a', h, hI, -⟩ := F6.jobM hF h6
-    exact cmpV_tjobSI hpb PS hF h6 hb9 h hI hV B hfS (B.getD 2 0) hk2S (zeroMem checkerTab)
+    exact cmpV_tjobSI hpb PS hF h6 hb9 h hI hV B (csFirst_hdrView hfS) (B.getD 2 0) hk2S (zeroMem checkerTab)
       (cp_zeroOwned fun b hb => (hsz b hb).1) rfl _ cs abiFuel e hruns hcs hph hk0
       (ths.map fun t => (zeroMem checkerTab, fS t)) (fun t' ht' => by
         obtain ⟨t, ht, rfl⟩ := List.mem_map.mp ht'
