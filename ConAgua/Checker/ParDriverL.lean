@@ -281,6 +281,7 @@ theorem checkJobs_seqTO {b pb : ByteArray}
 theorem checkerProg_flushProg : FlushProg checkerProg := by
   constructor <;> chk_lk
 
+set_option maxHeartbeats 1000000 in
 /-- **Entry 2 in place, `check_b`**: from a memory that agrees with the memory after the index
 build on every array the jobs name, with the range `[0, k)` (`k` the number of records) and an
 empty seed `CTLF`, a run that returns `ACCEPT` means the twin's jobs over every record accept from
@@ -308,7 +309,7 @@ theorem checkB_seqO {b pb : ByteArray}
   | succ n =>
     have hJ := checkJobs_seqTO ho hidx hF hJP n (by omega) hi hhi
     have hFl := flushCaches_spec checkerProg checkerProg_flushProg n
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · ·), (hFl ·)]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, st64, warr, (hJ · ·), (hFl ·)]
     all_goals (try simp only [L.St.setLoc_mem, St.setLoc_loc,
       L.Locals.init_nil, Cmp.eval,
       reduceIte, beq_iff_eq, decide_eq_true_eq] at *)

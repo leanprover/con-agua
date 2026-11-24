@@ -47946,6 +47946,57 @@ movq %rax, 35824(%r15)
 jmp .Lca_check_b_1X
 .Lca_check_b_1E:
 .Lca_check_b_1X:
+cmpq $0, 3160(%r15)
+je .Lca_check_b_21E
+cmpq $128, 3160(%r15)
+jbe ca_error
+movq 1472(%r15), %rax
+movq 1024(%rax), %rax
+movq %rax, 36928(%r15)
+movq 3160(%r15), %rax
+cmpq $12, %rax
+jb ca_error
+subq $12, %rax
+cmpq $162, %rax
+jb ca_error
+movq 1472(%r15), %rcx
+movq $162, %rax
+shlq $3, %rax
+addq %rcx, %rax
+movq %rax, %rcx
+movq 3384(%r15), %rax
+cmpq $12, %rax
+jb ca_error
+subq $12, %rax
+cmpq $162, %rax
+jb ca_error
+movq 1696(%r15), %rdx
+movq $162, %rax
+shlq $3, %rax
+addq %rdx, %rax
+movq %rax, %rdx
+movq $12, %rax
+shlq $3, %rax
+addq %rcx, %rax
+movq %rax, 16(%rsp)
+cmpq 16(%rsp), %rcx
+jae .Lca_check_b_21421X
+.Lca_check_b_21421L:
+movq (%rcx), %rax
+movq %rax, (%rdx)
+addq $8, %rcx
+addq $8, %rdx
+cmpq 16(%rsp), %rcx
+jb .Lca_check_b_21421L
+.Lca_check_b_21421X:
+cmpq $224, 3160(%r15)
+jbe ca_error
+movq 1472(%r15), %rax
+movq 1792(%rax), %rax
+movq %rax, 37696(%r15)
+jmp .Lca_check_b_21X
+.Lca_check_b_21E:
+.Lca_check_b_21X:
 subq $1, %r14
 jb ca_exhausted
 call ca_f_flush_caches
