@@ -135,7 +135,8 @@ not scan). -/
 /-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer; on every call
 the phase's words of the seed (`CTL[128]`, `CTL[162‥173]`, `CTL[224]`: the stream index's counter,
 the frozen literal names, the solution's flag; the compared run's second phase continues on the
-first phase's region with its own header's seed) re-read from the buffer, and the core caches flushed (the worker's empty caches: in place, the index build's level-equality
+first phase's region with its own header's seed) re-read from the buffer (none in place: `CTLF`
+empty), and the core caches flushed (the worker's empty caches: in place, the index build's level-equality
 entries would remain; between two calls they are empty already, every job ending in
 `scratch_drop`), then the jobs `PLO‥PHI-1` (`PHI` at most the number of records), in order, from
 the worker's state, as the pool's worker does (`checkJobList`); returns `ACCEPT`. -/
@@ -147,9 +148,11 @@ the worker's state, as the pool's worker does (`checkJobList`); returns `ACCEPT`
     copy!(CTL.u64, 0, CTLF.u64, 0, n);
     INIT := 1
   };
-  CTL.u64[128] := CTLF.u64[128];
-  copy!(CTL.u64, 162, CTLF.u64, 162, 12);
-  CTL.u64[224] := CTLF.u64[224];
+  if len(CTLF.u64) != 0 {
+    CTL.u64[128] := CTLF.u64[128];
+    copy!(CTL.u64, 162, CTLF.u64, 162, 12);
+    CTL.u64[224] := CTLF.u64[224]
+  };
   z := call flush_caches();
   if L.Front.DECL.u64[0] < PHI { abort };
   if PHI < PLO { abort };
