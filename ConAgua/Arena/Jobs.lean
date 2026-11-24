@@ -4,13 +4,14 @@ public import ConAgua.Arena.IndexBuild
 public import ConRon.Bridge.Checker.Pooled
 public import ConRon.Bridge.Compare.Record
 public import ConAgua.Arena.JustifyRef7
-public import ConAgua.Arena.CmpVMates
 import ConAgua.Census.Attr
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.CheckerL
+import ConAgua.Arena.IWFrame
+public import ConAgua.Arena.IndexRel
 
 @[expose] public section
 

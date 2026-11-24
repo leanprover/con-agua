@@ -6,6 +6,7 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Checker.CmpSeqMv
 
 @[expose] public section
 

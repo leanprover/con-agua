@@ -3,9 +3,7 @@ module
 public import ConAgua.Checker.C1ThrQ
 public import ConAgua.Arena.JobStartX
 public import ConAgua.Checker.CmpSeqW
-public import ConAgua.Checker.CmpSeqView
-import ConAgua.Arena.ScratchRefine
-import ConAgua.Arena.IndexRel
+import ConAgua.Arena.IWFrame
 
 @[expose] public section
 

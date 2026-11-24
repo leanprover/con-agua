@@ -2,15 +2,9 @@ module
 
 public import ConAgua.Final.CpThreads
 public import ConAgua.Final.ThreadsVerdict
-import ConAgua.Final.DrvFinal
-import ConAgua.Final.BufAbi
 import ConAgua.Checker.AsmFinal
-import ConAgua.Checker.ProgIRef
-import ConAgua.Checker.AsmXOk
-import ConAgua.Checker.ProgWf
-public import ConAgua.Checker.ProgTab
-public import ConAguaAsm.Checker
 import all ConAgua.Checker.Entry
+public import ConAgua.Verdict.ThreadsE
 
 @[expose] public section
 

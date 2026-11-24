@@ -1,10 +1,10 @@
 module
 
-public import ConAgua.Arena.FreezeView
 public import ConAgua.Arena.FreezeCmp
 import all ConAgua.Arena.FreezeCmp
 import all ConAgua.Arena.Freeze
-import ConAgua.L.Blocks
+public import ConAgua.Arena.FreezeSpec
+import ConAgua.Arena.IWFrame
 
 @[expose] public section
 

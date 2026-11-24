@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Checker.CompareTwinFacts
-public import ConAgua.Checker.ParEntryA
 import ConAgua.Arena.GrindAttr
 import ConAgua.Checker.RomProgInit
 import ConAgua.Checker.HoistWalkRef
@@ -14,6 +13,7 @@ import all ConAgua.Checker.CmpSeqEntry
 import ConAgua.Checker.CheckARun
 meta import ConAgua.Checker.LoopProgTac
 import ConAgua.Checker.LoopProgTac
+import ConAgua.Arena.IWFrame
 
 @[expose] public section
 

@@ -1,8 +1,9 @@
 module
 
 public import ConAgua.Checker.CmpSeqBank
-public import ConAgua.Checker.CmpSeqView
 import ConAgua.Arena.FreezeSpec
+public import ConAgua.Checker.CmpSeqMv
+import ConAgua.Arena.IWFrame
 
 @[expose] public section
 

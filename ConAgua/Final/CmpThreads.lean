@@ -1,16 +1,10 @@
 module
 
-public import ConAgua.Final.CpThreads
 public import ConAgua.Final.C1Threads
 public import ConAgua.Final.CmpEntry1
-public import ConAgua.Final.CmpAbi
-public import ConAgua.Final.CompareTwinVerdict
 import ConAgua.Final.CompareTwinThr
-public import ConAgua.Checker.CmpSPhaseThr
-import ConAgua.Final.DrvFinal
-import ConAgua.Final.BufAbi
-public import ConAgua.Checker.ProgTab
-public import ConAguaAsm.Checker
+public import ConAgua.Final.ThreadsFinal
+public import ConAgua.Final.CompareTwin
 
 @[expose] public section
 

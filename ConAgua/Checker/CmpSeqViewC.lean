@@ -4,7 +4,7 @@ public import ConAgua.Checker.CmpSeqViewS
 public import ConAgua.Checker.CmpSeqCheck
 public import ConAgua.Checker.CmpSeqW
 import ConAgua.Arena.FreezeSpec
-import ConAgua.Arena.ScratchRefine
+import ConAgua.Arena.IWFrame
 
 @[expose] public section
 

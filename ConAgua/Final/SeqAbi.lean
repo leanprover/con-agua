@@ -161,7 +161,7 @@ theorem abiSG_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : 
   refine ev_movRR (Code.get (i := 4) hL3 rfl) ?_
   refine ev_movRI (Code.get (i := 5) hL3 rfl) ?_
   refine ev_jmp (Code.get (i := 6) hL3 rfl) ?_
-  simp only [Reg64s.set64_rax, Reg64s.set64_rdi, Reg64s.set64_rsi, Reg64s.get64_r8, Reg64s.get64_rax,
+  simp only [Reg64s.set64_rdi, Reg64s.set64_rsi, Reg64s.get64_r8,
     Reg64s.get64_rsi, Reg64s.get64_rdx, Reg64s.get64_r10, UInt64.toNat_toBitVec]
   rw [e8r, hgA plo, hgA phi, hgA mode]
   have hOw : ∀ (d : DataMem) (g : GVar) (v : BitVec 64), g.id < tab.ng →

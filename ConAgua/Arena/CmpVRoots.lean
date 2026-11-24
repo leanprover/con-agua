@@ -91,7 +91,7 @@ theorem NSeen.insert {st : EStore} {seen : Std.HashMap EIdx Bool} {seenP : Std.H
     · exact hs.dom k h2
 
 /-- con-leche: none — **the walk's state read back**: the memo, and the names so far. -/
-@[expose] def XRel (st : EStore) (x : Arena.NeedsSt) (xP : ConLeche.Cached.NeedsSt) : Prop :=
+def XRel (st : EStore) (x : Arena.NeedsSt) (xP : ConLeche.Cached.NeedsSt) : Prop :=
   NSeen st x.seen xP.1 ∧ denoteNList st.ns x.acc = some xP.2.toList
 
 theorem XRel.empty (st : EStore) : XRel st Arena.NeedsSt.empty ({}, #[]) :=

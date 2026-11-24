@@ -7,9 +7,8 @@ import ConAgua.Checker.AsmFinal
 import ConAgua.Checker.ProgIRef
 import ConAgua.Checker.AsmXOk
 import ConAgua.Checker.ProgWf
-public import ConAgua.Checker.ProgTab
-public import ConAguaAsm.Checker
 import all ConAgua.Checker.Entry
+import ConAgua.Arena.IWFrame
 
 @[expose] public section
 

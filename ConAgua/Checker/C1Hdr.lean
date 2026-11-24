@@ -3,7 +3,6 @@ module
 public import ConAgua.Checker.CmpSPhaseThr
 public import ConAgua.Arena.FreezeView
 import ConAgua.Arena.FreezeFreshBase
-import ConAgua.Arena.FreezeTruncBase
 
 @[expose] public section
 

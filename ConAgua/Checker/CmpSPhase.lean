@@ -1,9 +1,7 @@
 module
 
 public import ConAgua.Checker.CompareChain6J
-public import ConAgua.Checker.CmpSeqView
-import ConAgua.Arena.IWFrame
-import ConAgua.Arena.LevelInternRef
+public import ConAgua.Checker.CompareChain6Run
 
 @[expose] public section
 

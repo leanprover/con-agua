@@ -1,10 +1,5 @@
 module
 
-public import ConAgua.Checker.Prog
-public import ConAgua.L.ErrSpec
-public import ConAgua.Checker.NoVerdictTree
-public import ConAgua.Arena.LevelIntern
-public import ConAgua.Arena.LevelSubstLP
 meta import ConAgua.Checker.Prog
 meta import ConAgua.L.ErrSpec
 meta import ConAgua.Checker.NoVerdictTree
@@ -173,7 +168,6 @@ import all ConAgua.Scan.Str
 import all ConAgua.Scan.Utf8
 import all ConAgua.Scan.Values
 public import ConAgua.Checker.NoVerdictClosed
-public import ConAgua.Arena.JustifyModels
 public import ConAgua.Arena.JustifyRef7
 meta import ConAgua.Checker.NoVerdictClosed
 meta import ConAgua.Arena.JustifyModels

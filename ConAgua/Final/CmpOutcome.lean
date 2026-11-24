@@ -236,7 +236,7 @@ omit [Host] in
 /-- `cmpStub` as one list literal. -/
 theorem cmpStub_lit : cmpStub tab mode = cmpStubL tab mode := by
   simp only [cmpStub, cmpEntries, cmpFront, cmpSeqTail, cmpThrTail, cmpExit, cmpModeEntry, cmpOkGe, cmpArgsS,
-    cmpSaveRax, List.cons_append, List.nil_append, List.append_assoc, cmpStubL]
+    cmpSaveRax, List.cons_append, List.nil_append, cmpStubL]
 
 /-- **The exit** (`ca_cmp_done`): the caller's `r15` and the return address back from the save
 area, the return. -/

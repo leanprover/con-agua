@@ -1,26 +1,23 @@
 module
 
-public import ConAgua.Verdict.FrontStageE
 public import ConAgua.Checker.CompareChain5
 public import ConAgua.Final.CompareTwinVerdict
 public import ConAgua.Final.CmpAbi
 public import ConAgua.Checker.ProgTab
 import ConAgua.Verdict.FrontSafeE
-import ConAgua.Compiler.Abi
-import ConAgua.Final.DrvFinal
 import ConAgua.Checker.AsmFinal
 import ConAgua.Checker.CheckARun
-import ConAgua.Checker.LoopProgTac
 import ConAgua.Checker.NoVerdictClosed
 import ConAgua.Checker.PreludeRef
 import ConAgua.Checker.RomProgInit
 import ConAgua.Front.ChunkBridge
 import ConAgua.Front.FrontRunRef
-import ConAgua.Final.CmpChain
 import all ConAgua.Checker.Entry
 import all ConAgua.Checker.CompareEntry
 import all ConAgua.Arena.FreezeCmp
 import all ConAgua.Checker.CmpSeqEntry
+public import ConAgua.Checker.VerdictEntry1
+import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -141,7 +138,7 @@ theorem checkC1_err_of_stages {p : Prog} (hp : p.lookup "check_c1" = some checkC
 /-- **`check_c2()`'s error from its stages**: only the solution's `front_run` claims. -/
 theorem checkC2_err_of_stages {p : Prog} (hp : p.lookup "check_c2" = some checkC2L)
     {fs : List FnName} (hnv : closedNV p fs = true)
-    (hm6 : "prepare_prelude" ∈ fs) (hm7 : "intern_all_pins" ∈ fs) (hm8 : "par_compact" ∈ fs)
+    (hm6 : "prepare_prelude" ∈ fs) (hm7 : "intern_all_pins" ∈ fs) (_hm8 : "par_compact" ∈ fs)
     (hm9 : "build_index" ∈ fs) {Q4 : Mem → Prop} {V : Word → Prop}
     (e5 : StageSpecE p "front_run" [] Q4 V)
     (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) :
@@ -155,7 +152,7 @@ theorem checkC2_err_of_stages {p : Prog} (hp : p.lookup "check_c2" = some checkC
     have hn' : n ≤ 2 ^ 62 := by omega
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       (e5 n hn' ·), (nv_at hnv hm6 n [] ·), (nv_at hnv hm7 n [] ·),
-      (fun v s => nv_at hnv hm9 n [v] s), (fun v s => nv_at hnv hm8 n [v] s)]
+      (fun v s => nv_at hnv hm9 n [v] s)]
     all_goals (try simp only [L.St.setLoc_mem,
       St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, Cmp.eval, ite_true,
       UInt64.toNat_zero, bne_iff_ne, ne_eq, Decidable.not_not] at *)

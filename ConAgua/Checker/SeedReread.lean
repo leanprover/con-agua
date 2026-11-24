@@ -4,11 +4,11 @@ public import ConAgua.Checker.Entry
 public import ConAgua.Arena.FreezeBuf
 import all ConAgua.Checker.Entry
 import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.FreezeSpec
 import ConAgua.L.Blocks
 import ConAgua.L.GrindAttr
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import ConAgua.Arena.IWFrame
 
 @[expose] public section
 

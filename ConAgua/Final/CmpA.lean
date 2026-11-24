@@ -242,7 +242,7 @@ theorem cmpA_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abi
     · rsimp at h2; exact absurd h2 (by decide)
     · rsimp
       refine ⟨rs5, m5, rs7, m7, hfr, hres7, hge7', ?_, ?_⟩
-      · simp only [BinOp.eval, UInt64.ofBitVec_toBitVec]
+      · simp only [BinOp.eval]
         rw [UInt64.add_comm _ (rs7.getD 0 0 - _), UInt64.add_comm]
       · rw [hbase]; exact hMemF v
   · -- `kS + kC ≥ 2^63`: a decline

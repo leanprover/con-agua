@@ -8,11 +8,11 @@ import all ConAgua.Checker.CompareEntry
 import all ConAgua.Arena.FreezeCmp
 import all ConAgua.Checker.CmpSeqEntry
 import ConAgua.Checker.CheckARun
-import ConAgua.Checker.CmpSStash
 public import ConAgua.Checker.CmpStashFrame
 import ConAgua.L.Blocks
 meta import ConAgua.Checker.LoopProgTac
 import ConAgua.Checker.LoopProgTac
+import ConAgua.Arena.IWFrame
 
 @[expose] public section
 

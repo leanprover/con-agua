@@ -3,8 +3,7 @@ module
 public import ConAgua.Checker.C1Switch
 public import ConAgua.Checker.C1Keep
 import ConAgua.Arena.FreezeFreshBase
-import ConAgua.Arena.FreezeTruncBase
-import ConAgua.Arena.IndexRel
+import ConAgua.Checker.C1Hdr
 
 @[expose] public section
 

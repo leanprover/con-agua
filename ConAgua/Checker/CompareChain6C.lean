@@ -7,10 +7,11 @@ import all ConAgua.Checker.CompareEntry
 import all ConAgua.Arena.FreezeCmp
 public import ConAgua.Arena.FreezeCmpSpec
 import all ConAgua.Checker.CmpSeqEntry
-public import ConAgua.Checker.CompareEntry
 public import ConAgua.Checker.CmpSStash
 meta import ConAgua.Checker.LoopProgTac
 public import ConAgua.Checker.ParEntryA
+public import ConAgua.Arena.JustifyIface
+import Std.Tactic.BVDecide.Normalize.BitVec
 
 @[expose] public section
 

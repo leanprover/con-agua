@@ -1,14 +1,14 @@
 module
 
-public import ConAgua.Checker.CmpSeqViewC
 public import ConAgua.Checker.ParDriverL
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import all ConAgua.Checker.Entry
 import all ConAgua.Checker.CmpSeqEntry
-import ConAgua.Checker.LoopProgTac
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Checker.CmpSeqCheck
+public import ConAgua.Checker.PhaseBReads
 
 @[expose] public section
 

@@ -7,11 +7,14 @@ import ConAgua.Checker.NoVerdictClosed
 import ConAgua.Checker.RomProgInit
 import ConAgua.Checker.LoopStage
 import ConAgua.L.Blocks
-import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.LoopProgTac
 public import ConAgua.Final.TwinVerdict
 import all ConAgua.Checker.Entry
 import ConAgua.Front.FrontRunRef
+public import ConAgua.Checker.ParThreadCall
+import ConAgua.Checker.JobsStart
+import ConRon.Bridge.Stages
+import ConAgua.Arena.FreezeTrunc
 
 @[expose] public section
 
@@ -224,12 +227,12 @@ theorem checkB_thrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg) 
           | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, hR0 (by simp_all)⟩
           | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, hR1 (by simp_all)⟩
           | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp_all; done)
-          | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp only [Mem.copy64_glob, rereadMem_glob] at *; simp_all; done)
+          | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp only [Mem.copy64_glob] at *; simp_all; done)
           | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm,
               by rw [L.St.setLocs_mem, ‹St.mem _ = rereadMem _›]; exact hR0 (by simp_all)⟩
           | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm,
               by rw [L.St.setLocs_mem, ‹St.mem _ = rereadMem _›]; exact hR1 (by simp_all)⟩
-          | (simp only [flushMem_glob, rereadMem_glob, Mem.copy64_glob] at *; simp_all; done)
+          | (simp only [Mem.copy64_glob] at *; simp_all; done)
           | (rw [L.St.setLocs_mem, hm, flushMem_glob, L.St.setLocs_mem, ‹St.mem _ = rereadMem _›,
               rereadMem_glob]; simp_all; done))
       | (rw [L.St.setLocs_mem]; simp_all; done)

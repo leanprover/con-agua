@@ -3,7 +3,6 @@ module
 public import ConAgua.Checker.CompareTwinC
 public import ConAgua.Arena.PoolJobsJ
 public import ConAgua.Arena.PoolJobs
-public import ConAgua.Final.CompareTwinVerdict
 import ConRon.Bridge.Compare.Stages
 import ConRon.Bridge.Compare.Side
 import ConRon.Bridge.Checker.Index
@@ -11,6 +10,8 @@ import ConRon.Bridge.Checker.Pool
 import ConRon.Bridge.Checker.Pooled
 import ConRon.Bridge.Inductives.Decl
 import ConRon.Bridge.Specs
+public import ConAgua.Final.CompareTwin
+import ConRon.Bridge.Checker.Install
 
 @[expose] public section
 

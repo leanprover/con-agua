@@ -134,7 +134,7 @@ theorem entry1_k (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b
   rw [hBeq] at h2
   simp only [Array.size_extract] at h2
   simp only [Array.getD_eq_getD_getElem?] at h2 ⊢
-  rw [if_pos h2, Nat.zero_add]
+  rw [ite_eq_left h2, Nat.zero_add]
   exact UInt64.le_refl _
 
 /-! ## The harness's facts -/

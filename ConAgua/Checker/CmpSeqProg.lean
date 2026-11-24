@@ -2,10 +2,7 @@ module
 
 public import ConAgua.Checker.CmpSeqRun
 import ConAgua.Verdict.ThreadsE
-import ConAgua.Checker.NoVerdictTree
 import ConAgua.Checker.NoVerdictClosed
-import ConAgua.Compiler.WriteSetSplit
-import ConAgua.Checker.PhaseBReads
 meta import ConAgua.Checker.PhaseBReads
 import ConAgua.Checker.LoopProgTac
 import Std.WP.Tactic

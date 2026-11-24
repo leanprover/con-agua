@@ -1,13 +1,14 @@
 module
 
 public import ConAgua.Checker.CmpSeqEntry
-public import ConAgua.Checker.CmpSeqView
 import all ConAgua.Checker.CmpSeqEntry
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.FreezeSpec
 import ConAgua.L.GrindAttr
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.SlotGrow
+public import ConAgua.L.Logic
 
 @[expose] public section
 

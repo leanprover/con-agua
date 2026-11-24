@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Arena.FreezeCmpSpec
 import all ConAgua.Arena.FreezeCmp
+public import ConAgua.Arena.FreezeView
+import ConAgua.Arena.IWFrame
 
 @[expose] public section
 

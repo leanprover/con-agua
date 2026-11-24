@@ -1,7 +1,8 @@
 module
 
 public import ConAgua.Arena.PoolJobsJ
-import ConAgua.Arena.PoolJobs
+import ConAgua.Arena.Jobs
+import ConAgua.Arena.IWFrame
 
 @[expose] public section
 

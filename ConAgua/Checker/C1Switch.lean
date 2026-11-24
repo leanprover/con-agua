@@ -3,7 +3,9 @@ module
 public import ConAgua.Checker.C1Hdr
 public import ConAgua.Checker.CmpSeqView
 import ConAgua.Arena.FreezeFreshBase
-import ConAgua.Arena.FreezeTruncBase
+public import ConAgua.Arena.FreezeView
+public import ConAgua.Checker.ParThreadCall
+import ConAgua.Arena.IWFrame
 
 @[expose] public section
 

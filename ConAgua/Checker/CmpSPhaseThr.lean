@@ -1,21 +1,10 @@
 module
 
-public import ConAgua.Final.CmpChainC
-public import ConAgua.Checker.ParThreadTwin
-public import ConAgua.Checker.CmpSPhase
-public import ConAgua.Checker.CmpSPhaseT
-import ConAgua.Checker.CmpThreadsC
-import ConAgua.Checker.CmpThreadsPool
-import ConAgua.Checker.CrsProgPB
-import ConAgua.Checker.RomProgInit
-import ConAgua.Checker.JobsProg
-import ConAgua.Checker.CheckARun
-import ConAgua.Checker.AsmFinal
-import ConAgua.Arena.FreezeFresh
-import ConAgua.Arena.FreezeTrunc
-import ConAgua.Arena.JobStart
-import ConAgua.Arena.LoopStart
 import ConRon.Bridge.Compare.Mates
+import ConAgua.Checker.CompareChain6J
+public import ConAgua.Checker.CompareChain6Run
+public import ConAgua.Checker.ParThreadCall
+public import ConAgua.Final.CompareTwin
 
 @[expose] public section
 

@@ -1,10 +1,12 @@
 module
 
-public import ConAgua.Checker.CmpSeqSpec
+public import ConAgua.Checker.CmpSeqEntry
 import all ConAgua.Checker.CmpSeqEntry
 import ConAgua.Arena.FreezeCmpSpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+public import ConAgua.Checker.CmpSeqView
+import ConAgua.Arena.IWFrame
 
 @[expose] public section
 

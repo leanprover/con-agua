@@ -1,12 +1,9 @@
 module
 
-public import ConAgua.Checker.PhaseBReads
 public import ConAgua.Checker.CmpSeqView
 public import ConAgua.Checker.CompareChain6
-public import ConAgua.Checker.CmpSStash
 import ConAgua.Checker.CmpSeqSpec
 meta import ConAgua.Checker.PhaseBReads
-import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.Prog
 meta import ConAgua.Arena.Jobs
@@ -171,7 +168,6 @@ import all ConAgua.Scan.Str
 import all ConAgua.Scan.Utf8
 import all ConAgua.Scan.Values
 import all ConAgua.Arena.NatSized
-public import ConAgua.Arena.Globals
 
 @[expose] public section
 

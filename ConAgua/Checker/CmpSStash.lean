@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.Checker.CompareStash
+public import ConAgua.Checker.CompareEntry
 import all ConAgua.Checker.CompareEntry
 import all ConAgua.Arena.FreezeCmp
 import all ConAgua.Checker.CmpSeqEntry
@@ -8,6 +8,10 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import ConAgua.Arena.FreezeSpec
+import ConAgua.Arena.IWFrame
+public import ConAgua.Arena.Frame
+import Std.Tactic.BVDecide.Normalize.BitVec
 
 @[expose] public section
 

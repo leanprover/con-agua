@@ -6,8 +6,8 @@ import ConAgua.L.Blocks
 import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.LoopProgTac
 import all ConAgua.Checker.Entry
-import ConAgua.Arena.FreezeFreshBase
-import ConAgua.Checker.CmpSeqW
+import ConAgua.Checker.ParDriverL
+import ConAgua.Checker.JobsStart
 
 @[expose] public section
 
@@ -159,12 +159,12 @@ theorem checkB_thrQ (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = som
           | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, hR0 (by simp_all)⟩
           | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, hR1 (by simp_all)⟩
           | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp_all; done)
-          | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp only [Mem.copy64_glob, rereadMem_glob] at *; simp_all; done)
+          | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp only [Mem.copy64_glob] at *; simp_all; done)
           | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm,
               by rw [L.St.setLocs_mem, ‹St.mem _ = rereadMem _›]; exact hR0 (by simp_all)⟩
           | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm,
               by rw [L.St.setLocs_mem, ‹St.mem _ = rereadMem _›]; exact hR1 (by simp_all)⟩
-          | (simp only [flushMem_glob, rereadMem_glob, Mem.copy64_glob] at *; simp_all; done)
+          | (simp only [Mem.copy64_glob] at *; simp_all; done)
           | (rw [L.St.setLocs_mem, hm, flushMem_glob, L.St.setLocs_mem, ‹St.mem _ = rereadMem _›,
               rereadMem_glob]; simp_all; done))
       | (rw [L.St.setLocs_mem]; simp_all; done)

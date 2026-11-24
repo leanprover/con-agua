@@ -1,10 +1,9 @@
 module
 
 public import ConAgua.Arena.JustifySideRefMove
-public import ConAgua.Arena.FreezeTrunc
 import ConAgua.Arena.IWFrame
 import ConAgua.Front.ApplyDeclRefine
-import ConAgua.Arena.LevelInternRef
+import ConAgua.Arena.IndexBuild
 
 @[expose] public section
 

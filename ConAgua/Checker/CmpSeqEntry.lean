@@ -1,9 +1,11 @@
 module
 
-public import ConAgua.Arena.JustifyIface
-public import ConAgua.Arena.CoreCaches
-public import ConAgua.Arena.CheckerL
 public import ConAgua.Arena.Globals
+public import ConAgua.Layout
+import ConAgua.L.Notation
+import ConAgua.Arena.NAnonStore
+import ConAgua.Arena.NStrStore
+import ConAgua.Arena.NNumStore
 
 @[expose] public section
 
