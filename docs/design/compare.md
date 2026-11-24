@@ -313,3 +313,12 @@ order, `checkStreamJ`), `TwinCompareVerdict`, `TwinCompareVerdictPooled`.
 * The user then asked for one frozen store image with two headers (the solution's terms not
   duplicated) and an independent design review of the one-pool layout; the buffer/entry work
   (H2b, H3b, H4) is on hold until it is decided.
+* **Decision (user, 2026-11-24): design (i)**, with an independent review's four amendments
+  (`_tmp/coordinator/compare-design-decision.md`): ONE frozen store image and two headers; both
+  phases' jobs start from the state after the challenge's index (`sI`); the solution's index
+  rows read through header S's `EIX*`/`TIX*` entries. The twin statements change accordingly
+  (`Final/CompareTwinI.lean`): `stagesCI_model` re-proves con-ron's `stagesC_model` with the
+  solution's pure fold at `sI` (`pooled_fold_records` is generic in its start state; its
+  hypotheses move from the solution's index state to `sI` by `Ext`/`PExt` monotonicity; checked
+  in Lean first, it went through at the first attempt). Helpers H2b (the compaction and the
+  headers), H4 (entry 2, `main.c`, the threaded theorems), H5 (the solution's phase at `sI`).
