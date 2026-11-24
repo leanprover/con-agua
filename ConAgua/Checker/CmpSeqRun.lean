@@ -96,13 +96,13 @@ switch's checks, the guards, and a returning `check_jobs(PLO, PHI)` call on `cqS
 memory agrees with the region's. -/
 theorem cq_check8 {p : Prog} (hQ : CqSeqProg p) {W N : Mem}
     (hAg : Agree phaseBPa (fun _ => false) W N) (hmode : W.glob MODE = 8)
-    {n : Nat} {rs : List Word} {W' : Mem} (hrun : L.run p n "check" [] W = .ok (rs, W')) :
-    ∃ k r' N', Agree phaseBPa (fun _ => false) W' N' ∧ rs.headD 0 = 71757147230292 ∧
+    {n : Nat} (hN : n ≤ 2 ^ 62) {rs : List Word} {W' : Mem} (hrun : L.run p n "check" [] W = .ok (rs, W')) :
+    ∃ k r' N', k ≤ 2 ^ 62 ∧ Agree phaseBPa (fun _ => false) W' N' ∧ rs.headD 0 = 71757147230292 ∧
       CqRowsSOK N ∧ CqTailSOK (cqRowsS N) ∧ CqCtlSOK (cqBankSM N) ∧ FlushOK (cqCtlSM (cqBankSM N)) ∧
       ¬ rdW ((cqSM N).arr64 DECL) 0 < (cqSM N).glob PHI ∧ ¬ (cqSM N).glob PHI < (cqSM N).glob PLO ∧
       callE p k "check_jobs" [(cqSM N).glob PLO, (cqSM N).glob PHI] (cqSM N) = .ok (r', N') := by
   obtain ⟨fs, hfs, -, hrd⟩ := hQ.reads
-  let P : Word → Mem → Prop := fun x W'' => ∃ k r' N', Agree phaseBPa (fun _ => false) W'' N' ∧
+  let P : Word → Mem → Prop := fun x W'' => ∃ k r' N', k ≤ 2 ^ 62 ∧ Agree phaseBPa (fun _ => false) W'' N' ∧
       x = 71757147230292 ∧
       CqRowsSOK N ∧ CqTailSOK (cqRowsS N) ∧ CqCtlSOK (cqBankSM N) ∧ FlushOK (cqCtlSM (cqBankSM N)) ∧
       ¬ rdW ((cqSM N).arr64 DECL) 0 < (cqSM N).glob PHI ∧ ¬ (cqSM N).glob PHI < (cqSM N).glob PLO ∧
@@ -133,7 +133,7 @@ theorem cq_check8 {p : Prog} (hQ : CqSeqProg p) {W N : Mem}
         (checkBS_spec hQ.bs k (hQ.bankS k) (hQ.ctlS k) (hQ.flush k) ⟨N, s.loc⟩)
       dsimp only at H
       obtain ⟨-, hr, h3, h4, h5, h6, h7, h8, r', hj⟩ := H
-      refine ⟨k, r', s₂'.mem, ?_, ?_, ?_⟩
+      refine ⟨k, r', s₂'.mem, by omega, ?_, ?_, ?_⟩
       · exact hAg2
       · subst hr; rfl
       · exact ⟨h3, h4, h5, h6, h7, h8, hj⟩
@@ -155,13 +155,13 @@ switch's checks, the guards, and a returning `check_jobs(PLO, PHI)` call on `cqC
 memory agrees with the region's. -/
 theorem cq_check9 {p : Prog} (hQ : CqSeqProg p) {W N : Mem}
     (hAg : Agree phaseBPa (fun _ => false) W N) (hmode : W.glob MODE = 9)
-    {n : Nat} {rs : List Word} {W' : Mem} (hrun : L.run p n "check" [] W = .ok (rs, W')) :
-    ∃ k r' N', Agree phaseBPa (fun _ => false) W' N' ∧ rs.headD 0 = 71757147230292 ∧
+    {n : Nat} (hN : n ≤ 2 ^ 62) {rs : List Word} {W' : Mem} (hrun : L.run p n "check" [] W = .ok (rs, W')) :
+    ∃ k r' N', k ≤ 2 ^ 62 ∧ Agree phaseBPa (fun _ => false) W' N' ∧ rs.headD 0 = 71757147230292 ∧
       CqCtlCOK (cqBankCM N) ∧ FlushOK (cqCtlCM (cqBankCM N)) ∧
       ¬ rdW ((cqCM N).arr64 DECL) 0 < (cqCM N).glob PHI ∧ ¬ (cqCM N).glob PHI < (cqCM N).glob PLO ∧
       callE p k "check_jobs" [(cqCM N).glob PLO, (cqCM N).glob PHI] (cqCM N) = .ok (r', N') := by
   obtain ⟨fs, -, hfs, hrd⟩ := hQ.reads
-  let P : Word → Mem → Prop := fun x W'' => ∃ k r' N', Agree phaseBPa (fun _ => false) W'' N' ∧
+  let P : Word → Mem → Prop := fun x W'' => ∃ k r' N', k ≤ 2 ^ 62 ∧ Agree phaseBPa (fun _ => false) W'' N' ∧
       x = 71757147230292 ∧
       CqCtlCOK (cqBankCM N) ∧ FlushOK (cqCtlCM (cqBankCM N)) ∧
       ¬ rdW ((cqCM N).arr64 DECL) 0 < (cqCM N).glob PHI ∧ ¬ (cqCM N).glob PHI < (cqCM N).glob PLO ∧
@@ -192,7 +192,7 @@ theorem cq_check9 {p : Prog} (hQ : CqSeqProg p) {W N : Mem}
         (checkBC_spec hQ.bc k (hQ.bankC k) (hQ.ctlC k) (hQ.flush k) ⟨N, s.loc⟩)
       dsimp only at H
       obtain ⟨-, hr, h5, h6, h7, h8, r', hj⟩ := H
-      refine ⟨k, r', s₂'.mem, hAg2, ?_, h5, h6, h7, h8, hj⟩
+      refine ⟨k, r', s₂'.mem, by omega, hAg2, ?_, h5, h6, h7, h8, hj⟩
       subst hr; rfl
   simp only [L.run] at hrun
   cases h : (invoke p (exec p (n + 1)) "check" []).run s₀ with

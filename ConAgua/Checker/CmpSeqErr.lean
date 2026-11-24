@@ -61,19 +61,19 @@ theorem check_err_dispatch89 {p : Prog} (hp : p.lookup "check" = some checkL) (n
 /-- A failing run of `check` from a region with the mode word `8` or `9` fails as the dispatch's
 triple says. -/
 theorem cq_run_err {p : Prog} (hp : p.lookup "check" = some checkL) {W : Mem} (E : Err → Prop)
-    (hE0 : ∀ e, e.cls = 0 → E e)
-    (h8 : ∀ n (s₁ : St), ⦃fun s => s = s₁⦄ invoke p (exec p n) "check_bs" []
+    (hE0 : ∀ e, e.cls = 0 → E e) {n₀ : Nat}
+    (h8 : ∀ n (s₁ : St), n < n₀ → ⦃fun s => s = s₁⦄ invoke p (exec p n) "check_bs" []
       ⦃fun _ _ => True; fun e => s₁.mem = W → W.glob MODE = 8 → E e⦄)
-    (h9 : ∀ n (s₁ : St), ⦃fun s => s = s₁⦄ invoke p (exec p n) "check_bc" []
+    (h9 : ∀ n (s₁ : St), n < n₀ → ⦃fun s => s = s₁⦄ invoke p (exec p n) "check_bc" []
       ⦃fun _ _ => True; fun e => s₁.mem = W → W.glob MODE = 9 → E e⦄)
-    (hmode : W.glob MODE = 8 ∨ W.glob MODE = 9) {n : Nat} {e : Err}
-    (hrun : L.run p n "check" [] W = .error e) : E e := by
-  have hr : (invoke p (exec p n) "check" []).run ⟨W, Locals.init []⟩ = .error e := by
+    (hmode : W.glob MODE = 8 ∨ W.glob MODE = 9) {e : Err}
+    (hrun : L.run p n₀ "check" [] W = .error e) : E e := by
+  have hr : (invoke p (exec p n₀) "check" []).run ⟨W, Locals.init []⟩ = .error e := by
     simp only [L.run] at hrun
-    cases h : (invoke p (exec p n) "check" []).run ⟨W, Locals.init []⟩ with
+    cases h : (invoke p (exec p n₀) "check" []).run ⟨W, Locals.init []⟩ with
     | ok x => rw [h] at hrun; cases hrun
     | error e' => rw [h] at hrun; cases hrun; rfl
-  cases n with
+  cases n₀ with
   | zero =>
     obtain ⟨e', he', h0⟩ := callE_zero p "check" [] W
     rw [callE_of_run_err (s := ⟨W, Locals.init []⟩) hr] at he'
@@ -81,20 +81,21 @@ theorem cq_run_err {p : Prog} (hp : p.lookup "check" = some checkL) {W : Mem} (E
     exact hE0 e h0
   | succ n =>
     exact M.of_run_err (P := fun s => s = ⟨W, Locals.init []⟩) rfl hr
-      (check_err_dispatch89 hp n ⟨W, Locals.init []⟩ E (h8 n) (h9 n) (hE0 _ rfl)) hmode
+      (check_err_dispatch89 hp n ⟨W, Locals.init []⟩ E (fun s₁ => h8 n s₁ (by omega))
+        (fun s₁ => h9 n s₁ (by omega)) (hE0 _ rfl)) hmode
 
 /-- **Mode `8` failing in place**: a failing run of `check` with the mode word `8` on a region `W`
 that agrees with `N` but in `OUT`, `HDRF`, `CTLF` and the bytes fails with class `0` or as the
 jobs' `check_jobs(PLO, PHI)` call on `cqSM N`. -/
 theorem cq_check8_err {p : Prog} (hQ : CqSeqProg p) {W N : Mem}
     (hAg : Agree phaseBPa (fun _ => false) W N) (hmode : W.glob MODE = 8)
-    {n : Nat} {e : Err} (hrun : L.run p n "check" [] W = .error e) :
-    e.cls = 0 ∨ ∃ k, callE p k "check_jobs" [(cqSM N).glob PLO, (cqSM N).glob PHI] (cqSM N) = .error e := by
+    {n : Nat} (hN : n ≤ 2 ^ 62) {e : Err} (hrun : L.run p n "check" [] W = .error e) :
+    e.cls = 0 ∨ ∃ k, k ≤ 2 ^ 62 ∧ callE p k "check_jobs" [(cqSM N).glob PLO, (cqSM N).glob PHI] (cqSM N) = .error e := by
   obtain ⟨fs, hfs, -, hrd⟩ := hQ.reads
   refine cq_run_err hQ.check (fun e => e.cls = 0 ∨
-      ∃ k, callE p k "check_jobs" [(cqSM N).glob PLO, (cqSM N).glob PHI] (cqSM N) = .error e)
-    (fun _ h => .inl h) (fun n s₁ => ?_)
-    (fun n s₁ => M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ _ _ h => by
+      ∃ k, k ≤ 2 ^ 62 ∧ callE p k "check_jobs" [(cqSM N).glob PLO, (cqSM N).glob PHI] (cqSM N) = .error e)
+    (fun _ h => .inl h) (fun n s₁ hn => ?_)
+    (fun n s₁ _ => M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ _ _ h => by
       rw [hmode] at h; cases h) (.inl hmode) hrun
   apply M.triple_of_run' (fun _ _ _ _ _ => trivial)
   rintro s e rfl h1 e1 -
@@ -110,19 +111,19 @@ theorem cq_check8_err {p : Prog} (hQ : CqSeqProg p) {W N : Mem}
     rcases M.of_run_err (P := fun x => x = ⟨N, s.loc⟩) rfl h2
       (checkBS_spec hQ.bs k (hQ.bankS k) (hQ.ctlS k) (hQ.flush k) ⟨N, s.loc⟩) with h | h
     · exact .inl h
-    · dsimp only at h; exact .inr ⟨k, h⟩
+    · dsimp only at h; exact .inr ⟨k, by omega, h⟩
 
 /-- **Mode `9` failing in place** (`cq_check8_err` for `check_bc`, on `cqCM N`). -/
 theorem cq_check9_err {p : Prog} (hQ : CqSeqProg p) {W N : Mem}
     (hAg : Agree phaseBPa (fun _ => false) W N) (hmode : W.glob MODE = 9)
-    {n : Nat} {e : Err} (hrun : L.run p n "check" [] W = .error e) :
-    e.cls = 0 ∨ ∃ k, callE p k "check_jobs" [(cqCM N).glob PLO, (cqCM N).glob PHI] (cqCM N) = .error e := by
+    {n : Nat} (hN : n ≤ 2 ^ 62) {e : Err} (hrun : L.run p n "check" [] W = .error e) :
+    e.cls = 0 ∨ ∃ k, k ≤ 2 ^ 62 ∧ callE p k "check_jobs" [(cqCM N).glob PLO, (cqCM N).glob PHI] (cqCM N) = .error e := by
   obtain ⟨fs, -, hfs, hrd⟩ := hQ.reads
   refine cq_run_err hQ.check (fun e => e.cls = 0 ∨
-      ∃ k, callE p k "check_jobs" [(cqCM N).glob PLO, (cqCM N).glob PHI] (cqCM N) = .error e)
+      ∃ k, k ≤ 2 ^ 62 ∧ callE p k "check_jobs" [(cqCM N).glob PLO, (cqCM N).glob PHI] (cqCM N) = .error e)
     (fun _ h => .inl h)
-    (fun n s₁ => M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ _ _ h => by
-      rw [hmode] at h; cases h) (fun n s₁ => ?_) (.inr hmode) hrun
+    (fun n s₁ _ => M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ _ _ h => by
+      rw [hmode] at h; cases h) (fun n s₁ hn => ?_) (.inr hmode) hrun
   apply M.triple_of_run' (fun _ _ _ _ _ => trivial)
   rintro s e rfl h1 e1 -
   have hAg1 : Agree phaseBPa (fun _ => false) s.mem N := by rw [e1]; exact hAg
@@ -137,6 +138,6 @@ theorem cq_check9_err {p : Prog} (hQ : CqSeqProg p) {W N : Mem}
     rcases M.of_run_err (P := fun x => x = ⟨N, s.loc⟩) rfl h2
       (checkBC_spec hQ.bc k (hQ.bankC k) (hQ.ctlC k) (hQ.flush k) ⟨N, s.loc⟩) with h | h
     · exact .inl h
-    · dsimp only at h; exact .inr ⟨k, h⟩
+    · dsimp only at h; exact .inr ⟨k, by omega, h⟩
 
 end L.Checker
