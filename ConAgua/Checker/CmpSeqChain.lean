@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Checker.CmpSeqRun
 public import ConAgua.Arena.JobStartX
-public import ConAgua.Arena.C1Pool
 import ConAgua.Checker.JobsStart
 import ConAgua.L.Blocks
 
@@ -13,9 +12,6 @@ import ConAgua.L.Blocks
 
 * `cqSM_bytes`, `cqSM_glob`, `cqCM_bytes`, `cqCM_glob`: the switches store only to word arrays.
 * `JobM.frame0`: the jobs' memory half reads no global and no byte array.
-* `cq_checkJobs_chainE`: a returning `check_jobs(j, hi)` call is a chain of `record_job` calls
-  over `j‥hi - 1` ending in the call's final memory.
-* `pool_seqE`, `pool_seqJ`: the pools with one worker (`pool_twinE`, `pool_twinJW`).
 * `cq_phaseC`: after the solution's jobs (their job relation at the end `N'`, stored only to the
   flag-`0` write set, the record pool grown), mode `9`'s switch gives the challenge's jobs'
   memory half at the solution's end state.
@@ -94,84 +90,6 @@ theorem _root_.L.Arena.JobM.frame0 {pins : List INatOpPinSet} {dn : NIdx → Opt
 /-- A memory with `M`'s arrays and other globals. -/
 theorem memFrame_glob (M : Mem) (g : GVar → Word) : MemFrame [] [] M ⟨M.bytes, M.words, g⟩ :=
   ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩
-
-/-- **A returning `check_jobs` loop is a chain of `record_job` calls ending in its memory**
-(`checkJobsLoop_chain` with the end). -/
-theorem checkJobsLoop_chainE {p : Prog} {hi : Word} :
-    ∀ (n : Nat), n ≤ 2 ^ 62 + 1 → ∀ (m : Mem) (j : Word) (q : Mem), checkJobsE.loop1 p n m j hi = .ok q →
-      JobChainE (RecCall p) m (List.range' j.toNat (hi.toNat - j.toNat)) q := by
-  intro n
-  induction n with
-  | zero =>
-    intro _ m j q hq
-    rw [checkJobsE.loop1.eq_1] at hq; cases hq
-  | succ n ih =>
-    intro hn m j q hq
-    by_cases g : j < hi
-    · rw [checkJobsE.loop1.arm1 _ _ _ _ _ g] at hq
-      rw [range'_cons_word g]
-      cases hc : callE p n "record_job" [j] m with
-      | error e => rw [hc, checkJobsE.k_record_job.none] at hq; cases hq
-      | ok q1 =>
-        obtain ⟨r, m₁⟩ := q1
-        rw [hc, checkJobsE.k_record_job.arm1] at hq
-        exact .cons ⟨n, r, by omega, by rw [UInt64.ofNat_toNat]; exact hc⟩ (ih (by omega) m₁ (j + 1) q hq)
-    · rw [checkJobsE.loop1.arm2 _ _ _ _ _ g] at hq
-      cases hq
-      have : hi.toNat - j.toNat = 0 := by have : ¬ j.toNat < hi.toNat := g; omega
-      rw [this]
-      exact .nil m
-
-/-- **A returning `check_jobs(j, hi)` call is a chain of `record_job` calls** over `j‥hi - 1`,
-from the call's memory to its final memory. -/
-theorem cq_checkJobs_chainE {p : Prog} (hcj : p.lookup "check_jobs" = some checkJobsL)
-    {n : Nat} (hn : n ≤ 2 ^ 62 + 1) {j hi : Word} {m m' : Mem} {r : List Word}
-    (h : callE p n "check_jobs" [j, hi] m = .ok (r, m')) :
-    JobChainE (RecCall p) m (List.range' j.toNat (hi.toNat - j.toNat)) m' := by
-  obtain ⟨s', hs', -, hE⟩ := triple_of_callE (checkJobs_specE p hcj n ⟨m, Locals.init []⟩ j hi) h
-  rw [hs'] at hE
-  rcases n with _ | n
-  · simp [checkJobsE] at hE
-  simp only [checkJobsE] at hE
-  rcases c : checkJobsE.loop1 p (n + 1) m j hi with e | m1
-  · rw [c] at hE; simp [checkJobsE.k_loop1] at hE
-  rw [c] at hE; simp only [checkJobsE.k_loop1, Except.ok.injEq, Prod.mk.injEq] at hE
-  rw [← hE.2]
-  exact checkJobsLoop_chainE (n + 1) hn m j m1 c
-
-section pool
-
-open ConRon.Bridge
-
-variable {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPinSet}
-  {ds : Array IDeclaration} {dsP : List ConLeche.Declaration} {I : IStreamIndex} {s₁ : AState}
-  {σ : Type} {Rel : σ → AState → Prop} {Call : Nat → σ → σ → Prop}
-
-/-- **The solution's pool with one worker** (`pool_twinE`): a chain over every record from a
-memory related to the driver state's worker accepts, ending related to the chain's end. -/
-theorem pool_seqE (H : PoolHyps (pins := pins) (pinsP := pinsP) (ds := ds) (dsP := dsP) (I := I)
-      (s₁ := s₁) Rel Call) (hst : StateOK s₁) {r r' : σ} (hr : Rel r s₁.worker)
-    (hc : JobChainE Call r (List.range ds.size) r') :
-    ∃ a', checkJobList V pins none I ds (List.range ds.size) s₁.worker = .ok (.ok (), a') ∧
-      Rel r' a' ∧ WorkerOK s₁ a' :=
-  pool_twinE H hst [(r, List.range ds.size, r')] (by simpa using hr) (by simpa using hc)
-    (by simp [List.pairwise_lt_range]) (by simp) (fun k hk => ⟨_, List.mem_singleton_self _, by simpa using hk⟩)
-    _ (List.mem_singleton_self _)
-
-variable {J : ISolution} {dsS : List ConLeche.Declaration}
-  {matesU : Std.HashMap ConLeche.Name (Array ConLeche.Name)}
-
-/-- **The challenge's pool with one worker** (`pool_twinJW`): a chain over every record from a
-memory related to a worker's state `a` of the driver state accepts from `a`. -/
-theorem pool_seqJ (H : PoolHypsJ (pins := pins) (pinsP := pinsP) (ds := ds) (dsP := dsP) (I := I)
-      (s₁ := s₁) (J := J) (dsS := dsS) (matesU := matesU) Rel Call) {r : σ} {a : AState}
-    (hr : Rel r a) (hw : WorkerOK s₁ a) (hc : JobChain Call r (List.range ds.size)) :
-    ∃ s'', checkJobList V pins (some J) I ds (List.range ds.size) a = .ok (.ok (), s'') :=
-  pool_twinJW H [(r, a, List.range ds.size)] (by simpa using ⟨hr, hw⟩) (by simpa using hc)
-    (by simp [List.pairwise_lt_range]) (by simp) (fun k hk => ⟨_, List.mem_singleton_self _, by simpa using hk⟩)
-    _ (List.mem_singleton_self _)
-
-end pool
 
 /-- **The challenge's jobs' memory half after the solution's jobs** (mode `9`'s switch): the
 challenge's at the frozen memory `N` (`hC`), the solution's job relation at the end `N'` of its

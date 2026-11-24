@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Checker.CmpSeqChain
+public import ConAgua.Arena.PoolJobsJ
 
 @[expose] public section
 
