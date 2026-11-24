@@ -313,3 +313,27 @@ order, `checkStreamJ`), `TwinCompareVerdict`, `TwinCompareVerdictPooled`.
 * The user then asked for one frozen store image with two headers (the solution's terms not
   duplicated) and an independent design review of the one-pool layout; the buffer/entry work
   (H2b, H3b, H4) is on hold until it is decided.
+* **Decision (user, 2026-11-24): design (i)**, with an independent review's four amendments
+  (`_tmp/coordinator/compare-design-decision.md`): ONE frozen store image and two headers; both
+  phases' jobs start from the state after the challenge's index (`sI`); the solution's index
+  rows read through header S's `EIX*`/`TIX*` entries. The twin statements change accordingly
+  (`Final/CompareTwinI.lean`): `stagesCI_model` re-proves con-ron's `stagesC_model` with the
+  solution's pure fold at `sI` (`pooled_fold_records` is generic in its start state; its
+  hypotheses move from the solution's index state to `sI` by `Ext`/`PExt` monotonicity; checked
+  in Lean first, it went through at the first attempt). Helpers H2b (the compaction and the
+  headers), H4 (entry 2, `main.c`, the threaded theorems), H5 (the solution's phase at `sI`).
+* H5: the solution's phase at `sI` (`Checker/CmpSPhase*.lean`: the view of header S as a
+  hypothesis `CsViewS`, `cmpThreadsS_poolI`, `cmpThreadsC_poolI`, `cmpThreads_twinPooledI`;
+  `Verdict/CmpVSPhase.lean`: `cmpV_tjobSI`, `cmpV_tjobCI`) merged, 0 `sorry`.
+* **The sequential run (user's choice: in place, no harness hypotheses, peak about one store).**
+  H6 found H9's wall again: after the solution's jobs run in place, the challenge's jobs would
+  have to start from a memory related to `sI.worker`, i.e. tier 0 of the store unchanged by the
+  solution's jobs. The twin proves only `PExt` across a job (tier 0 unchanged holds by inspection:
+  interns append to the scratch tier), and the L job relation fixes tier-0 words only up to the
+  store relation; of the 1482 functions in `check_b`'s closure none stores to a frozen array at a
+  constant tier, but the cons pushes, `erec_put` (~40 callers) and ~35 pool writers store at a
+  runtime tier. Approved fix (user): in the sequential run the challenge's jobs continue on the
+  worker state the solution's jobs left (`sJ`): `TwinComparesAcceptsSeqI`,
+  `TwinCompareVerdictSeqI`; the threaded statements stay (`…I`). **Follow-up idea, not this lane:**
+  the full tier-0 invariant (no job stores below the tier-0 counts) would also discharge the
+  threaded mode's trusted `BufKept` premise (route A's `mprotect`).
