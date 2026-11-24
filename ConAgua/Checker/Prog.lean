@@ -166,7 +166,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1965 functions, 0 of them stubs.
+1966 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -817,6 +817,7 @@ def checkerProg : Prog := [
   ("close_lams_go", L.Ind.closeLamsGo),
   ("close_telescope", L.Ind.closeTelescope),
   ("close_telescope_go", L.Ind.closeTelescopeGo),
+  ("cmp_ext", L.Checker.cmpExtL),
   ("cmp_hdr_s", L.Arena.cmpHdrSL),
   ("cmp_restore", L.Checker.cmpRestoreL),
   ("cmp_sstash", L.Checker.cmpSStashL),

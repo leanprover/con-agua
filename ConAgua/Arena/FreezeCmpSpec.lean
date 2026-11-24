@@ -70,8 +70,6 @@ def hsStep (M : Mem) (i : Nat) : Mem :=
   match hsE i with
   | .same j => (M.set64 OUT (10 + 2 * i).toUInt64 (rd64 M OUT (hdrW + (10 + 2 * j)).toUInt64 + hdrW.toUInt64)).set64
       OUT (11 + 2 * i).toUInt64 (rd64 M OUT (hdrW + (11 + 2 * j)).toUInt64)
-  | .zero j => (M.set64 OUT (10 + 2 * i).toUInt64 (rd64 M OUT (hdrW + (10 + 2 * j)).toUInt64 + hdrW.toUInt64)).set64
-      OUT (11 + 2 * i).toUInt64 0
   | .extra => M
 
 /-- Header S's entries `is`. -/
@@ -91,18 +89,16 @@ theorem evalE_hcW_add (k : Nat) (s : St) (h : hdrW + k < (s.mem.arr64 OUT).size)
   rfl
 
 theorem hsE_all : (List.range frozen.length).all (fun i => match hsE i with
-    | .same j => decide (j < frozen.length) | .zero j => decide (j = i) | .extra => true) = true := by
+    | .same j => decide (j < frozen.length) | .extra => true) = true := by
   decide +kernel
 
-theorem hsE_lt {i : Nat} (hi : i < frozen.length) :
-    (∀ j, hsE i = .same j → j < frozen.length) ∧ (∀ j, hsE i = .zero j → j = i) := by
+theorem hsE_lt {i : Nat} (hi : i < frozen.length) (j : Nat) (hj : hsE i = .same j) : j < frozen.length := by
   have := List.all_eq_true.mp hsE_all i (List.mem_range.mpr hi)
-  refine ⟨fun j hj => ?_, fun j hj => ?_⟩ <;> rw [hj] at this <;> simpa using this
+  rw [hj] at this; simpa using this
 
 theorem OutFrame.hsStep (M : Mem) (i : Nat) : OutFrame M (hsStep M i) := by
   unfold L.Arena.hsStep
   split
-  · exact (OutFrame.set64 _ _ _).trans (OutFrame.set64 _ _ _)
   · exact (OutFrame.set64 _ _ _).trans (OutFrame.set64 _ _ _)
   · exact OutFrame.refl _
 
@@ -121,11 +117,10 @@ theorem hsStmt_run {p : Prog} {f : Stmt → M Sig} (i : Nat) (hi : i < frozen.le
     (step p f (hsStmt i)).run s = .ok (.normal, { s with mem := hsStep s.mem i }) := by
   have hfl := frozen_length
   have hhw := hdrW_eq
-  obtain ⟨hs, hz⟩ := hsE_lt hi
   unfold hsStmt hsStep
   cases hj : hsE i with
   | same j =>
-    have hj' := hs j hj
+    have hj' := hsE_lt hi j hj
     simp only
     rw [step_seq_normal _ _ s _ (step_st64_one _ _ _ s _ _ (evalE_c _ s)
         (evalE_hcW_add _ s (by omega) (by omega)) (by rw [toNat_hdr _ (by omega)]; omega))]
@@ -135,13 +130,6 @@ theorem hsStmt_run {p : Prog} {f : Stmt → M Sig} (i : Nat) (hi : i < frozen.le
         rd64_set64_lt _ _ _ _ _ (by
           intro e; have := congrArg UInt64.toNat e
           rw [toNat_hdr _ (by omega), toNat_hdr _ (by omega)] at this; omega)]
-    · simp only [L.Mem.size64_set64]; rw [toNat_hdr _ (by omega)]; omega
-  | zero j =>
-    have hj' := hz j hj
-    simp only
-    rw [step_seq_normal _ _ s _ (step_st64_one _ _ _ s _ _ (evalE_c _ s)
-        (evalE_hcW_add _ s (by omega) (by omega)) (by rw [toNat_hdr _ (by omega)]; omega))]
-    apply step_st64_one _ _ _ _ _ _ (evalE_c _ _) (evalE_c _ _)
     · simp only [L.Mem.size64_set64]; rw [toNat_hdr _ (by omega)]; omega
   | extra => simp [step]; rfl
 
