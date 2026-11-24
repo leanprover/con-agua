@@ -1435,6 +1435,33 @@ theorem cmpApart_S (hok : parCompactOK m9 1 hdrWW = true) (hlt : (m9.arr64 OUT).
       · exact Or.inl hd
       · exact Or.inr (Or.inl hd)
 
+theorem frozen_vsOk : (List.range frozen.length).all (fun i => (fzAt i).e.vsOk || i == 60 || i == 61 ||
+    i == 62) = true := by decide +kernel
+
+/-- **Both views give every frozen entry the same extent** (the compare flag `CTL[cmpCW] = 1`):
+the extents read only unpatched words, but `FIRSTS`'s, `DECL`'s, `DLP`'s, which are the larger
+of the two phases' (`CTL[cmpKD]`, `CTL[cmpKP]`). -/
+theorem viewS_ext (m : Mem) (hcw : rd64 m CTL (Nat.toUInt64 cmpCW) = 1) {i : Nat} (hi : i < frozen.length) :
+    fzExt (viewS m) (fzAt i) = fzExt m (fzAt i) := by
+  have h := List.all_eq_true.mp frozen_vsOk i (List.mem_range.mpr hi)
+  simp only [Bool.or_eq_true, beq_iff_eq] at h
+  have e : fzEv m (fzCtl cmpCW) = 1 := hcw
+  have ev : fzEv (viewS m) (fzCtl cmpCW) = 1 := by
+    rw [fzEv_ctl_viewS m cmpCW (by decide) (by decide)]; exact e
+  have hD := fzEv_ctl_viewS m cmpKD (by decide) (by decide)
+  have hP := fzEv_ctl_viewS m cmpKP (by decide) (by decide)
+  rw [fzExt_eq, fzExt_eq]
+  rcases h with ((h | rfl) | rfl) | rfl
+  · rw [fzEv_viewS m _ h]
+  · show (fzEv (viewS m) (fzCmpOr fzDecl cmpKD)).toNat = (fzEv m (fzCmpOr fzDecl cmpKD)).toNat
+    rw [fzEv_cmpOr _ ev, fzEv_cmpOr _ e, hD]
+  · show (fzEv (viewS m) (.bin .add (fzC 1) (.bin .mul (fzC 8) (fzCmpOr fzDecl cmpKD)))).toNat =
+      (fzEv m (.bin .add (fzC 1) (.bin .mul (fzC 8) (fzCmpOr fzDecl cmpKD)))).toNat
+    simp only [fzEv_bin, fzEv_cmpOr _ ev, fzEv_cmpOr _ e, hD]; rfl
+  · show (fzEv (viewS m) (.bin .add (fzC 1) (fzCmpOr (.ld64 L.Front.DLP (fzC 0)) cmpKP))).toNat =
+      (fzEv m (.bin .add (fzC 1) (fzCmpOr (.ld64 L.Front.DLP (fzC 0)) cmpKP))).toNat
+    simp only [fzEv_bin, fzEv_cmpOr _ ev, fzEv_cmpOr _ e, hP]; rfl
+
 end viewS2
 
 end L.Arena

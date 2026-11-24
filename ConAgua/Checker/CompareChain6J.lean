@@ -304,6 +304,13 @@ theorem F6.ext (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) {
   simp only [g] at *
   refine ⟨trivial, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> omega
 
+/-- **Mode `6`'s frozen memory keeps every array's size.** -/
+theorem F6.size {c : Word} {m9 : Mem} (h6 : F6 PS m c m9) (b : TieredArray) :
+    (m9.arr64 b).size = (m.arr64 b).size := by
+  obtain ⟨m6, ⟨m2, m3, dsC, sG, res, m4, m5, h, hMt, hMI, hK, I, a', hI, hB, hFz, hfs, hBK, hfr, -⟩,
+    rfl, -⟩ := h6
+  rw [(cmpExt_frame _).size, (MemFrame.setCtl m6 224 1).size, hfr.size, hK.frame.size, h.frameM.size]
+
 /-- **`ExtOK` at mode `6`'s frozen memory.** -/
 theorem F6.extOK (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) {c : Word} {m9 : Mem}
     (h6 : F6 PS m c m9) : ExtOK m9 := by

@@ -16,6 +16,9 @@ import ConAgua.Checker.ProgIRef
 import ConAgua.Checker.AsmXOk
 import ConAgua.Checker.ProgWf
 import ConAgua.Final.DrvFinal
+import ConAgua.Final.CmpSeqTwin
+public import ConAgua.Arena.FreezeCmpView
+import ConAgua.Checker.C1Switch
 import all ConAgua.Checker.Entry
 
 @[expose] public section
@@ -50,15 +53,195 @@ def CmpOut (bC bS pb : ByteArray) (B : Array Word) (k : Word) : Prop :=
     (∀ i < frozen.length, fzExt mS (fzAt i) = fzExt m9 (fzAt i)) ∧
     k = B.getD 2 0 + c ∧ (B.getD 2 0).toNat + c.toNat < 2 ^ 64
 
-/-- **Stand-in (L level; H2c's mode `7`, H5's views)**: after the front and mode `7` returning
-`2^63 + kC`, `OUT`'s length word lies inside `OUT`, and the buffer `OUT[0, OUT[1])` is as
-`CmpOut` says, with `kS + kC` jobs. -/
-theorem cmp7_out_standin (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64) {rs5 : List Word}
+/-- **Header S's view of mode `7`'s frozen memory** (`viewS m9`) is `CsViewS`: from the solution's
+stash (`F6.csStash`) and the seed's patches. -/
+theorem cmp_csViewS {bC bS pb : ByteArray} {PS : PhaseS bC bS} {m₇ m : Mem}
+    (hF : FoldOn bS pb (abiSz checkerTab) PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) {c : Word} {m9 : Mem}
+    (h6 : F6 PS m c m9) : CsViewS m m9 (viewS m9) := by
+  have hcs := h6.csStash
+  have hsz9 : ∀ b, (m9.arr64 b).size = abiSz checkerTab b := fun b => by rw [F6.size h6, hF.sizeAt]
+  have hv := viewSArr_s m9
+  have hD := hF.build.decls
+  have b1 := hD.count; have b2 := hD.room; have b3 := hD.dsize; have b4 := hD.ptop; have b5 := hD.psize
+  have g : ∀ a : Array Word, rdW a 0 = a[0]?.getD 0 := fun a => by simp [L.Arena.rdW]
+  have hm1 := hF.sizeAt L.Front.DECL
+  have hm2 := hF.sizeAt L.Front.DLP
+  have hvs : (viewSCtl m9).size = (m9.arr64 CTL).size := by
+    have hfs : ∀ (ks : List Nat) (c : Array Word),
+        (ks.foldl (fun c k => c.setIfInBounds k ((m9.arr64 L.Checker.SCTL).getD k 0)) c).size = c.size := by
+      intro ks; induction ks with
+      | nil => intro c; rfl
+      | cons k ks ih => intro c; rw [List.foldl_cons, ih, Array.size_setIfInBounds]
+    unfold viewSCtl
+    rw [Array.size_setIfInBounds, hfs, Array.size_setIfInBounds]
+  have hctl : 256 ≤ (m9.arr64 CTL).size := by rw [hsz9]; decide
+  have hrd : ∀ x : Word, rdW (viewSCtl m9) x = (viewSCtl m9).getD x.toNat 0 := fun x => by
+    simp only [L.Arena.rdW, Array.getD_eq_getD_getElem?]
+  have hrd' : ∀ (a : Array Word) (x : Word), rdW a x = a.getD x.toNat 0 := fun a x => by
+    simp only [L.Arena.rdW, Array.getD_eq_getD_getElem?]
+  refine ⟨⟨fun b hb hc => ?_, fun x hx => ?_, fun b => ?_⟩, fun gi hg => ?_, fun gi hg => ?_,
+    fun j hj => ?_, fun j hj => ?_, fun j hj => ?_, ?_, ⟨?_, ?_⟩, ⟨?_, ?_⟩, ?_, fun x hx => ?_, ?_, rfl⟩
+  · apply viewS_arr
+    intro hm
+    simp only [vsChg, List.mem_cons, List.not_mem_nil, or_false] at hm
+    rcases hm with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+      first | exact hc rfl | exact hb (by decide)
+  · have hp : vsPatched x.toNat = false := by
+      have h1 : ¬ x.toNat ∈ rrWs := fun h => hx ((csC_iff x).mpr h)
+      rw [rrWs_iff] at h1
+      simp only [vsPatched, Bool.or_eq_false_iff, beq_eq_false_iff_ne, ne_eq, Bool.and_eq_false_iff,
+        decide_eq_false_iff_not]
+      omega
+    rw [show (viewS m9).arr64 ↑CTL = viewSCtl m9 from viewS_ctl m9, hrd, hrd', viewSCtl_getD m9 _ hp]
+  · show (viewSArr m9 b).size = _
+    by_cases hb : b ∈ vsChg
+    · simp only [vsChg, List.mem_cons, List.not_mem_nil, or_false] at hb
+      unfold viewSArr
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+      · rw [ite_eq_left rfl]; rw [hsz9, hsz9]; decide
+      · rw [ite_eq_right (by decide), ite_eq_left rfl]; rw [hsz9, hsz9]; decide
+      · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]; rw [hsz9, hsz9]; decide
+      · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]; rw [hsz9, hsz9]; decide
+      · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]; rw [hsz9, hsz9]; decide
+      · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]; rw [hsz9, hsz9]; decide
+      · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]; rw [hsz9, hsz9]; decide
+      · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]; rw [hsz9, hsz9]; decide
+      · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]; rw [hsz9, hsz9]; decide
+      · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]; exact hvs
+      · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]; rw [hsz9, hsz9]; decide
+      · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]; rw [hsz9, hsz9]; decide
+      · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]; rw [hsz9, hsz9]; decide
+      · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]; rw [hsz9, hsz9]; decide
+      · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]; rw [hsz9, hsz9]; decide
+      · rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]; rw [hsz9, hsz9]; decide
+    · rw [show viewSArr m9 b = (viewS m9).arr64 b from rfl, viewS_arr m9 b hb]
+  · rcases (show gi = 0 ∨ gi = 1 ∨ gi = 2 by omega) with rfl | rfl | rfl <;> rfl
+  · rcases (show gi = 0 ∨ gi = 1 ∨ gi = 2 by omega) with rfl | rfl | rfl <;> rfl
+  · show (viewSArr m9 ↑FIRSTS)[j]? = _
+    rw [hv.2.1]; exact hcs.firsts j hj
+  · show (viewSArr m9 ↑L.Front.DECL)[j]? = _
+    rw [hv.1]; exact hcs.decl j hj
+  · show (viewSArr m9 ↑L.Front.DLP)[j]? = _
+    rw [hv.2.2]; exact hcs.dlp j hj
+  · show _ ≤ (viewSArr m9 ↑FIRSTS).size
+    rw [hv.2.1, hsz9]
+    have : abiSz checkerTab L.Front.DECL ≤ 8 * abiSz checkerTab L.Checker.SFIRSTS := by decide
+    rw [g]; omega
+  · show _ ≤ (viewSArr m9 ↑L.Front.DECL).size
+    rw [hv.1, hsz9, show abiSz checkerTab L.Checker.SDECL = abiSz checkerTab L.Front.DECL by decide, g]; omega
+  · show (viewSArr m9 ↑L.Front.DECL).size < _
+    rw [hv.1, hsz9, show abiSz checkerTab L.Checker.SDECL = abiSz checkerTab L.Front.DECL by decide]; omega
+  · show _ ≤ (viewSArr m9 ↑L.Front.DLP).size
+    rw [hv.2.2, hsz9, show abiSz checkerTab L.Checker.SDLP = abiSz checkerTab L.Front.DLP by decide, g]; omega
+  · show (viewSArr m9 ↑L.Front.DLP).size < _
+    rw [hv.2.2, hsz9, show abiSz checkerTab L.Checker.SDLP = abiSz checkerTab L.Front.DLP by decide]; omega
+  · rw [show (viewS m9).arr64 ↑CTL = viewSCtl m9 from viewS_ctl m9, hrd, hrd']
+    have := viewSCtl_128 m9 (by omega)
+    simpa using this
+  · have hx' : 162 ≤ x.toNat ∧ x.toNat ≤ 173 := by
+      simp only [frozenCtl, List.mem_cons, List.not_mem_nil, or_false] at hx
+      rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+    rw [show (viewS m9).arr64 ↑CTL = viewSCtl m9 from viewS_ctl m9, hrd, viewSCtl_at m9 _ (by omega),
+      ite_eq_right (by omega), ite_eq_left hx', ← hrd']
+    exact hcs.frz x hx
+  · rw [show (viewS m9).arr64 ↑CTL = viewSCtl m9 from viewS_ctl m9, hrd, viewSCtl_at m9 _ (by simp; omega)]
+    simp
+
+/-- **Mode `7`'s buffer** (L level): after the front and mode `7` returning `2^63 + kC`, `OUT`'s
+length word lies inside `OUT`, and the buffer `OUT[0, OUT[1])` is as `CmpOut` says, with `kS + kC`
+jobs: header S shows `viewS m9` (`cmpView_S`), header C `m9` (`cmpView_C`), both headers' entries
+apart (`cmpApart_S`, `cmpApart_C`), of the same extents (`viewS_ext`). -/
+theorem cmp7_out (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64) {rs5 : List Word}
     {m5 : Mem} {rs7 : List Word} {m7 : Mem} (hf : CmpFront45 checkerTab checkerProg MODE bC bS pb rs5 m5)
-    (h7 : cmpRun checkerProg (m5.setG MODE 7) = .ok (rs7, m7)) (hge7 : 2 ^ 63 ≤ (rs7.getD 0 0).toNat) :
+    (h7 : cmpRun checkerProg (m5.setG MODE 7) = .ok (rs7, m7)) (_hge7 : 2 ^ 63 ≤ (rs7.getD 0 0).toNat) :
     ((m7.arr64 OUT).getD 1 0).toNat ≤ (m7.arr64 OUT).size ∧
     CmpOut bC bS pb (cmpBuf OUT m7) ((rs5.getD 0 0 - 9223372036854775808) + (rs7.getD 0 0 - 9223372036854775808)) := by
-  sorry
+  obtain ⟨PS, m₇, m, hF, hst, hk6, hm5, hres5⟩ := cmpFront_run bC bS pb h64 hf
+  rw [hm5] at h7
+  obtain ⟨-, hpb, -, -⟩ := hf
+  have hN : abiFuel < 2 ^ 62 := by simp [abiFuel]
+  have hsz6 : ∀ g ≤ 2, abiSz checkerTab (sixArr g) = abiSz checkerTab (eixArr g) ∧
+      abiSz checkerTab (stxArr g) = abiSz checkerTab (tixArr g) := by
+    intro g hg
+    rcases (show g = 0 ∨ g = 1 ∨ g = 2 by omega) with rfl | rfl | rfl <;> exact ⟨by decide, by decide⟩
+  have hO : OutEq m (m.setG MODE 7) := (⟨fun _ _ => rfl, fun _ => rfl, rfl⟩ : OutEq m m).setG MODE 7
+  obtain ⟨c, hpost, hres7⟩ := checkC3_run PS hF hst hk6 cmp_absz hpb hsz6 hO 7 1
+    (Or.inr ⟨rfl, rfl⟩) (by simp [Mem.setG]) abiFuel hN rs7 m7 h7
+  obtain ⟨m9, hF6, hok, hS⟩ := hpost.2 (by decide)
+  have hsz9 : ∀ b, (m9.arr64 b).size = abiSz checkerTab b := fun b => by rw [F6.size hF6, hF.sizeAt]
+  have hlt : (m9.arr64 OUT).size < 2 ^ 64 := by rw [hsz9]; exact cmp_absz _
+  obtain ⟨hS', rfl⟩ := hS (by rw [(parCompactMem_out_b m9 1 hdrWW).size, hsz9]; decide)
+  have hcw : rd64 m9 CTL (Nat.toUInt64 cmpCW) = 1 := by
+    have := (F6.ext hF hF6).1
+    simpa [rd64, L.Arena.rdW, Array.getD_eq_getD_getElem?] using this
+  obtain ⟨hVS, -⟩ := cmpView_S hok hlt hS' hcw
+  obtain ⟨hVC, -⟩ := cmpView_C hok hlt hS'
+  obtain ⟨hhdrC, hapC⟩ := cmpApart_C hok hlt hS'
+  have hapS := cmpApart_S hok hlt hS' hcw
+  obtain ⟨hsz, ho0, hlc, h256, hX1, hX2, h1, h5, -⟩ := cmpC_facts hok hlt hS'
+  have hV := cmp_csViewS hF hF6
+  have hhw := hdrW_eq
+  have hL := frozenIdsL_length
+  have hfl := frozen_length
+  -- the buffer
+  have hBe : cmpBuf OUT (cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)) =
+      cmpBufS OUT (cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)) := rfl
+  have hSz : (cmpBufS OUT (cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length))).size =
+      (hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).2.toNat := by
+    simp only [cmpBufS, h1, Array.size_extract]; omega
+  have hSg : ∀ k < (hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).2.toNat,
+      (cmpBufS OUT (cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length))).getD k 0 =
+      ((cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).arr64 OUT).getD k 0 := by
+    intro k hk'
+    simp only [cmpBufS, h1]
+    rw [getD_extract_lt _ _ _ _ (by simp only [Array.size_extract]; omega), Nat.zero_add]
+  have h5' : (cmpBufS OUT (cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length))).getD 5 0 = hdrWW := by
+    rw [hSg 5 (by omega), h5]
+  have e154 : hdrWW.toNat = 154 := rfl
+  -- word 2: the solution's count
+  have hD := hF.build.decls
+  have hw2 : (cmpBufS OUT (cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length))).getD 2 0 =
+      (m.arr64 L.Front.DECL)[0]?.getD 0 := by
+    have hc := hVS.cnt.1
+    simp only [bufImg, hVS.hdr0, Nat.zero_add] at hc
+    rw [getD_extract_lt _ _ _ _ (by simp only [Array.size_extract, hSz]; omega), Nat.zero_add] at hc
+    rw [hc]
+    show ((viewSArr m9 ↑L.Front.DECL).getD (UInt64.toNat 0) 0) = _
+    rw [(viewSArr_s m9).1, Array.getD_eq_getD_getElem?]
+    exact congrArg (·.getD 0) (hF6.csStash.decl 0 (by omega))
+  have hc63 : c.toNat < 2 ^ 63 := by
+    obtain ⟨m2, m3, dsC, sG, res, m4', I, a', h, -⟩ := F6.jobM hF hF6
+    have := h.count.1
+    have := h.decls.room; have := h.decls.dsize
+    simp only [List.size_toArray] at *
+    omega
+  have f2 : OutFrame m9 (L.Arena.seedMem (hsImgs (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)).1
+      (hdrW.toUInt64 + fzOff m9 frozen.length)) :=
+    (((parCompactMem_out_b m9 1 hdrWW).trans (OutFrame.hsMem _ _)).trans (OutFrame.xsGo _ _ _)).trans
+      (((OutFrame.set64 _ _ _).trans (OutFrame.seedFold _ _ _)).trans (OutFrame.set64 _ _ _))
+  have f3 : ∀ M o, OutFrame M (hsTail M o) := fun M o => by
+    unfold hsTail
+    exact (((((((OutFrame.set64 M _ _).trans (OutFrame.set64 _ _ _)).trans (OutFrame.set64 _ _ _)).trans
+      (OutFrame.set64 _ _ _)).trans (OutFrame.set64 _ _ _)).trans (OutFrame.set64 _ _ _)).trans
+      (OutFrame.set64 _ _ _)).trans (OutFrame.set64 _ _ _)
+  have hFr : OutFrame m9 (cmpHdrSMem (parCompactMem m9 1 hdrWW) (fzOff m9 frozen.length)) := f2.trans (f3 _ _)
+  have hcnt := hD.count
+  have hroom := hD.room; have hds := hD.dsize
+  have hk5 : rs5.getD 0 0 - 9223372036854775808 = UInt64.ofNat PS.dsS.size := by
+    rw [L.getD_zero, hres5, UInt64.add_comm, UInt64.add_sub_cancel]
+  have hk7 : rs7.getD 0 0 - 9223372036854775808 = c := by
+    rw [L.getD_zero, hres7, UInt64.add_comm, UInt64.add_sub_cancel]
+  have hw2' : (m.arr64 L.Front.DECL)[0]?.getD 0 = UInt64.ofNat PS.dsS.size := by
+    apply UInt64.toNat_inj.mp
+    rw [hcnt, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
+  refine ⟨by rw [h1, hsz]; exact hX2, ?_⟩
+  rw [hBe]
+  refine ⟨hpb, PS, m₇, m, c, m9, viewS m9, hF, hF6, (hFr.bytes.symm.trans (run_check_bytes h7)).trans rfl, hV,
+    fun b _ => ⟨by rw [hV.frame.size, hsz9], hsz9 b⟩,
+    ⟨fun i hi => by rw [hSz]; omega, hVS.inside, hapS⟩, hVS, by rw [hw2, hcnt],
+    by rw [h5']; decide, by rw [h5', hSz, e154]; omega,
+    ⟨fun i hi => hhdrC i hi, hVC.inside, hapC⟩, hVC, fun i hi => viewS_ext m9 hcw hi,
+    by rw [hk5, hk7, hw2, hw2'], by rw [hw2, hcnt]; omega⟩
 
 /-- The file's code as `ca_start_ac` sees it: the stub and the compiler's output, and the compared
 run's entries. -/
@@ -134,7 +317,7 @@ theorem cmpEntry1_out [Host] (k0 : Nat) (hcode : Code checkerFile k0) (bC bS pb 
   obtain ⟨⟨-, hRR, -, -⟩, hhi⟩ := hP
   refine ⟨hRR, ?_⟩
   obtain ⟨rs5, m5, rs7, m7, hfr, h7, hge7, hK, hM⟩ := hhi hrdx hrax
-  obtain ⟨hlen, hout⟩ := cmp7_out_standin bC bS pb h64 hfr h7 hge7
+  obtain ⟨hlen, hout⟩ := cmp7_out bC bS pb h64 hfr h7 hge7
   rw [cmp_bufEq hM hlen B hbufw hbuflen, hK]
   have e : (9223372036854775808 : Word) + ((rs5.getD 0 0 - 9223372036854775808) + (rs7.getD 0 0 - 9223372036854775808)) -
       9223372036854775808 = (rs5.getD 0 0 - 9223372036854775808) + (rs7.getD 0 0 - 9223372036854775808) := by
