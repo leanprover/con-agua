@@ -13,7 +13,7 @@ meta import ConAgua.Layout
 The final theorems (`ConAgua/Final/EndToEnd.lean`: `checkerFile_accepts`,
 `checkerFile_accepts_regs`, `checkerFile_model_exists`, `checkerFile_no_False`) are
 about the committed file `asm/checker.s`, called at `ca_start(in, in_len, pins, pins_len, base,
-base_len)` as the harness calls it (`AbiCall`, `ConAgua/Final/Abi.lean`): if the machine returns
+base_len)` as the harness calls it (`AbiCall` without a solution, `ConAgua/Final/Abi.lean`): if the machine returns
 `rdx = 0` and `rax = ACCEPT`, the twin (con-ron's arena checker) accepts `[b]` (`TwinAccepts`,
 `ConAgua/Final/Twin.lean`); in con-leche's terms, con-leche's own parser reads `b`, con-leche's
 pure fold accepts the parsed records (prepared with some prelude, at some pin list), the accepted

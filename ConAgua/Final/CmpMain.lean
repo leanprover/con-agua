@@ -432,7 +432,7 @@ theorem cmp_front (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk ta
       (Code.label (i := 0) hC rfl) (hC.get (i := 0) rfl) (hC.get (i := 1) rfl) (hC.get (i := 2) rfl)
       (hC.get (i := 3) rfl) (hC.get (i := 4) rfl) (hC.get (i := 5) rfl) (hC.get (i := 6) rfl)
       hcodeO fd hentry hnp bC pb _ (UInt64.ofBitVec (at_ (Kc + 51 + 1)).toBitVec) ?_) ?_
-    · refine hc.toAbiCall.shrink _ _ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ <;> dsimp only <;> (try rsimp)
+    · refine hc.toAbiArgs.shrink _ _ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ <;> dsimp only <;> (try rsimp)
       · exact hdi
       · exact hsi
       · exact hdx
