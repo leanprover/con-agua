@@ -9114,6 +9114,8 @@ movq %rcx, %rdi
 movq $4611686018427387902, %rsi
 jmp ca_enter
 ca_check_seq:
+movq $2, %r10
+ca_check_seq_m:
 movq $35433480192, %rax
 addq %r8, %rax
 movq %rax, (%r8)
@@ -18160,15 +18162,15 @@ movq $9021330427866345593, %rax
 movq %rax, 35384(%r8)
 movq $175996253, %rax
 movq %rax, 35392(%r8)
+ca_check_seq_g:
 movq %rsi, 35504(%r8)
 movq %rdx, 35520(%r8)
-movq $2, %rax
-movq %rax, 35496(%r8)
+movq %r10, 35496(%r8)
 movq %r8, %rdi
 movq $4611686018427387902, %rsi
 jmp ca_enter
 ca_start:
-movq $6768868458512, %rax
+movq $6768868458560, %rax
 cmpq %rax, %r9
 jb ca_drv_decline
 movq $6768868458496, %rax
@@ -18209,9 +18211,6 @@ jb ca_check_b_min
 movq 40(%rdi), %rax
 cmpq $0, %rax
 je ca_check_b_min
-movq $7696581394432, %rax
-cmpq %rax, %r8
-jb ca_abi_decline
 movq %rdx, %rax
 subq 16(%rdi), %rax
 movq %rax, %rdx
@@ -18219,13 +18218,6 @@ movq 40(%rdi), %rax
 shlq $3, %rax
 addq %rdi, %rax
 movq %rax, %rdi
-movq $3848290697216, %rax
-addq %rcx, %rax
-movq %rax, %rcx
-movq $3848290697216, %r9
-movq %r8, %rax
-subq %r9, %rax
-movq %rax, %r8
 ca_check_b_min:
 cmpq $4, 72(%rdi)
 jb ca_abi_decline
@@ -247427,8 +247419,20 @@ jb ca_setup
 movq $6, %rax
 movq %rax, 35496(%r8)
 jmp ca_setup
-ca_compare:
-movq $10651518894080, %rax
+ca_start_a7:
+movq $6768868458496, %rax
+cmpq %rax, %r9
+jb ca_setup
+movq $7, %rax
+movq %rax, 35496(%r8)
+jmp ca_setup
+ca_start_c:
+movq $0, %r10
+jmp ca_cmp_front
+ca_start_ac:
+movq $1, %r10
+ca_cmp_front:
+movq $6768868458560, %rax
 cmpq %rax, %r9
 jb ca_cmp_decline
 movq $6768868458496, %rax
@@ -247442,6 +247446,7 @@ movq 8(%rsp), %r11
 movq %r11, 24(%rax)
 movq %rdx, 32(%rax)
 movq %rcx, 40(%rax)
+movq %r10, 56(%rax)
 movq %r8, %r15
 movq $6768868458496, %r9
 call ca_start_a4
@@ -247469,33 +247474,9 @@ movq %rax, %rdx
 movq $6768868458496, %rax
 addq %r15, %rax
 movq %rdx, 48(%rax)
-movq $0, %rdx
-movq %rdx, 56(%rax)
-ca_cmp_loop:
-movq $6768868458496, %rax
-addq %r15, %rax
-movq 56(%rax), %rdx
-cmpq 48(%rax), %rdx
-jae ca_cmp_after
-movq $6184752906240, %rdi
-addq %r15, %rdi
-movq 8(%rdi), %rsi
-movq $6803228196864, %rcx
-addq %r15, %rcx
-movq $3848290697216, %r8
-call ca_check_b
-cmpq $0, %rdx
-jne ca_cmp_done
-movq $71757147230292, %rcx
-cmpq %rcx, %rax
-jne ca_cmp_done
-movq $6768868458496, %rax
-addq %r15, %rax
-movq 56(%rax), %rdx
-addq $1, %rdx
-movq %rdx, 56(%rax)
-jmp ca_cmp_loop
-ca_cmp_after:
+movq 56(%rax), %r11
+cmpq $0, %r11
+jne ca_cmp_thr
 movq $6768868458496, %rax
 addq %r15, %rax
 movq 16(%rax), %rdi
@@ -247512,9 +247493,58 @@ cmpq %rcx, %rax
 jb ca_cmp_done
 subq %rcx, %rax
 movq %rax, %rdx
+movq $6768868458496, %rax
+addq %r15, %rax
+movq %rdx, 56(%rax)
+movq $8, %r10
+movq $0, %rsi
+movq 48(%rax), %rdx
+movq %r15, %r8
+call ca_check_seq_m
+cmpq $0, %rdx
+jne ca_cmp_done
+movq $71757147230292, %rcx
+cmpq %rcx, %rax
+jne ca_cmp_done
+movq $6768868458496, %rax
+addq %r15, %rax
+movq 56(%rax), %rdx
+movq $9, %r10
 movq $0, %rsi
 movq %r15, %r8
-call ca_check_seq
+movq $35433480192, %rax
+addq %r15, %rax
+movq %rax, (%r15)
+call ca_check_seq_g
+jmp ca_cmp_done
+ca_cmp_thr:
+movq $6768868458496, %rax
+addq %r15, %rax
+movq 16(%rax), %rdi
+movq 24(%rax), %rsi
+movq 32(%rax), %rdx
+movq 40(%rax), %rcx
+movq %r15, %r8
+movq $6768868458496, %r9
+call ca_start_a7
+cmpq $0, %rdx
+jne ca_cmp_done
+movq $-9223372036854775808, %rcx
+cmpq %rcx, %rax
+jb ca_cmp_done
+subq %rcx, %rax
+movq %rax, %rdx
+movq $6768868458496, %rax
+addq %r15, %rax
+movq 48(%rax), %rax
+addq %rdx, %rax
+cmpq %rcx, %rax
+jb ca_cmp_kok
+movq $1, %rdx
+jmp ca_cmp_done
+ca_cmp_kok:
+addq %rcx, %rax
+movq $0, %rdx
 ca_cmp_done:
 movq %rax, %rcx
 movq $6768868458496, %rax
@@ -247528,13 +247558,6 @@ ca_cmp_decline:
 movq $0, %rax
 movq $1, %rdx
 ret
-ca_start_a7:
-movq $6768868458496, %rax
-cmpq %rax, %r9
-jb ca_setup
-movq $7, %rax
-movq %rax, 35496(%r8)
-jmp ca_setup
 .section .rodata
 .globl ca_rom
 .globl ca_rom_len
@@ -247547,7 +247570,7 @@ ca_rom: .byte 116, 114, 117, 101, 102, 97, 108, 115, 101, 115, 97, 102, 101, 116
 .globl ca_region_size
 .globl ca_slot
 .globl ca_w0
-ca_region_size: .quad 6768868458512
+ca_region_size: .quad 6768868458560
 ca_slot: .quad 34359738368
 ca_w0: .quad 68719476736
 .section .rodata
@@ -247562,12 +247585,7 @@ ca_worker_size: .quad 3848290697216
 ca_nw: .quad 195
 ca_nb: .quad 2
 ca_npos: .quad 198
-.section .rodata
-.globl ca_cmp_region_size
-ca_cmp_region_size: .quad 10651518894080
-.globl ca_compare
-.globl ca_start_a4
-.globl ca_start_a5
-.globl ca_start_a7
+.globl ca_start_c
+.globl ca_start_ac
 .globl ca_diag
 ca_diag: .quad -1

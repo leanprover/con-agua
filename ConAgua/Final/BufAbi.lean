@@ -917,7 +917,7 @@ theorem abiB_outcome0' [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok :
 /-- **From `ca_check_b`, the second phase**: a job index `j` at least the buffer's word `2` (the
 first phase's job count `kS`) and a nonzero word `5` (the second phase's offset `LS`, in words):
 the run of `check` on the second phase's buffer `B'` at `buf + 8 · LS`, for the job `j - kS`, on
-the region's second half (`dm'`: the call as `abiB_outcome0` sees it). -/
+the same region (`dm'`: the call as `abiB_outcome0` sees it). -/
 theorem abiB_outcome2 [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
     {X : AsmTab} (hAX : AsmOkT q tab X)
     (hwf : Prog.wf tab q = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
@@ -927,11 +927,10 @@ theorem abiB_outcome2 [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : 
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (B B' : Array Word) (r : Mem) (dm dm' : MachineData) (ra : Word)
     (h5 : 5 < B.size) (hB : ∀ i (h : i < B.size), rdW dm.dmem (A (dm.regs.rdi.toNat + 8 * i)) = some B[i])
-    (hge : B.getD 2 0 ≤ dm.regs.rdx) (hL : B.getD 5 0 ≠ 0) (hneed : 2 * workerNeed own ≤ dm.regs.r8.toNat)
+    (hge : B.getD 2 0 ≤ dm.regs.rdx) (hL : B.getD 5 0 ≠ 0)
     (hc : BufCall tab fz own B' dm' ra) (hd : dm'.dmem = dm.dmem) (hsp : dm'.regs.rsp = dm.regs.rsp)
     (hdi : dm'.regs.rdi.toNat = dm.regs.rdi.toNat + 8 * (B.getD 5 0).toNat)
-    (hcx : dm'.regs.rcx.toNat = dm.regs.rcx.toNat + workerNeed own)
-    (h8 : dm'.regs.r8.toNat = dm.regs.r8.toNat - workerNeed own)
+    (hcx : dm'.regs.rcx.toNat = dm.regs.rcx.toNat) (h8 : dm'.regs.r8.toNat = dm.regs.r8.toNat)
     (hr : RegionRel tab dm'.regs.rcx.toNat own r dm.dmem) (hmo : bufMinOk tab fz own = true) :
     Ev (EntryPost (bufLayout tab dm'.regs.rdi.toNat B' dm'.regs.rcx.toNat fz own) dm ra
         (L.run p abiFuel "check" [] (bufMemG fz own plo phi mode B' r (dm.regs.rdx - B.getD 2 0))))
@@ -943,10 +942,7 @@ theorem abiB_outcome2 [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : 
   have hB2 := getD_rdW (show 2 < B.size by omega) hB
   have hB5 := getD_rdW (show 5 < B.size by omega) hB
   have hge' := UInt64.le_iff_toNat_le.mp hge
-  have hfit := hc.geom.fits
   have hbe := hc.geom.bend
-  have h8lt : dm.regs.r8.toNat < 2 ^ 64 := dm.regs.r8.toNat_lt
-  have hwn : 2 * workerNeed own < 2 ^ 64 := by omega
   rw [Code.label (i := 0) hX rfl]
   refine ev_label (Code.get (i := 0) hX rfl) ?_
   refine ev_movRM (Code.get (i := 1) hX rfl) (by constructor <;> decide) (v := B.getD 2 0) (by simpa using hB2) ?_
@@ -963,37 +959,19 @@ theorem abiB_outcome2 [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : 
     simp only [CondCode.interp, cmpFlags_zf] at hz
     rsimp at hz
     exact hL (UInt64.toBitVec_inj.mp (by simpa using hz))
-  refine ev_movRI (Code.get (i := 7) hX rfl) ?_
-  refine ev_cmpRO (r := .r8) (o := oR .rax) (v := (2 * workerNeed own).toUInt64) (Code.get (i := 8) hX rfl)
-    (Or.inr (Or.inr ⟨.rax, rfl, rfl⟩)) ?_
-  refine ev_jcc (Code.get (i := 9) hX rfl) (fun hlt => ?_) (fun _ => ?_)
-  · exfalso
-    simp only [CondCode.interp, cmpFlags_cf, decide_eq_true_eq] at hlt
-    rsimp at hlt
-    rw [Nat.toUInt64, UInt64.toNat_ofNat_of_lt' (by omega)] at hlt
-    omega
-  refine ev_movRR (Code.get (i := 10) hX rfl) ?_
-  refine ev_binO (op := .sub) (o := oM (mb .rdi 16)) (v := B.getD 2 0) rfl (Code.get (i := 11) hX rfl)
+  refine ev_movRR (Code.get (i := 7) hX rfl) ?_
+  refine ev_binO (op := .sub) (o := oM (mb .rdi 16)) (v := B.getD 2 0) rfl (Code.get (i := 8) hX rfl)
     (Or.inr (Or.inl ⟨.rdi, 16, rfl, by constructor <;> decide, by rsimp; simpa using hB2⟩)) fun st1 => ?_
-  refine ev_movRR (Code.get (i := 12) hX rfl) ?_
-  refine ev_movRM (Code.get (i := 13) hX rfl) (by constructor <;> decide) (v := B.getD 5 0) (by rsimp; simpa using hB5) ?_
-  refine ev_shlRI (n := 3) (by decide) (Code.get (i := 14) hX rfl) fun st2 => ?_
-  refine ev_binO (op := .add) (o := oR .rdi) rfl (Code.get (i := 15) hX rfl)
+  refine ev_movRR (Code.get (i := 9) hX rfl) ?_
+  refine ev_movRM (Code.get (i := 10) hX rfl) (by constructor <;> decide) (v := B.getD 5 0) (by rsimp; simpa using hB5) ?_
+  refine ev_shlRI (n := 3) (by decide) (Code.get (i := 11) hX rfl) fun st2 => ?_
+  refine ev_binO (op := .add) (o := oR .rdi) rfl (Code.get (i := 12) hX rfl)
     (Or.inr (Or.inr ⟨.rdi, rfl, rfl⟩)) fun st3 => ?_
-  refine ev_movRR (Code.get (i := 16) hX rfl) ?_
-  refine ev_movRI (Code.get (i := 17) hX rfl) ?_
-  refine ev_binO (op := .add) (o := oR .rcx) rfl (Code.get (i := 18) hX rfl)
-    (Or.inr (Or.inr ⟨.rcx, rfl, rfl⟩)) fun st4 => ?_
-  refine ev_movRR (Code.get (i := 19) hX rfl) ?_
-  refine ev_movRI (Code.get (i := 20) hX rfl) ?_
-  refine ev_movRR (Code.get (i := 21) hX rfl) ?_
-  refine ev_binO (op := .sub) (o := oR .r9) rfl (Code.get (i := 22) hX rfl)
-    (Or.inr (Or.inr ⟨.r9, rfl, rfl⟩)) fun st5 => ?_
-  refine ev_movRR (Code.get (i := 23) hX rfl) ?_
+  refine ev_movRR (Code.get (i := 13) hX rfl) ?_
   have hL8 : 8 * (B.getD 5 0).toNat + dm.regs.rdi.toNat < 2 ^ 64 := by omega
   have hus : UInt64.size = 2 ^ 64 := rfl
   refine ev_gen_st fun s hs => ?_
-  rw [← Code.label (i := 24) hX rfl]
+  rw [← Code.label (i := 14) hX rfl]
   refine abiB_outcome0' q p hq tab hok hAX hwf mode plo phi out hdrf ctlf hw fz own hngm hngl hngh h12 h13 h23
     hfzl k0 hcode fd hentry hnp B' r dm dm' s ra _ hc hd hsp hr hmo (by rw [hs]) ?_ ?_ ?_ (by rw [hs]; rsimp)
     (by rw [hs]; rsimp) (by rw [hs]; rsimp) (by rw [hs]; rsimp) (by rw [hs]; rsimp) (by rw [hs]; rsimp)
@@ -1004,96 +982,9 @@ theorem abiB_outcome2 [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : 
     rw [UInt64.toNat_add, UInt64.toNat_shiftLeft]
     simp only [UInt64.toNat_ofNat', Nat.shiftLeft_eq, Nat.reduceMod, Nat.reducePow]
     omega
-  · rsimp
-    simp only [BinOp.eval, hcx]
-    rw [UInt64.toNat_add, Nat.toUInt64, UInt64.toNat_ofNat_of_lt' (by omega)]
-    omega
-  · rsimp
-    simp only [BinOp.eval, h8]
-    rw [UInt64.toNat_sub_of_le, Nat.toUInt64, UInt64.toNat_ofNat_of_lt' (by omega)]
-    rw [UInt64.le_iff_toNat_le, Nat.toUInt64, UInt64.toNat_ofNat_of_lt' (by omega)]
-    omega
+  · rsimp; exact hcx.symm
+  · rsimp; exact h8.symm
   · rsimp
     simp only [BinOp.eval]
-
-/-- **`ca_check_b` declines a second-phase job on a region below `2 · workerNeed`**: the job
-index at least the buffer's word `2`, its word `5` nonzero, `r8 < 2 · workerNeed own`: the call
-returns `rdx = 1`. -/
-theorem abiB_small [Host] (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
-    (fz own : List TieredArray) {k0 : Nat} {rest : Program}
-    (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ rest)) k0)
-    (B : Array Word) (dm : MachineData) (ra : Word)
-    (h5 : 5 < B.size) (hB : ∀ i (h : i < B.size), rdW dm.dmem (A (dm.regs.rdi.toNat + 8 * i)) = some B[i])
-    (hge : B.getD 2 0 ≤ dm.regs.rdx) (hL : B.getD 5 0 ≠ 0) (hsmall : dm.regs.r8.toNat < 2 * workerNeed own)
-    (hra : rdW dm.dmem (A dm.regs.rsp.toNat) = some ra) (hwn : 2 * workerNeed own < 2 ^ 64)
-    (hsp8 : dm.regs.rsp.toNat + 8 < 2 ^ 64) (G : L.Compiler.Layout) (res : Except Err (List Word × Mem)) :
-    Ev (fun st => EntryPost G dm ra res st ∧ st.data.regs.rdx = 1) dm (label abiCheckBL) := by
-  have hcP := hcode.left
-  simp only [parStub] at hcP
-  have hX := hcP.right
-  unfold bufMinStub at hX
-  have hcT := hcode.right.left.right
-  simp only [abiTail] at hcT
-  have hB2 := getD_rdW (show 2 < B.size by omega) hB
-  have hB5 := getD_rdW (show 5 < B.size by omega) hB
-  have hge' := UInt64.le_iff_toNat_le.mp hge
-  rw [Code.label (i := 0) hX rfl]
-  refine ev_label (Code.get (i := 0) hX rfl) ?_
-  refine ev_movRM (Code.get (i := 1) hX rfl) (by constructor <;> decide) (v := B.getD 2 0) (by simpa using hB2) ?_
-  refine ev_cmpRO (r := .rdx) (o := oR .rax) (v := B.getD 2 0) (Code.get (i := 2) hX rfl)
-    (Or.inr (Or.inr ⟨.rax, rfl, by rsimp⟩)) ?_
-  refine ev_jcc (Code.get (i := 3) hX rfl) (fun hlt => ?_) (fun _ => ?_)
-  · exfalso
-    simp only [CondCode.interp, cmpFlags_cf, decide_eq_true_eq] at hlt
-    rsimp at hlt; omega
-  refine ev_movRM (Code.get (i := 4) hX rfl) (by constructor <;> decide) (v := B.getD 5 0) (by rsimp; simpa using hB5) ?_
-  refine ev_cmpRO (r := .rax) (o := oI 0) (v := 0) (Code.get (i := 5) hX rfl) (Or.inl rfl) ?_
-  refine ev_jcc (Code.get (i := 6) hX rfl) (fun hz => ?_) (fun _ => ?_)
-  · exfalso
-    simp only [CondCode.interp, cmpFlags_zf] at hz
-    rsimp at hz
-    exact hL (UInt64.toBitVec_inj.mp (by simpa using hz))
-  refine ev_movRI (Code.get (i := 7) hX rfl) ?_
-  refine ev_cmpRO (r := .r8) (o := oR .rax) (v := (2 * workerNeed own).toUInt64) (Code.get (i := 8) hX rfl)
-    (Or.inr (Or.inr ⟨.rax, rfl, rfl⟩)) ?_
-  refine ev_jcc (Code.get (i := 9) hX rfl) (fun _ => ?_) (fun hge2 => ?_)
-  · rw [Code.label (i := 3) hcT rfl]
-    refine ev_label (Code.get (i := 3) hcT rfl) ?_
-    refine ev_movRI (Code.get (i := 4) hcT rfl) ?_
-    refine ev_movRI (Code.get (i := 5) hcT rfl) ?_
-    refine ev_ret (Code.get (i := 6) hcT rfl) (ra := ra) (by simpa [Reg64s.set64_rax, Reg64s.set64_rdx] using hra) ?_
-    refine Eventually.done _ ⟨⟨rfl, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ⟨fun _ h => h, fun _ _ _ _ _ _ _ => rfl⟩, .inl ?_⟩, ?_⟩
-    · simp only [Reg64s.set64_rsp, Reg64s.set64_rax, Reg64s.set64_rdx, UInt64.toNat_ofBitVec, BitVec.toNat_add,
-        UInt64.toNat_toBitVec, show (8 : BitVec 64).toNat = 8 from rfl]
-      omega
-    all_goals simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp]
-  · exfalso
-    simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not, Nat.not_lt] at hge2
-    rsimp at hge2
-    rw [Nat.toUInt64, UInt64.toNat_ofNat_of_lt' (by simpa [UInt64.size] using hwn)] at hge2
-    omega
-
-/-- **From `ca_check_b` on a region below `2 · workerNeed`** (the sequential driver's worker
-region): the run of `check` as `abiB_outcome`, or a decline (`rdx = 1`). -/
-theorem abiB_outcome_w [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
-    {X : AsmTab} (hAX : AsmOkT q tab X)
-    (hwf : Prog.wf tab q = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
-    (fz own : List TieredArray) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng) (hngh : phi.id < tab.ng)
-    (h12 : plo ≠ phi) (h13 : plo ≠ mode) (h23 : phi ≠ mode) (hfzl : fz.length < 2 ^ 20) (k0 : Nat)
-    (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProgX X tab q "check")) k0)
-    (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
-    (B : Array Word) (r : Mem) (dm : MachineData) (ra : Word) (hc : BufCall tab fz own B dm ra)
-    (hr : RegionRel tab dm.regs.rcx.toNat own r dm.dmem) (hmo : bufMinOk tab fz own = true)
-    (h5 : 5 < B.size) (hsmall : dm.regs.r8.toNat < 2 * workerNeed own) (hwn : 2 * workerNeed own < 2 ^ 64) :
-    Ev (EntryPost (bufLayout tab dm.regs.rdi.toNat B dm.regs.rcx.toNat fz own) dm ra
-        (L.run p abiFuel "check" [] (bufMemG fz own plo phi mode B r dm.regs.rdx)))
-      dm (label abiCheckBL) := by
-  by_cases hns : dm.regs.rdx < B.getD 2 0 ∨ B.getD 5 0 = 0
-  · exact abiB_outcome q p hq tab hok hAX hwf mode plo phi out hdrf ctlf hw fz own hngm hngl hngh h12 h13 h23
-      hfzl k0 hcode fd hentry hnp B r dm ra hc hr hmo h5 hns
-  · simp only [not_or] at hns
-    exact eventually_weaken _ _ _ _ (fun _ h => h.1)
-      (abiB_small tab mode plo phi out hdrf ctlf hw fz own hcode B dm ra h5 hc.hB
-        (UInt64.not_lt.mp hns.1) hns.2 hsmall hc.hra hwn hc.hcs8 _ _)
 
 end ConAgua.Final
