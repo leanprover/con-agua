@@ -20,6 +20,7 @@ namespace L.Checker
 
 open L L.Compiler
 
+set_option maxRecDepth 100000 in
 set_option asmLitBatch 1 in
 asm_lit_fns checkerAsm : checkerTab checkerNrt checkerSkt checkerProgI 697 819 asm checkerX
 
