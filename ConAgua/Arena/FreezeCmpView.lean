@@ -105,8 +105,6 @@ theorem hsMem_high : ∀ (is : List Nat) (M : Mem), (∀ i ∈ is, i < frozen.le
     split
     · rw [getD_set64_ne _ _ _ _ _ (by rw [toNat_c _ (by omega)]; omega),
         getD_set64_ne _ _ _ _ _ (by rw [toNat_c _ (by omega)]; omega)]
-    · rw [getD_set64_ne _ _ _ _ _ (by rw [toNat_c _ (by omega)]; omega),
-        getD_set64_ne _ _ _ _ _ (by rw [toNat_c _ (by omega)]; omega)]
     · rfl
 
 theorem seedFold_low (so : Word) (lo : Nat) (hso : so.toNat + 224 < 2 ^ 64) (hlo : lo ≤ so.toNat) :
@@ -382,14 +380,6 @@ theorem movedT_ok : ∀ x ∈ movedT, hsE x.1 = .same (x.1 + 10) ∧ (fzAt x.1).
 theorem hsE_moved_all : (List.range frozen.length).all (fun i => match hsE i with
     | .same j => j == i || movedT.any (·.1 == i) | _ => true) = true := by decide +kernel
 
-theorem zeroT_hs : (List.range frozen.length).all (fun i => match hsE i with
-    | .zero _ => decide (63 ≤ i ∧ i ≤ 71) | _ => true) = true := by decide +kernel
-
-theorem zeroT_e : ∀ i, 63 ≤ i → i ≤ 71 → ∃ ca, (fzAt i).e = fzSolExt ca := by
-  intro i h1 h2
-  have : i = 63 ∨ i = 64 ∨ i = 65 ∨ i = 66 ∨ i = 67 ∨ i = 68 ∨ i = 69 ∨ i = 70 ∨ i = 71 := by omega
-  rcases this with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact ⟨_, rfl⟩
-
 theorem viewSArr_moved (m : Mem) : viewSArr m ↑EIXA = m.arr64 SIXA ∧ viewSArr m ↑EIXS = m.arr64 SIXS ∧
     viewSArr m ↑EIXN = m.arr64 SIXN ∧ viewSArr m ↑TIXA = m.arr64 STXA ∧ viewSArr m ↑TIXS = m.arr64 STXS ∧
     viewSArr m ↑TIXN = m.arr64 STXN := by
@@ -412,8 +402,8 @@ theorem fzEv_ctl_viewS (m : Mem) (k : Nat) (hk : vsPatched k = false) (hk' : k <
   exact viewSCtl_getD m k hk
 
 /-- **A header S entry taken from another header C entry** (the stream index's rows): `viewS`
-shows the solution's rows with their extents (`CTL[224] = 1` at the challenge's index). -/
-theorem same_view (m : Mem) (h224 : rd64 m CTL (Nat.toUInt64 224) = 1) {i j : Nat} (hi : i < frozen.length)
+shows the solution's rows with their extents (the compare flag `CTL[cmpCW] = 1`). -/
+theorem same_view (m : Mem) (h224 : rd64 m CTL (Nat.toUInt64 cmpCW) = 1) {i j : Nat} (hi : i < frozen.length)
     (hj : hsE i = .same j) :
     (viewS m).arr64 (fzAt i).src = m.arr64 (fzAt j).src ∧ fzEv (viewS m) (fzAt i).e = fzEv m (fzAt j).e := by
   have := List.all_eq_true.mp hsE_moved_all i (List.mem_range.mpr hi)
@@ -439,36 +429,10 @@ theorem same_view (m : Mem) (h224 : rd64 m CTL (Nat.toUInt64 224) = 1) {i j : Na
       · exact hv.2.2.2.2.1
       · exact hv.2.2.2.2.2
     · simp only [fzSolExt, fzEv_bin, fzEv_ctl_viewS m _ h6 h7]
-      have e : fzEv m (fzCtl 224) = 1 := h224
+      have e : fzEv m (fzCtl cmpCW) = 1 := h224
       have e2 : fzEv (viewS m) (fzC 2) = fzEv m (fzC 2) := rfl
       rw [e, e2]
       simp [BinOp.eval]
-
-/-- **A zeroed header S entry** (the solution's own rows): `viewS` gives it extent `0`. -/
-theorem zero_view (m : Mem) (h224 : 224 < (m.arr64 CTL).size) {i j : Nat} (hi : i < frozen.length)
-    (hj : hsE i = .zero j) : fzExt (viewS m) (fzAt i) = 0 := by
-  have := List.all_eq_true.mp zeroT_hs i (List.mem_range.mpr hi)
-  rw [hj] at this
-  simp only [decide_eq_true_eq] at this
-  obtain ⟨ca, he⟩ := zeroT_e i this.1 this.2
-  have hfs : ∀ (ks : List Nat) (c : Array Word),
-      (ks.foldl (fun c k => c.setIfInBounds k ((m.arr64 L.Checker.SCTL).getD k 0)) c).size = c.size := by
-    intro ks; induction ks with
-    | nil => intro c; rfl
-    | cons k ks ih => intro c; rw [List.foldl_cons, ih, Array.size_setIfInBounds]
-  have hz : (viewSCtl m).getD 224 0 = 0 := by
-    unfold viewSCtl
-    rw [Array.getD_eq_getD_getElem?, Array.getElem?_setIfInBounds_self_of_lt
-      (by rw [hfs, Array.size_setIfInBounds]; exact h224)]
-    rfl
-  have h0 : fzEv (viewS m) (fzCtl 224) = 0 := by
-    show rd64 (viewS m) ↑CTL (fzEv (viewS m) (.const (Nat.toUInt64 224))) = 0
-    have e : fzEv (viewS m) (.const (Nat.toUInt64 224)) = Nat.toUInt64 224 := rfl
-    rw [e, rd64, viewS_ctl, toNat_c _ (by omega), hz]
-  simp only [fzExt, he, fzSolExt]
-  show (fzEv (viewS m) (.bin .mul (fzCtl 224) (.bin .mul (fzC 2) (fzCtl ca)))).toNat = 0
-  rw [fzEv_bin, h0]
-  simp [BinOp.eval]
 
 /-! ### Header S's entries in the final memory -/
 
@@ -477,7 +441,6 @@ own). -/
 def hsVal (M : Mem) (i : Nat) : Option (Word × Word) :=
   match hsE i with
   | .same j => some (rd64 M OUT (hdrW + (10 + 2 * j)).toUInt64 + hdrW.toUInt64, rd64 M OUT (hdrW + (11 + 2 * j)).toUInt64)
-  | .zero j => some (rd64 M OUT (hdrW + (10 + 2 * j)).toUInt64 + hdrW.toUInt64, 0)
   | .extra => none
 
 theorem hsStep_other (M : Mem) (i : Nat) (hi : i < frozen.length) (k : Nat) (h10 : k ≠ 10 + 2 * i)
@@ -485,8 +448,6 @@ theorem hsStep_other (M : Mem) (i : Nat) (hi : i < frozen.length) (k : Nat) (h10
   have hfl := frozen_length
   unfold hsStep
   split
-  · rw [getD_set64_ne _ _ _ _ _ (by rw [toNat_c _ (by omega)]; exact h11),
-      getD_set64_ne _ _ _ _ _ (by rw [toNat_c _ (by omega)]; exact h10)]
   · rw [getD_set64_ne _ _ _ _ _ (by rw [toNat_c _ (by omega)]; exact h11),
       getD_set64_ne _ _ _ _ _ (by rw [toNat_c _ (by omega)]; exact h10)]
   · rfl
@@ -508,13 +469,10 @@ theorem hsVal_step (M : Mem) (i i' : Nat) (hi : i < frozen.length) (hi' : i' < f
     intro k hk hk'
     simp only [rd64, toNat_c _ hk']
     exact hsStep_other M i' hi' k (by omega) (by omega)
-  obtain ⟨hs, hz⟩ := hsE_lt hi
   unfold hsVal
   split
-  · rename_i j hj; have := hs j hj
+  · rename_i j hj; have := hsE_lt hi j hj
     rw [hr _ (by omega) (by omega), hr _ (by omega) (by omega)]
-  · rename_i j hj; have := hz j hj
-    rw [hr _ (by omega) (by omega)]
   · rfl
 
 /-- **Header S's entry `i`** after `hsMem` (the list without repeats): header C's offset moved by
@@ -542,13 +500,6 @@ theorem hsMem_entry : ∀ (is : List Nat) (M : Mem), is.Nodup → (∀ i ∈ is,
       unfold hsStep
       cases hE : hsE i with
       | same j =>
-        simp only [hE, Option.some.injEq] at hv ⊢
-        cases hv
-        refine ⟨?_, ?_⟩
-        · rw [getD_set64_ne _ _ _ _ _ (by rw [toNat_c _ (by omega)]; omega), getD_set64_same,
-            if_pos ⟨by rw [toNat_c _ (by omega)], by omega⟩]
-        · rw [getD_set64_same, if_pos ⟨by rw [toNat_c _ (by omega)], by simp only [L.Mem.size64_set64]; omega⟩]
-      | zero j =>
         simp only [hE, Option.some.injEq] at hv ⊢
         cases hv
         refine ⟨?_, ?_⟩

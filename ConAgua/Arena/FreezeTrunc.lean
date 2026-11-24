@@ -464,10 +464,10 @@ theorem ExtOK.flat {m : Mem} {ds : Array IDeclaration}
   have hps := h.psize
   have hr0 : rdW (m.arr64 L.Front.DECL) 0 = ((m.arr64 L.Front.DECL)[0]?.getD 0) := by simp [rdW]
   have hp0 : rdW (m.arr64 L.Front.DLP) 0 = ((m.arr64 L.Front.DLP)[0]?.getD 0) := by simp [rdW]
-  simp only [xD, xP, cmpOrW_off hcw]
-  refine ⟨Nat.le_refl _, ?_, Nat.le_refl _, ?_⟩
-  · rw [hr0]; omega
-  · rw [hp0]; omega
+  have e1 : xD m = rdW (m.arr64 L.Front.DECL) 0 := cmpOrW_off hcw _ _
+  have e2 : xP m = rdW (m.arr64 L.Front.DLP) 0 := cmpOrW_off hcw _ _
+  refine ⟨by rw [e1]; exact Nat.le_refl _, by rw [e1, hr0]; omega, by rw [e2]; exact Nat.le_refl _,
+    by rw [e2, hp0]; omega⟩
 
 theorem DeclsF.trunc {m : Mem} {ds : Array IDeclaration}
     (h : L.Front.DeclsF (m.arr64 L.Front.DECL) (m.arr64 L.Front.DLP) ds) (hx : ExtOK m) :
