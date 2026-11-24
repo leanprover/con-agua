@@ -1016,4 +1016,56 @@ theorem abiB_outcome2 [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : 
   · rsimp
     simp only [BinOp.eval]
 
+/-- **`ca_check_b` declines a second-phase job on a region below `2 · workerNeed`**: the job
+index at least the buffer's word `2`, its word `5` nonzero, `r8 < 2 · workerNeed own`: the call
+returns `rdx = 1`. -/
+theorem abiB_small [Host] (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
+    (fz own : List TieredArray) {k0 : Nat} {rest : Program}
+    (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ rest)) k0)
+    (B : Array Word) (dm : MachineData) (ra : Word)
+    (h5 : 5 < B.size) (hB : ∀ i (h : i < B.size), rdW dm.dmem (A (dm.regs.rdi.toNat + 8 * i)) = some B[i])
+    (hge : B.getD 2 0 ≤ dm.regs.rdx) (hL : B.getD 5 0 ≠ 0) (hsmall : dm.regs.r8.toNat < 2 * workerNeed own)
+    (hra : rdW dm.dmem (A dm.regs.rsp.toNat) = some ra) (hwn : 2 * workerNeed own < 2 ^ 64) :
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rdx = 1) dm (label abiCheckBL) := by
+  have hcP := hcode.left
+  simp only [parStub] at hcP
+  have hX := hcP.right
+  unfold bufMinStub at hX
+  have hcT := hcode.right.left.right
+  simp only [abiTail] at hcT
+  have hB2 := getD_rdW (show 2 < B.size by omega) hB
+  have hB5 := getD_rdW (show 5 < B.size by omega) hB
+  have hge' := UInt64.le_iff_toNat_le.mp hge
+  rw [Code.label (i := 0) hX rfl]
+  refine ev_label (Code.get (i := 0) hX rfl) ?_
+  refine ev_movRM (Code.get (i := 1) hX rfl) (by constructor <;> decide) (v := B.getD 2 0) (by simpa using hB2) ?_
+  refine ev_cmpRO (r := .rdx) (o := oR .rax) (v := B.getD 2 0) (Code.get (i := 2) hX rfl)
+    (Or.inr (Or.inr ⟨.rax, rfl, by rsimp⟩)) ?_
+  refine ev_jcc (Code.get (i := 3) hX rfl) (fun hlt => ?_) (fun _ => ?_)
+  · exfalso
+    simp only [CondCode.interp, cmpFlags_cf, decide_eq_true_eq] at hlt
+    rsimp at hlt; omega
+  refine ev_movRM (Code.get (i := 4) hX rfl) (by constructor <;> decide) (v := B.getD 5 0) (by rsimp; simpa using hB5) ?_
+  refine ev_cmpRO (r := .rax) (o := oI 0) (v := 0) (Code.get (i := 5) hX rfl) (Or.inl rfl) ?_
+  refine ev_jcc (Code.get (i := 6) hX rfl) (fun hz => ?_) (fun _ => ?_)
+  · exfalso
+    simp only [CondCode.interp, cmpFlags_zf] at hz
+    rsimp at hz
+    exact hL (UInt64.toBitVec_inj.mp (by simpa using hz))
+  refine ev_movRI (Code.get (i := 7) hX rfl) ?_
+  refine ev_cmpRO (r := .r8) (o := oR .rax) (v := (2 * workerNeed own).toUInt64) (Code.get (i := 8) hX rfl)
+    (Or.inr (Or.inr ⟨.rax, rfl, rfl⟩)) ?_
+  refine ev_jcc (Code.get (i := 9) hX rfl) (fun _ => ?_) (fun hge2 => ?_)
+  · rw [Code.label (i := 3) hcT rfl]
+    refine ev_label (Code.get (i := 3) hcT rfl) ?_
+    refine ev_movRI (Code.get (i := 4) hcT rfl) ?_
+    refine ev_movRI (Code.get (i := 5) hcT rfl) ?_
+    refine ev_ret (Code.get (i := 6) hcT rfl) (ra := ra) (by simpa [Reg64s.set64_rax, Reg64s.set64_rdx] using hra) ?_
+    exact Eventually.done _ ⟨rfl, by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp]⟩
+  · exfalso
+    simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not, Nat.not_lt] at hge2
+    rsimp at hge2
+    rw [Nat.toUInt64, UInt64.toNat_ofNat_of_lt' (by simpa [UInt64.size] using hwn)] at hge2
+    omega
+
 end ConAgua.Final
