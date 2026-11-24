@@ -303,4 +303,69 @@ def TwinCompareVerdictSeqI (bC bS : ByteArray) (c : L.Word) : Prop :=
     L.Arena.TwinFailsV (checkJobList .verified ipins (some (solutionOf IS recsC)) IC recsC.toArray
       (List.range recsC.toArray.size)) sJ c)
 
+/-! ## The threads: each worker continues from its solution jobs to its challenge jobs -/
+
+/-- **Both phases' pools, each worker continuing** (`--jobs`): job-list pairs, one per worker:
+the first lists cover the solution's positions, the second the challenge's, each list increasing,
+and each worker runs its solution list from `s.worker` (no solution) and then, from the state that
+left, its challenge list with the solution `J`. -/
+def PoolJobs2 (pins : List INatOpPinSet) (J : ISolution) (IS IC : IStreamIndex)
+    (dsS dsC : Array IDeclaration) (s : AState) : Prop :=
+  ∃ (parts : List (List Nat × List Nat)),
+    (∀ t < dsS.size, ∃ q ∈ parts, t ∈ q.1) ∧ (∀ t < dsC.size, ∃ q ∈ parts, t ∈ q.2) ∧
+    (∀ q ∈ parts, (∀ t ∈ q.1, t < dsS.size) ∧ (∀ t ∈ q.2, t < dsC.size)) ∧
+    (∀ q ∈ parts, q.1.Pairwise (· < ·) ∧ q.2.Pairwise (· < ·)) ∧
+    (∀ q ∈ parts, ∃ w w', checkJobList .verified pins none IS dsS q.1 s.worker = .ok (.ok (), w) ∧
+      checkJobList .verified pins (some J) IC dsC q.2 w = .ok (.ok (), w'))
+
+/-- **The twin accepts the comparison as the threaded x64 run does**: the stages up to the
+challenge's index (ending in `sI`), then workers each running some of the solution's jobs from
+`sI.worker` and then, continuing, some of the challenge's with the solution (`PoolJobs2`). -/
+def TwinComparesAcceptsThr (bC bS : ByteArray) : Prop :=
+  ∃ (pins : List NatOpPinSet) (ipins : List INatOpPinSet) (dsS : Array IDeclaration)
+    (recsC : List IDeclaration) (IS IC : IStreamIndex) (sI : AState),
+    CmpStagesI bC bS pins ipins dsS recsC IS IC sI ∧
+    PoolJobs2 ipins (solutionOf IS recsC) IS IC dsS recsC.toArray sI
+
+/-- The sequential run is the threaded one with one worker. -/
+theorem TwinComparesAcceptsSeqI.thr {bC bS : ByteArray} (h : TwinComparesAcceptsSeqI bC bS) :
+    TwinComparesAcceptsThr bC bS := by
+  obtain ⟨pins, ipins, dsS, recsC, IS, IC, sI, sJ, sK, hS, hJS, hJC⟩ := h
+  refine ⟨pins, ipins, dsS, recsC, IS, IC, sI, hS, [(List.range dsS.size, List.range recsC.toArray.size)],
+    fun t ht => ⟨_, List.mem_singleton_self _, List.mem_range.mpr ht⟩,
+    fun t ht => ⟨_, List.mem_singleton_self _, List.mem_range.mpr ht⟩, fun q hq => ?_, fun q hq => ?_,
+    fun q hq => ?_⟩
+  all_goals rw [List.mem_singleton] at hq; subst hq
+  · exact ⟨fun t ht => List.mem_range.mp ht, fun t ht => List.mem_range.mp ht⟩
+  · exact ⟨List.pairwise_lt_range, List.pairwise_lt_range⟩
+  · exact ⟨sJ, sK, hJS, hJC⟩
+
+/-- **The threaded run rejects or declines**: a stage fails (`TwinCompareVerdict`), or after every
+stage some worker's list of the solution's jobs fails from `sI.worker`, or the solution's jobs are
+accepted by workers covering them and some worker, after its solution list (accepted from
+`sI.worker`, ending in `w`), fails on its list of the challenge's jobs from `w` with the solution,
+with an error of class `c`. -/
+def TwinCompareVerdictThr (bC bS : ByteArray) (c : L.Word) : Prop :=
+  TwinCompareVerdict bC bS c ∨
+  (∃ (pins : List NatOpPinSet) (ipins : List INatOpPinSet) (dsS : Array IDeclaration)
+    (recsC : List IDeclaration) (IS IC : IStreamIndex) (sI : AState) (l : List Nat),
+    CmpStagesI bC bS pins ipins dsS recsC IS IC sI ∧ (∀ t ∈ l, t < dsS.size) ∧
+    L.Arena.TwinFailsV (checkJobList .verified ipins none IS dsS l) sI.worker c) ∨
+  (∃ (pins : List NatOpPinSet) (ipins : List INatOpPinSet) (dsS : Array IDeclaration)
+    (recsC : List IDeclaration) (IS IC : IStreamIndex) (sI w : AState) (lS lC : List Nat),
+    CmpStagesI bC bS pins ipins dsS recsC IS IC sI ∧ PoolJobs .verified ipins none IS dsS sI ∧
+    (∀ t ∈ lS, t < dsS.size) ∧ (∀ t ∈ lC, t < recsC.length) ∧
+    checkJobList .verified ipins none IS dsS lS sI.worker = .ok (.ok (), w) ∧
+    L.Arena.TwinFailsV (checkJobList .verified ipins (some (solutionOf IS recsC)) IC recsC.toArray lC)
+      w c)
+
+theorem TwinCompareVerdictSeqI.thr {bC bS : ByteArray} {c : L.Word}
+    (h : TwinCompareVerdictSeqI bC bS c) : TwinCompareVerdictThr bC bS c := by
+  rcases h with h | ⟨pins, ipins, dsS, recsC, IS, IC, sI, hS, hF⟩ |
+    ⟨pins, ipins, dsS, recsC, IS, IC, sI, sJ, hS, hJ, hF⟩
+  · exact .inl h
+  · exact .inr (.inl ⟨pins, ipins, dsS, recsC, IS, IC, sI, _, hS, fun t ht => List.mem_range.mp ht, hF⟩)
+  · exact .inr (.inr ⟨pins, ipins, dsS, recsC, IS, IC, sI, sJ, _, _, hS, PoolJobs.of_seq hJ,
+      fun t ht => List.mem_range.mp ht, fun t ht => by simpa using List.mem_range.mp ht, hJ, hF⟩)
+
 end ConAgua.Final
