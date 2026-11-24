@@ -540,20 +540,22 @@ theorem hsMem_entry : ∀ (is : List Nat) (M : Mem), is.Nodup → (∀ i ∈ is,
       have hi0 := h i (by simp)
       unfold hsVal at hv
       unfold hsStep
-      split at hv
-      · rename_i j hj
+      cases hE : hsE i with
+      | same j =>
+        simp only [hE, Option.some.injEq] at hv ⊢
         cases hv
         refine ⟨?_, ?_⟩
         · rw [getD_set64_ne _ _ _ _ _ (by rw [toNat_c _ (by omega)]; omega), getD_set64_same,
             if_pos ⟨by rw [toNat_c _ (by omega)], by omega⟩]
         · rw [getD_set64_same, if_pos ⟨by rw [toNat_c _ (by omega)], by simp only [L.Mem.size64_set64]; omega⟩]
-      · rename_i j hj
+      | zero j =>
+        simp only [hE, Option.some.injEq] at hv ⊢
         cases hv
         refine ⟨?_, ?_⟩
         · rw [getD_set64_ne _ _ _ _ _ (by rw [toNat_c _ (by omega)]; omega), getD_set64_same,
             if_pos ⟨by rw [toNat_c _ (by omega)], by omega⟩]
         · rw [getD_set64_same, if_pos ⟨by rw [toNat_c _ (by omega)], by simp only [L.Mem.size64_set64]; omega⟩]
-      · cases hv
+      | extra => simp only [hE] at hv; cases hv
     · have := hsMem_entry is (hsStep M i0) hnd.2 (fun j hj => h j (by simp [hj])) hsz' i hi' v
         (by rw [hsVal_step _ _ _ (h i (by simp [hi'])) (h i0 (by simp))]; exact hv)
       exact this

@@ -118,6 +118,10 @@ theorem checkB_seqR {m : Mem} (hJ0 : FlushOK m → JobR ipins dn ds J I (flushMe
   have hl : (UInt64.toNat (s₀.mem.len64 CTLF)) = 0 := by simp [Mem.len64, hctlf]
   have hlo' : s₀.mem.glob ⟨9⟩ = 0 := hlo
   have hhi'' : s₀.mem.glob ⟨11⟩ = hi := hhi'
+  have hw0 : (s₀.mem.words CTLF).size = 0 := hctlf
+  -- the seed re-read's branch is dead: `CTLF` is empty (the memory there differs from `s₀`'s only in globals)
+  have hgd : ∀ {M : Mem}, (M.len64 CTLF != 0) = true → M.words CTLF = s₀.mem.words CTLF → False :=
+    fun {M} h e => by simp [Mem.len64, Mem.arr64, e, hw0] at h
   rw [invoke_eq _ checkerProg_lookup_check_b]
   simp only [callFn, checkBL]
   cases n with
@@ -125,12 +129,13 @@ theorem checkB_seqR {m : Mem} (hJ0 : FlushOK m → JobR ipins dn ds J I (flushMe
   | succ n =>
     have hJ := checkJobs_seqTR hJ0 hPB hJP n (by omega) hi hhi
     have hFl := flushCaches_spec checkerProg checkerProg_flushProg n
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · ·), (hFl ·)]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, st64, warr, (hJ · ·), (hFl ·)]
     all_goals (try simp only [L.St.setLoc_mem, St.setLoc_loc,
       L.Locals.init_nil, Cmp.eval,
       reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
     all_goals (try simp only [hl, Mem.copy64_zero] at *)
     all_goals (try simp only [St.setG, Mem.setG, St.setLoc] at *)
+    all_goals (try (exfalso; exact hgd ‹_› rfl))
     all_goals first
       | (simp_all (config := { decide := true }) [Mem.arr64]; done)
       | skip
