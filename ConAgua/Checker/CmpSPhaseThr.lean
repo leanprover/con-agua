@@ -162,7 +162,7 @@ theorem cmpThreadsS_poolI {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : 
     obtain ⟨hz, hI0, -, -⟩ := hth t₀ ht₀
     intro j
     have hKI := indexKeysIn_of hJM.arena.base H.hI H.hpI
-    have hJR := JobM.fresh (hJM.trunc hoff hKI) hwf hoff
+    have hJR := JobM.fresh (hJM.trunc hoff hKI (.inr (F6.extOKS hF h6 hV))) hwf hoff
     refine ⟨freshMem mS, ⟨_, ⟨hJR, PExt.of_ext (Ext.refl _), rfl⟩, ?_⟩, ?_, ?_⟩
     · exact ⟨by simp [AState.worker, estore_dropScratch_self hwf hoff], rfl, rfl⟩
     · rw [freshMem_arr8]
@@ -269,7 +269,7 @@ theorem cmpThreadsC_poolI {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : 
     intro j
     have hKI := indexKeysIn_of hJM.arena.base H.hI H.hpI
     have hSK : SolKeysIn m9 J := solKeysIn_of hJM.arena.base H.hIS H.hpIS H.hmates
-    have hJR := JobM.fresh (hJM.truncJ hoff hKI (fun J' e => by cases e; exact hSK)) hwf hoff
+    have hJR := JobM.fresh (hJM.truncJ hoff hKI (.inr (F6.extOK hF h6)) (fun J' e => by cases e; exact ⟨hSK, (F6.ext hF h6).1⟩)) hwf hoff
     refine ⟨freshMem m9, ⟨_, ⟨hJR, PExt.of_ext (Ext.refl _), rfl⟩, ?_⟩, ?_, ?_⟩
     · exact ⟨by simp [AState.worker, estore_dropScratch_self hwf hoff], rfl, rfl⟩
     · rw [freshMem_arr8]

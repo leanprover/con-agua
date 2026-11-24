@@ -153,4 +153,20 @@ theorem _root_.L.Arena.JobM.csViewS {J : ISolution} {m m9 mS : Mem}
 
 end
 
+/-- **`ExtOK` at header S's view** of mode `6`'s frozen memory (the extent words are not patched;
+the view's records are the solution's). -/
+theorem F6.extOKS {bC bS pb : ByteArray} {sz : TieredArray → Nat} {PS : PhaseS bC bS} {m₇ m : Mem}
+    (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) {c : Word} {m9 mS : Mem}
+    (h6 : F6 PS m c m9) (hV : CsViewS m m9 mS) : ExtOK mS := by
+  obtain ⟨h1, -, h3, h4, -, h6', h7⟩ := F6.ext hF h6
+  have c1 : rdW (mS.arr64 CTL) (UInt64.ofNat cmpCW) = 1 := by rw [hV.frame.ctl _ (by decide)]; exact h1
+  have cD : rdW (mS.arr64 CTL) (UInt64.ofNat cmpKD) = rdW (m9.arr64 CTL) (UInt64.ofNat cmpKD) :=
+    hV.frame.ctl _ (by decide)
+  have cP : rdW (mS.arr64 CTL) (UInt64.ofNat cmpKP) = rdW (m9.arr64 CTL) (UInt64.ofNat cmpKP) :=
+    hV.frame.ctl _ (by decide)
+  have e1 : xD mS = rdW (mS.arr64 CTL) (UInt64.ofNat cmpKD) := cmpOrW_on c1 _ _
+  have e2 : xP mS = rdW (mS.arr64 CTL) (UInt64.ofNat cmpKP) := cmpOrW_on c1 _ _
+  exact ⟨by rw [e1, cD, hV.decl]; exact h3, by rw [e1, cD]; exact h4, by rw [e2, cP, hV.dlp]; exact h6',
+    by rw [e2, cP]; exact h7⟩
+
 end L.Checker

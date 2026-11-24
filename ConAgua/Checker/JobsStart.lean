@@ -50,6 +50,14 @@ theorem FoldOn.c224 {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Array ID
   rw [h.frame.ctl _ (not_mem_biC (by decide)), h.r7.since.frame.ctl _ (by decide)]
   exact loadMem_rd b pb sz CTL 224
 
+/-- **The compare flag after the index build** is the loaded memory's `0` (`cmp_ext` runs only in
+the compared run's modes `6`/`7`). -/
+theorem FoldOn.c229 {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Array IDeclaration}
+    {ipins : List INatOpPinSet} {sE : AState} {I : IStreamIndex} {sF : AState} {m₇ m : Mem}
+    (h : FoldOn b pb sz ds ipins sE I sF m₇ m) : rdW (m.arr64 CTL) (UInt64.ofNat cmpCW) = 0 := by
+  rw [h.frame.ctl _ (not_mem_biC (by decide)), h.r7.since.frame.ctl _ (by decide)]
+  exact loadMem_rd b pb sz CTL _
+
 /-- **The jobs' start**: after the index build and the cache flush, `JobR` at the index state
 with its caches emptied (the twin's worker state, `AState.worker`: the scratch tier and memos as
 every job's `enterScratch` leaves them, `Arena/JobStart.lean`). -/
@@ -134,6 +142,9 @@ theorem FoldOn.jobM {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Array ID
     (h : FoldOn b pb sz ds ipins sE I sF m₇ m) (hx : Ext sE.store sF.store) :
     JobM ipins (dnOf sE.store) ds none I m sF :=
   h.jobMJ hx (JSol.none h.c224)
+
+theorem FoldAt.c229 {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
+    (h : FoldAt b pb sz PA m₇ m) : rdW (m.arr64 CTL) (UInt64.ofNat cmpCW) = 0 := h.on.c229
 
 theorem FoldAt.c224 {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
     (h : FoldAt b pb sz PA m₇ m) : rdW (m.arr64 CTL) 224 = 0 := h.on.c224

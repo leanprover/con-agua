@@ -243,6 +243,75 @@ theorem F6.jobM (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) 
         omega⟩
   exact hJM6.setFlag hf9 hJS
 
+theorem wmax_toNat (a b : Word) : (wmax a b).toNat = max a.toNat b.toNat := by
+  unfold wmax
+  split <;> rename_i h <;> simp only [UInt64.lt_iff_toNat_lt] at h <;> omega
+
+/-- **The extent words after mode `6`**: the compare flag on, `CTL[cmpKD]` and `CTL[cmpKP]` the
+larger of the two phases' record counts and pool tops (the challenge's in `m9`, the solution's in
+`m`), with room. -/
+theorem F6.ext (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) {c : Word} {m9 : Mem}
+    (h6 : F6 PS m c m9) :
+    rdW (m9.arr64 CTL) (UInt64.ofNat cmpCW) = 1 ∧
+    (rdW (m9.arr64 L.Front.DECL) 0).toNat ≤ (rdW (m9.arr64 CTL) (UInt64.ofNat cmpKD)).toNat ∧
+    (rdW (m.arr64 L.Front.DECL) 0).toNat ≤ (rdW (m9.arr64 CTL) (UInt64.ofNat cmpKD)).toNat ∧
+    (rdW (m9.arr64 CTL) (UInt64.ofNat cmpKD)).toNat < 2 ^ 60 ∧
+    (rdW (m9.arr64 L.Front.DLP) 0).toNat ≤ (rdW (m9.arr64 CTL) (UInt64.ofNat cmpKP)).toNat ∧
+    (rdW (m.arr64 L.Front.DLP) 0).toNat ≤ (rdW (m9.arr64 CTL) (UInt64.ofNat cmpKP)).toNat ∧
+    (rdW (m9.arr64 CTL) (UInt64.ofNat cmpKP)).toNat < 2 ^ 63 := by
+  have hcs := h6.csStash
+  obtain ⟨m6, ⟨m2, m3, dsC, sG, res, m4, m5, h, hMt, hMI, hK, I, a', hI, hB, hFz, hfs, hBK, hfr, -⟩,
+    rfl, -⟩ := h6
+  have hctl : 231 < (m.arr64 CTL).size := by
+    rw [hF.sizeAt]
+    have := hF.r7.since.caps.2.1; rw [loadMem_arr, Array.size_replicate] at this
+    simp only [ctlMin] at this; omega
+  have hsz6 : (m6.arr64 CTL).size = (m.arr64 CTL).size := by
+    rw [hfr.size, hK.frame.size, h.frameM.size]
+  have hf1 := MemFrame.setCtl m6 224 1
+  have hX : ((m6.set64 CTL 224 1).arr64 CTL).size = (m.arr64 CTL).size := by rw [hf1.size, hsz6]
+  have e9 : ∀ b : TieredArray, b ≠ CTL → (cmpExtM (m6.set64 CTL 224 1)).arr64 b = m6.arr64 b := fun b hb =>
+    ((cmpExt_frame _).arr b (by simp) hb).trans (hf1.arr b (by simp) hb)
+  have r229 : rdW ((cmpExtM (m6.set64 CTL 224 1)).arr64 CTL) (UInt64.ofNat cmpCW) = 1 := by
+    simp only [cmpExtM, cmpCW]
+    rw [(MemFrame.setCtl _ 231 _).ctl _ (by decide), (MemFrame.setCtl _ 230 _).ctl _ (by decide)]
+    exact rdW_set64_self _ _ _ _ (by rw [hX]; simp; omega)
+  have r230 : rdW ((cmpExtM (m6.set64 CTL 224 1)).arr64 CTL) (UInt64.ofNat cmpKD) =
+      wmax (rdW (m6.arr64 L.Front.DECL) 0) (rdW (m6.arr64 SDECL) 0) := by
+    simp only [cmpExtM, cmpKD]
+    rw [(MemFrame.setCtl _ 231 _).ctl _ (by decide), show (UInt64.ofNat 230 : Word) = 230 from rfl,
+      rdW_set64_self _ _ _ _ (by simp only [L.Mem.size64_set64, hX]; simp; omega),
+      hf1.arr _ (by simp) (by decide), hf1.arr _ (by simp) (by decide)]
+  have r231 : rdW ((cmpExtM (m6.set64 CTL 224 1)).arr64 CTL) (UInt64.ofNat cmpKP) =
+      wmax (rdW (m6.arr64 L.Front.DLP) 0) (rdW (m6.arr64 SDLP) 0) := by
+    simp only [cmpExtM, cmpKP]
+    rw [show (UInt64.ofNat 231 : Word) = 231 from rfl,
+      rdW_set64_self _ _ _ _ (by simp only [L.Mem.size64_set64, hX]; simp; omega),
+      hf1.arr _ (by simp) (by decide), hf1.arr _ (by simp) (by decide)]
+  have sD : rdW (m6.arr64 SDECL) 0 = rdW (m.arr64 L.Front.DECL) 0 := by
+    have := hcs.decl 0 (by omega); rw [e9 _ (by decide)] at this
+    simp only [rdW, UInt64.toNat_zero, this]
+  have sP : rdW (m6.arr64 SDLP) 0 = rdW (m.arr64 L.Front.DLP) 0 := by
+    have := hcs.dlp 0 (by omega); rw [e9 _ (by decide)] at this
+    simp only [rdW, UInt64.toNat_zero, this]
+  have hD6 := hB.decls
+  have hDm := hF.build.decls
+  have b1 := hD6.count; have b2 := hD6.room; have b3 := hD6.dsize; have b4 := hD6.ptop; have b5 := hD6.psize
+  have c1 := hDm.count; have c2 := hDm.room; have c3 := hDm.dsize; have c4 := hDm.ptop; have c5 := hDm.psize
+  have g : ∀ a : Array Word, rdW a 0 = a[0]?.getD 0 := fun a => by simp [rdW]
+  rw [r229, r230, r231, e9 L.Front.DECL (by decide), e9 L.Front.DLP (by decide), sD, sP, wmax_toNat,
+    wmax_toNat]
+  simp only [g] at *
+  refine ⟨trivial, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> omega
+
+/-- **`ExtOK` at mode `6`'s frozen memory.** -/
+theorem F6.extOK (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) {c : Word} {m9 : Mem}
+    (h6 : F6 PS m c m9) : ExtOK m9 := by
+  obtain ⟨h1, h2, -, h4, h5, -, h7⟩ := F6.ext hF h6
+  have e1 : xD m9 = rdW (m9.arr64 CTL) (UInt64.ofNat cmpKD) := cmpOrW_on h1 _ _
+  have e2 : xP m9 = rdW (m9.arr64 CTL) (UInt64.ofNat cmpKP) := cmpOrW_on h1 _ _
+  exact ⟨by rw [e1]; exact h2, by rw [e1]; exact h4, by rw [e2]; exact h5, by rw [e2]; exact h7⟩
+
 /-- **The challenge's job relation after mode `6`**: the steps' twin facts, the challenge's index
 build, and the job relation at the flushed memory, at the solution `solutionOf IS res`. -/
 theorem F6.jobR (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) {c : Word} {m9 : Mem}

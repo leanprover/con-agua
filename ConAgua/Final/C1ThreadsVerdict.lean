@@ -124,7 +124,7 @@ theorem c1Thr_failC {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS
   have H := hH hstepS
   -- the threads' starts
   have hKI := indexKeysIn_of hJM.arena.base H.hI H.hpI
-  have hJR0 := JobM.fresh (hJM.trunc hoff hKI) hwf hoff
+  have hJR0 := JobM.fresh (hJM.trunc hoff hKI (.inr (F6.extOKS hF h6 hV))) hwf hoff
   have hPB0 : X₀.arr8 L.Rom.PB = pb.data.toList.toArray := by
     rw [freshMem_arr8]
     show mS.bytes L.Rom.PB = _
@@ -216,7 +216,7 @@ theorem c1Thr_failC {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS
   have HC := hHC hstepC
   have hKIC := indexKeysIn_of hJM9.arena.base HC.hI HC.hpI
   have hSK : SolKeysIn m9 J := solKeysIn_of hJM9.arena.base HC.hIS HC.hpIS HC.hmates
-  have hJRC := JobM.fresh (hJM9.truncJ hoff hKIC (fun J' e => by cases e; exact hSK)) hwf hoff
+  have hJRC := JobM.fresh (hJM9.truncJ hoff hKIC (.inr (F6.extOK hF h6)) (fun J' e => by cases e; exact ⟨hSK, (F6.ext hF h6).1⟩)) hwf hoff
 
   have hcrs : CrsFor PS.ipins (dnOf sG.store) res.toArray (Prog.subPB pb.data.toList checkerProg) (some J) :=
     fun _ => checkerProg_crsSpecPB pb.data.toList hr hpre hcdC

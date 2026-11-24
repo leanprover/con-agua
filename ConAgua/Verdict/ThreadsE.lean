@@ -392,7 +392,7 @@ theorem threads_twinVerdictPooled (hCd : CheckerCd)
     have hoff := hF.build.off
     have hw := hF.build.drv.state.wf
     have hKI := indexKeysIn_of hF.jobM.arena.base H.hI H.hpI
-    have hJR := JobM.fresh (hF.jobM.trunc hoff hKI) hw hoff
+    have hJR := JobM.fresh (hF.jobM.trunc hoff hKI (.inl hF.c229)) hw hoff
     refine ⟨freshMem m, ⟨_, ⟨hJR, PExt.of_ext (Ext.refl _), rfl⟩, ?_⟩, ?_, ?_⟩
     · exact ⟨by simp [AState.worker, enableScratch_dropScratch], rfl, rfl⟩
     · rw [freshMem_arr8]

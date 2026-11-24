@@ -279,7 +279,7 @@ theorem biPc_mem (x : Word) (h : biPc x = true) : x ∈ biC := by
   omega
 
 theorem not_mem_biC {x : Word} (h : x.toNat = 150 ∨ x.toNat = 151 ∨ x.toNat = 224 ∨ x.toNat = 73 ∨
-    x.toNat = 75 ∨ x.toNat = 240 ∨ (220 ≤ x.toNat ∧ x.toNat ≤ 228)) : x ∉ biC := by
+    x.toNat = 75 ∨ x.toNat = 240 ∨ (220 ≤ x.toNat ∧ x.toNat ≤ 231)) : x ∉ biC := by
   intro hm
   simp only [biC, List.mem_map, List.mem_filter, List.mem_range] at hm
   obtain ⟨y, ⟨hy, hb⟩, rfl⟩ := hm
