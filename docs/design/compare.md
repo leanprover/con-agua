@@ -380,3 +380,36 @@ order, `checkStreamJ`), `TwinCompareVerdict`, `TwinCompareVerdictPooled`.
   Peak RSS is 2.8× con-ron's sequentially (flat: 641 MB against 388 MB); the compared run adds
   about 380 MB over the flat one, where con-ron adds nothing. Not yet analysed: candidates are the
   two phases' records and environment records in one store, and the stash copies.
+* H2f: header S swaps the solution's and the challenge's index rows (`hsE`: SIX*/STX* ↦ the
+  challenge's EIX*/TIX* images), so both headers are permutations of one image set (the layout
+  cannot alias two ids to one image, and every extent stays equal across headers); `cmp7_out`
+  proved: **0 `sorry`**. H9: gates green (16 Lean warnings, 178 unused imports); `CmpCall` moved out
+  of `Final/` (internal, `AbiCall.cmp`); `checkerFile_drv_accepts_regs` takes `AbiCall b none`.
+* Final checks (compare2 d526c7dd6): `diff-e2e --refs` 766/766 agree, REFDIFF/UNSOUND/INCOMPLETE/
+  CRASH/TIMEOUT 0; `--jobs 4` 766/766. Flat Init against master (H2f, instructions:u, 2 rounds):
+  1 thread 202 631.84 M both (±5 k), 16 threads 204.10–204.13 G against 204.12–204.14 G (noise),
+  RSS 627/764 MB both.
+* **Memory** (H10, `mincore` per slot and `/proc/self/status`; raw `_tmp/compare2/mem-*.txt`): of
+  the compared run's extra ~400 MB over the flat run, 338 MB are the second input file's mapped
+  pages (clean page cache; the flat run's own input is 341 of its 652 MB, the main gap to con-ron in
+  both modes); the anonymous extra is +62 MB sequential, +86 MB at 16 threads: the store +0
+  (hash-consing: one Init), POOL +10.5 (not explained yet), EREC +4.2 and the two indices ≈ +21
+  (con-ron holds them too), the stash copies (D57) ≈ +23 sequential / +10 threaded (ours; keeping
+  the challenge's index rows in place in the sequential switch would save ~12 MB), Ind.MCM +4.2,
+  OUT +38 (threaded: the solution's images and the POOL/EREC growth). Follow-up idea: unmap the
+  challenge's input after its parse (needs an entry boundary in `main.c`; would help the flat run's
+  input the same way).
+
+### What went wrong (compare2)
+* **Three harness designs.** The three-entry harness (H3) was built and proved, then rejected (the
+  user: two entries, `main.c` stupid); the two-buffers design (A') was then rejected for
+  duplicating the solution's terms; design (i) (one image, two headers) took an independent review
+  and four amendments. Lesson: send the user the harness and memory shape before the machine
+  proofs, not the statements alone.
+* **The tier-0 wall again** (in-place sequential run): lane compare's H9 had hit it; the fix was a
+  statement change (the challenge's jobs continue on the solution's worker, `sJ`), not a proof.
+* **Equal lengths across headers** were found late (H7b): every job-relation transport goes
+  through `MemFrame`, which fixes array sizes; then aliasing in header S (H2f) — both cost an L
+  change and a regeneration each.
+* **Helper context**: 20 helper shifts; regenerations (~15 min each) and full rebuilds (~15 min)
+  dominated the integration; one memory kill (17 GB, a `let` over `workerNeed parOwnedL`).
