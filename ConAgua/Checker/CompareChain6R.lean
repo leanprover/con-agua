@@ -86,7 +86,7 @@ structure Prep6 (pre : PreludeIx) (rC : ParseResultD) (sF : AState) (m2 : Mem) :
   keep : Keep6 m2 pre
   memos : IndMemos m2
 
-theorem moveA_memos : ∀ b ∈ (([OUT] : List TieredArray) ++ moveA),
+theorem moveA_memos : ∀ b ∈ (sstA ++ moveA),
     b ≠ ILFM ∧ b ≠ L.Stubs.CRM ∧ (b.arr < 201 ∨ 208 < b.arr) := by
   intro b hb
   rcases List.mem_append.mp hb with h | h
@@ -97,7 +97,7 @@ theorem moveA_memos : ∀ b ∈ (([OUT] : List TieredArray) ++ moveA),
 theorem prep6_of (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) (hst : Stash m PS.pre PS.rC)
     (hk6 : Keep6 m PS.pre) {m2 : Mem} (h : Q62 PS m m2) : Prep6 PS.pre PS.rC PS.sF m2 := by
   obtain ⟨m1, ⟨m0, hO, -, hI, hf⟩, hok, rfl⟩ := h
-  have hf' : MemFrame (([OUT] : List TieredArray) ++ moveA) moveC m m1 :=
+  have hf' : MemFrame (sstA ++ moveA) moveC m m1 :=
     (hO.memFrame.mono (by simp) (by simp)).trans (hf.mono (fun b hb => List.mem_append_right _ hb) (by simp))
   have hst1 : Stash m1 PS.pre PS.rC := hst.frame hf' (by decide) (by decide)
   have hD1 : (m1.arr64 L.Front.DECL).size < 2 ^ 63 := by
@@ -261,7 +261,7 @@ theorem sideStep6 (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m
 
 /-- The arrays mode `6` writes before the mates. -/
 def A64 : List TieredArray :=
-  ([OUT] : List TieredArray) ++ moveA ++ ([L.Front.DECL] : List TieredArray) ++ stageA_prepare_prelude ++
+  sstA ++ moveA ++ ([L.Front.DECL] : List TieredArray) ++ stageA_prepare_prelude ++
     ([L.Front.DECL, L.Ind.MCM] : List TieredArray)
 
 /-- The control words mode `6` writes before the mates. -/
@@ -269,11 +269,13 @@ def C64 : List Word := moveC ++ stageC_prepare_prelude ++ [L.Ind.mcSch.cs, L.Ind
 
 theorem A64_arr : ∀ b ∈ A64, (129 ≤ b.arr ∧ b.arr ≤ 134) ∨ (210 ≤ b.arr ∧ b.arr ≤ 215) ∨
     b.arr = 240 ∨ b.arr = 67 ∨ b.arr = 208 ∨ b.arr = 33 ∨ b.arr = 34 ∨ b.arr = 75 ∨ b.arr = 76 ∨
-    b.arr = 200 := by
+    b.arr = 200 ∨ (224 ≤ b.arr ∧ b.arr ≤ 227) := by
   intro b hb
   simp only [A64, List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at hb
   rcases hb with (((h | h) | h) | h) | h | h
-  · subst h; decide
+  · rcases sstA_arr h with rfl | e
+    · decide
+    · omega
   · have := moveA_facts b h; omega
   · subst h; decide
   · have := stageA_prep_facts b h; omega

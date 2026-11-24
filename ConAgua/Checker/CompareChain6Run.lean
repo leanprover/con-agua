@@ -8,6 +8,7 @@ import all ConAgua.Checker.CompareEntry
 import all ConAgua.Arena.FreezeCmp
 import all ConAgua.Checker.CmpSeqEntry
 import ConAgua.Checker.CheckARun
+import ConAgua.Checker.CmpSStash
 meta import ConAgua.Checker.LoopProgTac
 import ConAgua.Checker.LoopProgTac
 
@@ -79,12 +80,25 @@ theorem checkC3_run {bC bS pb : ByteArray} {sz : TieredArray → Nat} (PS : Phas
     (hmode : M.glob MODE = md)
     (N : Nat) (hN : N < 2 ^ 62) (rs : List Word) (m' : Mem)
     (hrun : L.run checkerProg N "check" [] M = .ok (rs, m')) :
-    ∃ c, PostPC k (F6 PS m c) m' ∧ rs.headD 0 = (9223372036854775808 : Word) + c := by
+    ∃ c, PostC3 k (F6 PS m c) m' ∧ rs.headD 0 = (9223372036854775808 : Word) + c := by
   have hlc : checkerProg.lookup "check" = some checkL := by chk_lk
   have hc3 : checkerProg.lookup "check_c3" = some checkC3L := by chk_lk
   have hpc : checkerProg.lookup "par_compact" = some parCompactL := by chk_lk
   let B : Mem → Prop := fun x => x.bytes = m.bytes
   have hB : ∀ x y, L.Keep x y → B x → B y := fun x y hk hx => hk.1.trans hx
+  have h0 : StageSpec checkerProg "cmp_sstash" (fun x => OutEq m x ∧ B x) (fun _ x => OutEq m x ∧ B x) :=
+    fun n _ s₀ => triple_post (cmpSStash_spec checkerProg (by chk_lk) n s₀) fun _ _ ⟨hl, -, he⟩ =>
+      ⟨hl, fun ⟨hO', hb⟩ => by
+        rw [he]; exact ⟨hO'.sstash, by simp only [B, sstashM, Mem.copy64_bytes]; exact hb⟩⟩
+  have hfs : ∀ x ∈ fzsImgs, checkerProg.lookup (fzsName x.1) = some (fzsF x.1) := by
+    intro x hx
+    have h1 : x.1 ∈ [60, 61, 62] := by
+      rw [← (by decide : fzsImgs.map (·.1) = [60, 61, 62])]; exact List.mem_map_of_mem hx
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at h1
+    rcases h1 with h | h | h <;> rw [h]
+    · show checkerProg.lookup "fzs_60" = some (fzsF 60); chk_lk
+    · show checkerProg.lookup "fzs_61" = some (fzsF 61); chk_lk
+    · show checkerProg.lookup "fzs_62" = some (fzsF 62); chk_lk
   have h1 := ((moveStep6 (PS := PS) (m₇ := m₇) hF hsz6).keepB B hB).mono
     (Pre' := fun c x => (OutEq m x ∧ B x) ∧ CntAt c x) (Post' := fun _ x => Q61 PS m x ∧ B x)
     (fun _ _ ⟨⟨a, b⟩, c⟩ => ⟨⟨a, c⟩, b⟩) (fun _ _ h => h)
@@ -105,10 +119,10 @@ theorem checkC3_run {bC bS pb : ByteArray} {sz : TieredArray → Nat} (PS : Phas
   | succ n =>
     have hn : n ≤ 2 ^ 62 := by omega
     let s₀ : St := { mem := M, loc := Locals.init [] }
-    let P : Word → Mem → Prop := fun x m'' => ∃ c, PostPC k (F6 PS m c) m'' ∧ x = 9223372036854775808 + c
+    let P : Word → Mem → Prop := fun x m'' => ∃ c, PostC3 k (F6 PS m c) m'' ∧ x = 9223372036854775808 + c
     have hC : ∀ s₁ : St, ⦃fun s => s = s₁⦄ invoke checkerProg (exec checkerProg n) "check_c3" [k]
         ⦃fun r s' => s₁.mem = s₀.mem → P (r.headD 0) s'.mem; ⊤⦄ := fun s₁ =>
-      triple_post (checkC3_of_stages hc3 hpc checkerProg_fz h1 h2 h3 h4 h5 h6
+      triple_post (checkC3_of_stages hc3 hpc checkerProg_fz (by chk_lk) hfs h0 h1 h2 h3 h4 h5 h6
         (F := F6 PS m) (fun c x hx => ⟨x, hx, rfl⟩) k n hn s₁)
         fun _ _ h e => h (by rw [e]; exact ⟨hO, hO.bytes⟩)
     exact run_post (Q := fun x m'' => s₀.mem.glob MODE = md → P (x.headD 0) m'') hrun

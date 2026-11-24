@@ -141,7 +141,7 @@ theorem stage_moved {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Array ID
     {ipins : List INatOpPinSet} {sE : AState} {I : IStreamIndex} {sF : AState} {m₇ m m0 m1 : Mem}
     (hF : FoldOn b pb sz ds ipins sE I sF m₇ m) (hO : OutEq m m0) (hI : IndexR m1 {})
     (hf : MemFrame moveA moveC m0 m1) : L.Ind.StageR 0 (fe0 sF.pins) m1 sF := by
-  have hf' : MemFrame (([OUT] : List TieredArray) ++ moveA) moveC m m1 :=
+  have hf' : MemFrame (sstA ++ moveA) moveC m m1 :=
     (hO.memFrame.mono (by simp) (by simp)).trans (hf.mono (fun b hb => List.mem_append_right _ hb) (by simp))
   have hiw : L.Ind.IWOK m1 := IWOK.frame hf' (by decide) (by decide) (by decide) (by decide)
     hF.build.stage.iw (by decide) (by decide)
