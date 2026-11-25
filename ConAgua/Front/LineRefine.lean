@@ -152,7 +152,7 @@ theorem lineRecW_refines (m m' : Mem) (_hm : m.arr8 IN = b.data) (a₀ : AState)
         have hgQ := grows_drop hR.base.lit.1 hg
         have hfQ := hf.set0 m.top
         have hRQ : ArenaD (m₂.set64 CTL 0 m.top) a₀ :=
-          ⟨ArenaR.frame_ext _ _ (by simp [spArr, NID, NIDS]) (by simp [szC, spS]) _ _ hfQ a₀
+          ⟨ArenaR.frame_ext _ _ (by simp [spArr, NID, NIDS]) (by simp [szC, spS, NID]) _ _ hfQ a₀
               (L.Arena.ArenaD.grow _ _ hgQ _ hR).base,
             DerR.frameT hfQ (by simp [spArr, NID, NIDS]) (L.Arena.ArenaD.grow _ _ hgQ _ hR).der⟩
         rw [hI hidx, hP' ha] at hok' hR' hD' hst
