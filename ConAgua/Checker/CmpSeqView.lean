@@ -298,7 +298,7 @@ theorem _root_.L.Arena.JobM.csSwapJ {J J' : Option ISolution} {t t' : Mem} (h : 
     (hf : MemFrame csAS csC t t') (hI : IndexR t' I') (hD : DeclsF (t'.arr64 DECL) (t'.arr64 DLP) ds')
     (hfz : FrozenR t' I') (hfs : I'.firsts.size = ds'.size) (hs : JSol J' t') :
     JobM pins dn ds' J' I' t' a :=
-  h.csSwapX (hf.mono (fun _ h => List.mem_append_left _ h) (fun _ h => h)) hI hD hfz hfs hs
+  h.csSwapX hf hI hD hfz hfs hs
 end
 
 /-- **Header C's view after the solution's jobs** `mC`: the memory `mS` the solution's jobs left

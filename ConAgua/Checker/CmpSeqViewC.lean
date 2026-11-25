@@ -52,8 +52,7 @@ theorem xchgM_congr {d s : TieredArray} (hds : d ≠ s) {m M : Mem} (hd : M.arr6
   | zero => exact ⟨hd, hs⟩
   | succ j ih =>
     simp only [xchgM, Mem.arr64_set64_ne _ _ _ _ _ hds, Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hds),
-      Mem.arr64_set64_same, ih.1, ih.2]
-    exact ⟨rfl, rfl⟩
+      Mem.arr64_set64_same, ih.1, ih.2, and_self]
 
 /-- **`c` holds `m`'s `b` below the extent `CCTL[k]` of `A`** (in bounds). -/
 structure CqSv (m A : Mem) (b c : ArrId) (k : Word) : Prop where
@@ -215,12 +214,12 @@ theorem cqBankSM_rows {m9 : Mem} (hR : CqRowsSOK m9) :
   obtain ⟨o1, o2, o3, o4, o5, o6, h9⟩ := hR
   have hs : ∀ (d s : ArrId) (ca k : Word) (m : Mem), ((cqRowStep d s ca k m).arr64 CCTL).size =
       (m.arr64 CCTL).size := fun _ _ _ _ m => cqRowStep_csize m
-  have s1 := cqRowStep_x (k := 0) o1 (by simp only [UInt64.toNat_zero]; omega) (by decide) (by decide) (by decide) (by cq_eo) (by cq_eo)
-  have s2 := cqRowStep_x (k := 1) o2 (by simp only [hs]; simp; omega) (by decide) (by decide) (by decide) (by cq_eo) (by cq_eo)
-  have s3 := cqRowStep_x (k := 2) o3 (by simp only [hs]; simp; omega) (by decide) (by decide) (by decide) (by cq_eo) (by cq_eo)
-  have s4 := cqRowStep_x (k := 3) o4 (by simp only [hs]; simp; omega) (by decide) (by decide) (by decide) (by cq_eo) (by cq_eo)
-  have s5 := cqRowStep_x (k := 4) o5 (by simp only [hs]; simp; omega) (by decide) (by decide) (by decide) (by cq_eo) (by cq_eo)
-  have s6 := cqRowStep_x (k := 5) o6 (by simp only [hs]; simp; omega) (by decide) (by decide) (by decide) (by cq_eo) (by cq_eo)
+  have s1 := cqRowStep_x (m := m9) (k := 0) o1 (by simp only [UInt64.toNat_zero]; omega) (by decide) (by decide) (by decide) rfl rfl
+  have s2 := cqRowStep_x (m := m9) (k := 1) o2 (by simp only [hs]; simp; omega) (by decide) (by decide) (by decide) (by cq_eo) (by cq_eo)
+  have s3 := cqRowStep_x (m := m9) (k := 2) o3 (by simp only [hs]; simp; omega) (by decide) (by decide) (by decide) (by cq_eo) (by cq_eo)
+  have s4 := cqRowStep_x (m := m9) (k := 3) o4 (by simp only [hs]; simp; omega) (by decide) (by decide) (by decide) (by cq_eo) (by cq_eo)
+  have s5 := cqRowStep_x (m := m9) (k := 4) o5 (by simp only [hs]; simp; omega) (by decide) (by decide) (by decide) (by cq_eo) (by cq_eo)
+  have s6 := cqRowStep_x (m := m9) (k := 5) o6 (by simp only [hs]; simp; omega) (by decide) (by decide) (by decide) (by cq_eo) (by cq_eo)
   clear o1 o2 o3 o4 o5 o6
   have eA : ∀ b : ArrId, (b : TieredArray) ∉ cqTailA → (b : TieredArray) ≠ CTL →
       (cqBankSM m9).arr64 b = (cqRowsS m9).arr64 b :=
@@ -286,7 +285,7 @@ theorem cqBankCM_pair (M : Mem) {b c : ArrId} {k : Word} (h : (b, c, k) ∈ cqPa
   · simp only [cqBankCM]
     refine ⟨by decide, ?_⟩
     try simp (disch := decide) only [arr64_copy64_ne]
-    refine ⟨_, ?_, ?_, rfl⟩ <;> simp (disch := decide) only [arr64_copy64_ne]
+    refine ⟨_, ?_, ?_, rfl⟩ <;> simp (disch := decide) only [arr64_copy64_ne, cqRowsC, xchgM_ne]
 
 /-- **`cq_bank_c` restores the stashed words.** -/
 theorem CqSv.back_lo {m A : Mem} {b c : ArrId} {k : Word} (h : CqSv m A b c k) (hp : (b, c, k) ∈ cqPairs)
@@ -394,14 +393,13 @@ theorem cqC_view {m9 mS : Mem} (hR : CqRowsSOK m9) (hT : CqTailSOK (cqRowsS m9))
     rw [cqCtlCM_arr _ _ h3]
     exact (sv h hc h1 h2 hk).back (hH.congr (eSB _ (cq_idx_not_cqA hb) h3 h4) (eK _ hk)) hp (hsz _)
   -- the exchanged rows back
-  have xback : ∀ {d s : ArrId} {k : Word}, (d, s, k) ∈ cqXPairs → d ≠ s → IdxArr d = true → s ∈ solArrs →
+  have xback : ∀ {d s : ArrId} {k : Word}, (d, s, k) ∈ cqXPairs → d ≠ s → IdxArr d = true →
+      (s : TieredArray) ∈ solArrs → (d : TieredArray) ≠ CTL → (s : TieredArray) ≠ CTL →
       (d : TieredArray) ≠ CCTL → (s : TieredArray) ≠ CCTL → k.toNat < 16 →
       (cqCtlCM (cqBankCM mS)).arr64 d = m9.arr64 d ∧ (cqCtlCM (cqBankCM mS)).arr64 s = m9.arr64 s :=
-    fun hp hds hd hs hdC hsC hk => by
-      rw [cqCtlCM_arr _ _ (fun e => by subst e; revert hd; decide),
-        cqCtlCM_arr _ _ (fun e => by subst e; revert hs; decide)]
-      exact (hr _ hp).back hp hds (eSB _ (cq_idx_not_cqA hd) (fun e => by subst e; revert hd; decide) hdC)
-        (eSB _ (sol_not_cqA hs) (fun e => by subst e; revert hs; decide) hsC) (eK _ hk)
+    fun hp hds hd hs hdT hsT hdC hsC hk => by
+      rw [cqCtlCM_arr _ _ hdT, cqCtlCM_arr _ _ hsT]
+      exact (hr _ hp).back hp hds (eSB _ (cq_idx_not_cqA hd) hdT hdC) (eSB _ (sol_not_cqA hs) hsT hsC) (eK _ hk)
   have bF := (cqBankCM_frame csC mS)
   have hfr : MemFrame csAV csC mS (cqCtlCM (cqBankCM mS)) :=
     bF.trans ((cqCtlCM_frame _).mono (by simp) (fun _ h => h))
@@ -409,12 +407,12 @@ theorem cqC_view {m9 mS : Mem} (hR : CqRowsSOK m9) (hT : CqTailSOK (cqRowsS m9))
     intro b hb
     simp only [solRowsS, List.mem_cons, List.not_mem_nil, or_false] at hb
     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl
-    · exact (xback (d := EIXA) (s := SIXA) (k := 0) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).2
-    · exact (xback (d := EIXS) (s := SIXS) (k := 2) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).2
-    · exact (xback (d := EIXN) (s := SIXN) (k := 4) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).2
-    · exact (xback (d := TIXA) (s := STXA) (k := 1) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).2
-    · exact (xback (d := TIXS) (s := STXS) (k := 3) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).2
-    · exact (xback (d := TIXN) (s := STXN) (k := 5) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).2
+    · exact (xback (d := EIXA) (s := SIXA) (k := 0) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).2
+    · exact (xback (d := EIXS) (s := SIXS) (k := 2) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).2
+    · exact (xback (d := EIXN) (s := SIXN) (k := 4) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).2
+    · exact (xback (d := TIXA) (s := STXA) (k := 1) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).2
+    · exact (xback (d := TIXS) (s := STXS) (k := 3) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).2
+    · exact (xback (d := TIXN) (s := STXN) (k := 5) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).2
   refine ⟨hfr, hrows, fun b hb => ?_, fun j hj => ?_,
     fun j hj => ?_, ?_, ?_, fun x hx => ?_⟩
   · obtain ⟨n, hi⟩ := b
@@ -422,12 +420,12 @@ theorem cqC_view {m9 mS : Mem} (hR : CqRowsSOK m9) (hT : CqTailSOK (cqRowsS m9))
     obtain ⟨rfl, h1⟩ := hb
     have : n = 129 ∨ n = 130 ∨ n = 131 ∨ n = 132 ∨ n = 133 ∨ n = 134 ∨ n = 137 := by omega
     rcases this with rfl | rfl | rfl | rfl | rfl | rfl | rfl
-    · exact (xback (d := TIXA) (s := STXA) (k := 1) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).1
-    · exact (xback (d := TIXS) (s := STXS) (k := 3) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).1
-    · exact (xback (d := TIXN) (s := STXN) (k := 5) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).1
-    · exact (xback (d := EIXA) (s := SIXA) (k := 0) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).1
-    · exact (xback (d := EIXS) (s := SIXS) (k := 2) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).1
-    · exact (xback (d := EIXN) (s := SIXN) (k := 4) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).1
+    · exact (xback (d := TIXA) (s := STXA) (k := 1) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).1
+    · exact (xback (d := TIXS) (s := STXS) (k := 3) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).1
+    · exact (xback (d := TIXN) (s := STXN) (k := 5) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).1
+    · exact (xback (d := EIXA) (s := SIXA) (k := 0) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).1
+    · exact (xback (d := EIXS) (s := SIXS) (k := 2) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).1
+    · exact (xback (d := EIXN) (s := SIXN) (k := 4) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).1
     · exact back (b := FIRSTS) (c := CFIRSTS) (k := 7) (by decide) t7 t7h (by decide) (by decide) (by decide) (by decide) (by decide)
         (by decide) (by decide)
   · -- the records' used words
