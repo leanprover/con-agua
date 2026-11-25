@@ -64,6 +64,27 @@ theorem applyLine_level (st : StateD) (a₀ : AState) (i : Nat) (r : LevelRec)
   obtain ⟨h1, h2, h3⟩ := AM.bind_pure (parseLevelEntryD st i r) (Sum.inl : StateD → StateD ⊕ RecordVerdict) a₀ h
   exact ⟨h1, h3, h2⟩
 
+/-! ## Dropping a slice at the top -/
+
+/-- **The top back to its old place** after a pool append: from the old memory, the pool grew
+(by nothing new below the old top). -/
+theorem grows_drop {m mP : Mem} (hok : PoolOK m) (hg : Grows m mP) : Grows m (mP.set64 CTL 0 m.top) := by
+  have hPF : PFrame m (mP.set64 CTL 0 m.top) := by
+    have h := PFrame.set64_both CTL 0 m.top hg.frame (by decide) (by decide)
+    rwa [Mem.set64_set64_same, show m.top = rdW (m.arr64 CTL) 0 from rfl, set64_rdW_self] at h
+  have h := Grows.write m _ 0 hok hPF
+    (by rw [vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩]; exact hg.agree)
+    (by simp only [UInt64.toNat_zero, Nat.add_zero]; exact hok.inTier)
+  rwa [UInt64.add_zero, Mem.set64_set64_same] at h
+
+/-- A frame survives the same store to `CTL[0]` on both sides. -/
+theorem _root_.L.Arena.MemFrame.set0 {A : List TieredArray} {C : List Word} {m₁ m₂ : Mem} (h : MemFrame A C m₁ m₂)
+    (v : Word) : MemFrame A C (m₁.set64 CTL 0 v) (m₂.set64 CTL 0 v) := by
+  refine ⟨fun b hb hc => ?_, fun x hx => ?_, fun b => ?_⟩
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ hc, Mem.arr64_set64_ne _ _ _ _ _ hc]; exact h.arr b hb hc
+  · rw [rdW_set64, rdW_set64, h.size CTL, h.ctl x hx]
+  · rw [L.Mem.size64_set64, L.Mem.size64_set64, h.size b]
+
 section refine
 variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
 include h64 hsize
@@ -117,12 +138,31 @@ theorem lineRecW_refines (m m' : Mem) (_hm : m.arr8 IN = b.data) (a₀ : AState)
       obtain ⟨hg, hq, hk⟩ := ConAgua.Front.UnescapeLink.strPutEsc_link h64 b hsize m m₁ hR.base.lit.1 f.c f.d S
         (hS hc0) l hP
       have hmo₁ := L.Arena.ModeOK.grows hmode hg
-      obtain ⟨hok', hR', hD', hM'⟩ := applyNStrW_refines m₁ m' a₀ st
-        (L.Arena.ArenaD.grow _ _ hg _ hR) (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart))
-        f.idx f.a m.top l hq S hk (ModeOK.slice0 hmo₁ hq) h
-      rw [hI hidx, hP' ha] at hok' hR' hD'
-      obtain ⟨h1, h2, h3⟩ := applyLine_name st a₀ I (.str P S) hok'
-      exact ⟨_, h1, h2, by rw [h3]; exact hR', hD', hM' hmo₁⟩
+      obtain ⟨m₂, h2, rfl⟩ := Option.map_eq_some_iff.mp h
+      have hR₁ := L.Arena.ArenaD.grow _ _ hg _ hR
+      have hD₁ := hD.frame (grows_frame _ _ hg) (by tapart) (by tapart)
+      obtain ⟨hok', hR', hD', hM'⟩ := applyNStrW_refines m₁ m₂ a₀ st hR₁ hD₁
+        f.idx f.a m.top l hq S hk (ModeOK.slice0 hmo₁ hq) h2
+      unfold strDropW
+      split
+      · -- the node existed: the twin's state is `a₀`, the top back at `m.top`
+        rename_i hc
+        obtain ⟨hst, hf⟩ := applyNStrW_hit m₁ m₂ a₀ st hR₁ hD₁ f.idx f.a m.top l hq S hk
+          (ModeOK.slice0 hmo₁ hq) h2 hc.1 hc.2
+        have hgQ := grows_drop hR.base.lit.1 hg
+        have hfQ := hf.set0 m.top
+        have hRQ : ArenaD (m₂.set64 CTL 0 m.top) a₀ :=
+          ⟨ArenaR.frame_ext _ _ (by simp [spArr, NID, NIDS]) (by simp [szC, spS]) _ _ hfQ a₀
+              (L.Arena.ArenaD.grow _ _ hgQ _ hR).base,
+            DerR.frameT hfQ (by simp [spArr, NID, NIDS]) (L.Arena.ArenaD.grow _ _ hgQ _ hR).der⟩
+        rw [hI hidx, hP' ha] at hok' hR' hD' hst
+        obtain ⟨h1, h2', h3⟩ := applyLine_name st a₀ I (.str P S) hok'
+        exact ⟨_, h1, h2', by rw [h3, hst]; exact hRQ,
+          hD'.frame (MemFrame.setCtl m₂ 0 m.top) (by tapart) (by tapart),
+          MemFrame.modeOK hfQ (h := L.Arena.ModeOK.grows hmode hgQ)⟩
+      · rw [hI hidx, hP' ha] at hok' hR' hD'
+        obtain ⟨h1, h2', h3⟩ := applyLine_name st a₀ I (.str P S) hok'
+        exact ⟨_, h1, h2', by rw [h3]; exact hR', hD', hM' hmo₁⟩
     all_goals simp_all
   rename_i hpl1
   split at h

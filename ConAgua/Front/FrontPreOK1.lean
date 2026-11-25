@@ -162,7 +162,11 @@ theorem lineRecW_dk (b : Array UInt8) (m m' : Mem) (pl idx a c d : Word)
     rcases hP : L.Front.Unescape.strPutEscW b m c d with _ | ⟨l, m₁⟩ <;> simp only [hP, applyStrW.k_str_put_esc, applyStrW_kn, reduceCtorEq] at h
     split at h; cases h
     split at h; cases h
-    exact (strPutEscW_dk hP).trans (applyNStrW_dk h)
+    obtain ⟨m₂, h2, rfl⟩ := Option.map_eq_some_iff.mp h
+    refine ((strPutEscW_dk hP).trans (applyNStrW_dk h2)).trans ?_
+    unfold strDropW; split
+    · exact DK.set64 _ _ (by decide) (by decide) _ _
+    · exact DK.refl _
   split at h; cases h
   split at h
   · exact applyNNumW_dk h

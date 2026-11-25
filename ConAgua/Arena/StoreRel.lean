@@ -31,6 +31,19 @@ theorem rdW_set! (a : Array Word) (k : Nat) (v x : Word) :
   simp only [rdW, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
   grind
 
+/-- Writing back a word read from the same place changes nothing. -/
+theorem set64_rdW_self (m : Mem) (b : TieredArray) (i : Word) : m.set64 b i (rdW (m.arr64 b) i) = m := by
+  obtain ⟨bytes, words, glob⟩ := m
+  simp only [Mem.set64, Mem.arr64, Mem.mk.injEq, true_and, and_true]
+  funext s
+  split
+  · subst s
+    simp only [rdW, Array.set!_eq_setIfInBounds]
+    by_cases h : i.toNat < (words b).size
+    · simp [h, Array.setIfInBounds, Array.set_getElem_self]
+    · simp [Array.setIfInBounds, h]
+  · rfl
+
 theorem rdW_set64 (m : Mem) (a b : TieredArray) (k v x : Word) :
     rdW ((m.set64 a k v).arr64 b) x =
       if b = a ∧ k = x ∧ k.toNat < (m.arr64 a).size then v else rdW (m.arr64 b) x := by

@@ -253,18 +253,6 @@ def JobPost (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds 
 
 /-! ## Frames of the job's memory -/
 
-/-- Writing back a word read from the same place changes nothing. -/
-theorem set64_rdW_self (m : Mem) (b : TieredArray) (i : Word) : m.set64 b i (rdW (m.arr64 b) i) = m := by
-  obtain ⟨bytes, words, glob⟩ := m
-  simp only [Mem.set64, Mem.arr64, Mem.mk.injEq, true_and, and_true]
-  funext s
-  split
-  · subst s
-    simp only [rdW, Array.set!_eq_setIfInBounds]
-    by_cases h : i.toNat < (words b).size
-    · simp [h, Array.setIfInBounds, Array.set_getElem_self]
-    · simp [Array.setIfInBounds, h]
-  · rfl
 
 /-- The `CTL` words below `48` or in `60‥127` (the bracket's and the flush's). -/
 def LoCtl (C : List Word) : Prop := ∀ x ∈ C, x.toNat < 48 ∨ (60 ≤ x.toNat ∧ x.toNat < 128)
