@@ -70,10 +70,12 @@ Patches at the first vendoring:
 | `con-ron/0001-wfproofs-rfl.patch` | `Tbl.node?_push_eq`: a trailing `rfl` |
 | `con-ron/0002-bridge-toolchain.patch` | the 31 `ConRon.Bridge` files (three toolchain changes, see "ConRonBridge") |
 | `con-ron/0003-checker-base-do.patch` | `Bridge/Checker/Base.lean`'s `checkConstantVal_bridge`: `try replace` (as 0002; split out at ronsync8, upstream rewrote the file) |
+| `con-ron/0004-modular-roots-do.patch` | `Bridge/Modular/Roots.lean`: the four `pure () >>=` steps (as 0002), so that module and its imports `Modular.Rel`, `Modular.Worker` build; L's compare verdict (`Arena/CmpVCone.lean`) imports its needs-walk lemmas |
 
 `ConRon.Bridge.Modular.*` (con-ron #166, the modular modes; deviation D50) is not built (`lakefile.toml`'s
-`ConRonBridge` globs): nothing else imports it, and its run-style proofs meet our toolchain's `do`
-elaborator at every `pure () >>=` (ronsync8).
+`ConRonBridge` globs), except `Rel`, `Worker` and `Roots` (patch `con-ron/0004`), whose needs-walk
+lemmas L's compare verdict uses: the rest's run-style proofs meet our toolchain's `do` elaborator at
+every `pure () >>=` (ronsync8), for no theorem L uses.
 
 ## Toolchain switch: nightly-2026-09-21 → nightly-2026-10-20 (Kraken fork)
 

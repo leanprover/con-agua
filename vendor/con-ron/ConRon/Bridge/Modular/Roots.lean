@@ -793,14 +793,12 @@ theorem pinGround_exact {s s' : AState} (hok : StateOK s) (hp : PinsOK s)
   obtain ⟨rfl, d0⟩ := natDivModNames_run hp g0
   have hc := denoteNL_contains hok.wf d0 hn
   unfold ConLeche.Driver.pinGround
-  dsimp only at k1
+  try dsimp only at k1 -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   by_cases hb : dms.contains c = true
   · rw [ite_eq_right (by rw [hb]; decide)] at k1
     rw [hc] at hb
-    rw [ite_eq_right (by rw [hb]; decide)]
-    obtain ⟨u0, s1', g0', k1'⟩ := AM.bind_ok k1
-    obtain ⟨-, rfl⟩ := AM.pure_ok g0'
-    obtain ⟨eq, s1, g1, k2⟩ := AM.bind_ok k1'
+    rw [ite_eq_right (by rw [hb]; decide)] -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
+    obtain ⟨eq, s1, g1, k2⟩ := AM.bind_ok k1
     obtain ⟨rfl, deq⟩ := pinAt_run (x := ConLeche.eqName) hp (by rfl) g1
     obtain ⟨x, s2, g2, k3⟩ := AM.bind_ok k2
     simp only [Arena.Modular.groundStmts] at g2
@@ -1161,12 +1159,9 @@ theorem rootsAt_exact {s s' : AState} (hok : DriverOK s) (hoff : s.store.scratch
   rw [← (ImpsD.isEmpty hx)]
   by_cases he : x.isEmpty = true
   · rw [ite_eq_left he] at h ⊢
-    simp only [bind_pure] at h
+    try simp only [bind_pure] at h -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
     exact ownRoots_exact hok hoff hpins hf hcs hp hd h
-  · rw [ite_eq_right he] at h ⊢
-    obtain ⟨u0, s0, g0, h⟩ := AM.bind_ok h
-    obtain ⟨-, hs00⟩ := AM.pure_ok g0
-    subst s0
+  · rw [ite_eq_right he] at h ⊢ -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
     obtain ⟨own, s1, h1, k1⟩ := AM.bind_ok h
     unfold Arena.Modular.recsLoaded at h1
     rw [← Array.foldlM_toList] at h1
@@ -1361,10 +1356,7 @@ theorem ownHolesOk_run {s s' : AState} (hok : DriverOK s) (hoff : s.store.scratc
   · rw [ite_eq_left he] at h ⊢
     obtain ⟨-, rfl⟩ := AM.pure_ok h
     exact ⟨DStep.refl hok hoff, rfl⟩
-  · rw [ite_eq_right he] at h ⊢
-    obtain ⟨u0, s0, g0, h⟩ := AM.bind_ok h
-    obtain ⟨-, hs00⟩ := AM.pure_ok g0
-    subst s0
+  · rw [ite_eq_right he] at h ⊢ -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
     obtain ⟨own, s1, h1, h2⟩ := AM.bind_ok h
     have h1' : Arena.Modular.ownRecs x ix ds s = .ok (own, s1) := by
       unfold Arena.Modular.ownRecs; rw [ite_eq_right he]; exact h1

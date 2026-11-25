@@ -176,14 +176,15 @@ leanOptions = {autoImplicit = true, relaxedAutoImplicit = true}
 # eighty-odd modules are siblings, not all reachable from the root, hence the
 # glob (as in con-ron's own lakefile). Not `ConRon.Bridge.Modular.+` (con-ron #166, the modular
 # modes L does not have, deviation D50; nothing else imports it): its run-style proofs meet the new
-# `do` elaborator of our toolchain at every `pure () >>=` (ronsync8), for no theorem L uses.
+# `do` elaborator of our toolchain at every `pure () >>=` (ronsync8), for no theorem L uses; except
+# `Rel`, `Worker` and `Roots` (patch con-ron/0004), whose needs-walk lemmas L's compare verdict imports.
 [[lean_lib]]
 name = "ConRonBridge"
 srcDir = "vendor/con-ron"
 roots = ["ConRon.Bridge"]
 globs = ["ConRon.Bridge", "ConRon.Bridge.Axioms","ConRon.Bridge.Checker","ConRon.Bridge.Core","ConRon.Bridge.EnvDenote","ConRon.Bridge.ExprOps","ConRon.Bridge.Frontend","ConRon.Bridge.GrindAttr","ConRon.Bridge.Grind","ConRon.Bridge.Inductives","ConRon.Bridge.Pers","ConRon.Bridge.Rel","ConRon.Bridge.Specs","ConRon.Bridge.SpecsL","ConRon.Bridge.Stages","ConRon.Bridge.StateOK","ConRon.Bridge.StoreBind","ConRon.Bridge.StoreNested",
   "ConRon.Bridge.Checker.+", "ConRon.Bridge.Compare.+", "ConRon.Bridge.Core.+", "ConRon.Bridge.ExprOps.+",
-  "ConRon.Bridge.Frontend.+", "ConRon.Bridge.Inductives.+"]
+  "ConRon.Bridge.Frontend.+", "ConRon.Bridge.Inductives.+", "ConRon.Bridge.Modular.Rel", "ConRon.Bridge.Modular.Worker", "ConRon.Bridge.Modular.Roots"]
 leanOptions = {autoImplicit = true, relaxedAutoImplicit = true}
 
 # Baseline for the compiled-L measurement (DESIGN.md, "The compiler"): con-leche's compiled
