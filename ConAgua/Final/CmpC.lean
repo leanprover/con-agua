@@ -62,7 +62,6 @@ theorem CmpFrame.setR10 {dm : MachineData} {ra sa : Word} {nS base rsp0 : Nat} {
     by simpa only [Reg64s.set64_r10] using hf.rbx, by simpa only [Reg64s.set64_r10] using hf.r12,
     by simpa only [Reg64s.set64_r10] using hf.r13, hf.sv0, hf.sv1, hf.sv2, hf.sv3, hf.sv4, hf.sv5, hf.win, hf.map⟩
 
-set_option maxHeartbeats 3200000 in
 /-- **`ca_start_c` on the machine.** From `ca_start_c`, called as `CmpCall` says, the machine
 returns to `ra` with the callee-saved registers restored; an accept and an error mean the L runs
 `CmpAccS`, `CmpErrS` say. -/
