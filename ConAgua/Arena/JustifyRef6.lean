@@ -267,8 +267,8 @@ theorem justifyWhy_ok {J : ISolution} {n : Nat} {m m' : Mem} {a : AState} {x : W
       have hck2 := hst2.checkOK hck
       have hty2 := ConRon.Bridge.denote_ext (ConRon.Bridge.denoteCV_inv (ConRon.Bridge.denoteCI_toConstantVal hdc)).2.2
         hst2.ext
-      obtain ⟨-, hx4⟩ := ConRon.Bridge.CmpV.expr_exact hck2.state hck2.pins
-        (ConRon.Bridge.CmpV.XRel.empty a2.store) hty2 e4
+      obtain ⟨-, hx4⟩ := ConRon.Bridge.Modular.expr_exact hck2.state hck2.pins
+        (ConRon.Bridge.Modular.XRel.empty a2.store) hty2 e4
       obtain ⟨hst7, hd7⟩ := ConRon.Bridge.CmpV.coneGo_den _ _ _ a2 a7 y7 hck2 (hsol.mono hst2.ext)
         (hm.mono hst2.ok.wf hst2.ext) (hcm.ext hst2.ext)
         (ConRon.Bridge.CmpV.allDen_of_denoteNList hx4.2) hrun7
