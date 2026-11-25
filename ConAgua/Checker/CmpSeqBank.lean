@@ -235,11 +235,13 @@ theorem cqBankC_spec (p : Prog) (hp : p.lookup "cq_bank_c" = some cqBankCL) (hP 
     all_goals have hC : ∀ (X : Mem) (d s : TieredArray) (j : Nat), d ≠ CCTL → s ≠ CCTL →
         (xchgM d s X j).arr64 CCTL = X.arr64 CCTL :=
       fun X d s j h1 h2 => xchgM_ne d s X j (Ne.symm h1) (Ne.symm h2)
-    all_goals simp only [L.reduceLoc, L.St.setLocs_mem] at c1 c2 c3 c4 c5 c6 g0
+    all_goals simp only [L.St.setLocs_mem] at c1 c2 c3 c4 c5 c6 g0
     all_goals simp only [e6, e5, e4, e3, e2, e1] at b2 b2' b3 b3' b4 b4' b5 b5' b6 b6' c1 c2 c3 c4 c5 c6 ⊢
     all_goals simp (disch := decide) only [hC, xchgM_size] at b2 b2' b3 b3' b4 b4' b5 b5' b6 b6' c1 c2 c3 c4 c5 c6 ⊢
     all_goals simp (disch := (simp only [UInt64.toNat_ofNat]; omega)) only [cq_getElem_rdW] at b1 b1' b2 b2' b3 b3' b4 b4' b5 b5' b6 b6' ⊢
     case vc2 => exact ⟨b1, b1', b2, b2', b3, b3', b4, b4', b5, b5', b6, b6'⟩
+    simp (disch := decide) only [hC, arr64_copy64_ne, xchgM_size]
+    simp (disch := (simp only [UInt64.toNat_ofNat]; omega)) only [cq_getElem_rdW]
     simp (disch := decide) only [cqBankCM, cqRowsC, hC]
 
 end L.Checker
