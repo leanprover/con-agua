@@ -241,6 +241,6 @@ theorem cqBankC_spec (p : Prog) (hp : p.lookup "cq_bank_c" = some cqBankCL) (hP 
     all_goals simp (disch := (simp only [UInt64.toNat_ofNat]; omega)) only [cq_getElem_rdW] at b1 b1' b2 b2' b3 b3' b4 b4' b5 b5' b6 b6' ⊢
     case vc2 => exact ⟨b1, b1', b2, b2', b3, b3', b4, b4', b5, b5', b6, b6'⟩
     simp (disch := decide) only [hC, arr64_copy64_ne]
-    simp (disch := decide) only [cqBankCM, cqRowsC, hC]
+    simp (disch := decide) only [cqBankCM, cqRowsC]
 
 end L.Checker
