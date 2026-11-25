@@ -95,3 +95,36 @@ Checks: `diff-e2e --parallel 16` 766/766 agree (UNSOUND/INCOMPLETE/CRASH/TIMEOUT
 The sequential compared run's peak drops by 11 MB (H10 estimated 12); the threaded run never used
 the stash.
 `diff-e2e --refs --parallel 16`: 766/766 agree, REFDIFF 0.
+
+## 6. D58 fixed: `apply_str` drops a hit's string (user's request via the coordinator; 18:08–18:40)
+
+L (`Front/Line.lean`): `apply_str` reads the `nstr` counts `CTL[36]`, `CTL[37]` before
+`apply_nstr` and, when both are unchanged after it (the node existed), sets the pool top back to
+the slice's start `o` (`str_put_esc` put the slice at the old top). The model gains `strDropW`.
+Proofs: `nsinternW_hit` (an intern that leaves both counts alone returned the memory unchanged:
+`consInternM_out`, `pushRec_cnt`), `nstr_twin_hit` (then the twin's `internNNode` hit too: both
+states' `NStrR` at one memory give equal node counts, and `protoRun_casesG`'s append would add
+one), `applyNStrW_hit` (`Front/StateDR.lean`: the arena state unchanged, the memory moved only by
+the name table's put), and in `lineRecW_refines`'s `str` arm the hit case: `grows_drop` (the
+dropped memory is a `Grows` of the one before the line), `MemFrame.set0`, `ArenaR.frame_ext`/
+`DerR.frameT` across the put, `StateDR.frame` across the top's store. `set64_rdW_self` moved from
+`Arena/Jobs.lean` to `Arena/StoreRel.lean` (needed this early in the frontend).
+
+**Correction to §3:** a single file never hits: lean4export lists each name once and a `str` node's
+key is its prefix and its string, so the "8 MiB dead in flat `Init`" there was wrong (it counted
+equal components under different prefixes, which are different nodes). The waste was the compared
+run's second file only.
+
+Measured (Init, interleaved with master = item 4's binary, 2 rounds, load about 6; `POOL` by a
+debug copy of `main.c` that counts the tier-0 pool slot's resident pages with `mincore` after the
+driver returns):
+
+| run | instructions:u master → new | wall | peak RSS | `POOL` resident |
+|---|---|---|---|---|
+| flat, 1 thread | 202 631.9 M → 202 633.1 M (+0.0006 %) | 15.0–16.6 s → 15.0 s | 627 MB both | 14.0 MiB both |
+| flat, 16 threads | 204.13–204.15 G → 204.09–204.10 G (noise) | 2.7 s both | 764 MB both | – |
+| compare, 1 thread | 407 610.0 M → 407 613.4 M | 30.7–31.3 s → 30.4–30.6 s | 1 005 → 994–996 MB | 24.0 → 14.0 MiB |
+| compare, 16 threads | 409 856–409 878 M → 409 817–409 857 M | 5.1–5.6 s both | 1 177 → 1 155 MB | – |
+
+`diff-e2e --parallel 16`: 766/766 agree.
+`diff-e2e --refs --parallel 16`: 766/766 agree, REFDIFF 0.

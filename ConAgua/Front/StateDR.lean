@@ -398,6 +398,50 @@ theorem putK_eq {b : ArrId} {i : Word} {x : Option (Word × Mem)} {m' : Mem}
       exact ⟨w, m₁, rfl, by simpa [UInt64.lt_iff_toNat_lt] using hc, h⟩
     · simp at h
 
+/-! ## A `str` name that exists already -/
+
+/-- **An interning that leaves the `nstr` counts alone hit**: the memory is unchanged. -/
+theorem nsinternW_hit {m m₁ : Mem} {q o l w : Word} (hI : nsinternW m q o l = some (w, m₁))
+    (hctl : 38 ≤ (m.arr64 CTL).size)
+    (h36 : rdW (m₁.arr64 CTL) 36 = rdW (m.arr64 CTL) 36) (h37 : rdW (m₁.arr64 CTL) 37 = rdW (m.arr64 CTL) 37) :
+    m₁ = m := by
+  rcases consInternM_out nstrCS_wf hI with e | ⟨t, ht, -, -, he, -⟩
+  · exact e
+  exfalso
+  have hc : (CTL : TieredArray) ≠ tierA nstrCS.sa t := by
+    rcases tierA_eq_or nstrCS.sa t with e | e <;> rw [e] <;> decide
+  have hct := pushRec_cnt nstrCS nstrCS_wf m t ht [q, o, l] (by show UInt64.toNat 36 + 2 ≤ _; simpa using hctl) t ht
+  simp only [ite_true, cntC] at hct
+  rw [← he CTL hc] at hct
+  rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
+  · have : rdW (m.arr64 CTL) 36 + 1 = rdW (m.arr64 CTL) 36 := hct.symm.trans h36
+    simp at this
+  · have : rdW (m.arr64 CTL) 37 + 1 = rdW (m.arr64 CTL) 37 := hct.symm.trans h37
+    simp at this
+
+/-- **The twin's `str` intern hit too**: a run whose name tables both states' `NStrR` relate to one
+memory (the same node counts) left the state alone. -/
+theorem nstr_twin_hit {m : Mem} {a : AState} {pre : NIdx} {s : String} (hR : NStrR m a)
+    (hR' : NStrR m (AM.st (internNNode (.str pre s)) a)) (hok : AM.ok (internNNode (.str pre s)) a) :
+    AM.st (internNNode (.str pre s)) a = a := by
+  have hrun := (internNNode_str_run pre s a).symm.trans (AM.run_of_ok _ a hok)
+  rcases protoRun_casesG nstrLens _ _ _ _ _ _ a _ _ hrun with e | ⟨-, -, -, e⟩ | ⟨-, -, -, e⟩
+  · exact e
+  · exfalso
+    rw [e] at hR'
+    simp only [NStrR, consR_iff, StoreR] at hR hR'
+    obtain ⟨-, -, ⟨h0, -⟩, -⟩ := hR
+    obtain ⟨-, -, ⟨h1, -⟩, -⟩ := hR'
+    simp only [nstrLens, withPersNStrs, Tbl.push_nodes, Array.size_push] at h0 h1
+    omega
+  · exfalso
+    rw [e] at hR'
+    simp only [NStrR, consR_iff, StoreR] at hR hR'
+    obtain ⟨-, -, -, ⟨h0, -⟩, -⟩ := hR
+    obtain ⟨-, -, -, ⟨h1, -⟩, -⟩ := hR'
+    simp only [nstrLens, withScrNStrs, Tbl.push_nodes, Array.size_push] at h0 h1
+    omega
+
 /-! ## Name entries -/
 
 section names
@@ -430,6 +474,40 @@ theorem applyNStrW_refines (i pre o l : Word) (hq : SliceOK m o l) (s : String)
     exact ⟨hD.putName hf (by tapart) (by tapart) i w hp hw _
       (fun j => IdTable.get?_insert _ _ _ _) rfl rfl,
       fun hmo => MemFrame.modeOK (tblPutW_frame (.inl rfl) hp) (h := MemFrame.modeOK hf (h := hmo))⟩
+  · simp at h
+
+/-- **A `str` name entry whose node existed** (the `nstr` counts unchanged): the arena state is
+unchanged, and the memory moved only in the name table. -/
+theorem applyNStrW_hit (i pre o l : Word) (hq : SliceOK m o l) (s : String)
+    (hk : sliceL (vpool m) o.toNat l.toNat = strWords s) (hq0 : m.flag = 0 → o.toNat < 2 ^ 40)
+    (h : applyNStrW m i pre o l = some m')
+    (h36 : rdW (m'.arr64 CTL) 36 = rdW (m.arr64 CTL) 36) (h37 : rdW (m'.arr64 CTL) 37 = rdW (m.arr64 CTL) 37) :
+    AM.st (parseNameEntryD st i.toNat (.str pre.toNat s)) a = a ∧
+      MemFrame [NID, spArr NID] [szC NID, (spS NID).cs + 1] m m' := by
+  simp only [applyNStrW] at h
+  split at h
+  · rename_i hc
+    obtain ⟨hok, hfr⟩ := hc
+    obtain ⟨hget, hP⟩ := hD.names.read _ _ _ _ hok
+    have hnone := hD.names.fresh _ _ _ _ hfr
+    obtain ⟨w, m₁, hI, hw, hp⟩ := putK_eq h
+    have hf := tblPutW_frame (.inl rfl) hp
+    have c36 : rdW (m₁.arr64 CTL) 36 = rdW (m.arr64 CTL) 36 := by rw [← hf.ctl 36 (by decide), h36]
+    have c37 : rdW (m₁.arr64 CTL) 37 = rdW (m.arr64 CTL) 37 := by rw [← hf.ctl 37 (by decide), h37]
+    have hns := hR.base.nstr
+    simp only [NStrR, consR_iff, StoreR] at hns
+    have hm1 := nsinternW_hit hI (by have h := hns.1.1; exact h) c36 c37
+    rw [hm1] at hI hf
+    refine ⟨?_, hf⟩
+    obtain ⟨hok', hR₁, -, -⟩ := nstr_A m a hR w m _ o l hP hq s hk hq0 hI
+    have hX : parseNameEntryD st i.toNat (.str pre.toNat s) =
+        (internNNode (.str (decI (tblW m NID pre)) s) >>= fun h =>
+          pure { st with names := st.names.insert i.toNat h }) := by
+      simp [parseNameEntryD, StateD.name, hget, StateD.freshName, IdTable.bound_eq, hnone]
+    obtain ⟨-, hst₂, -⟩ := AM.bind_pure _
+      (fun h => { st with names := st.names.insert i.toNat h }) a hok'
+    rw [hX, hst₂]
+    exact nstr_twin_hit hR.base.nstr hR₁.base.nstr hok'
   · simp at h
 
 theorem applyNNumW_refines (i pre x : Word) (h : applyNNumW m i pre x = some m') :

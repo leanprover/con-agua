@@ -32368,9 +32368,9 @@ ret
 ca_f_apply_str:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $80, %rax
+cmpq $96, %rax
 jb ca_exhausted
-subq $72, %rsp
+subq $88, %rsp
 movq %rdi, (%rsp)
 movq %r8, 8(%rsp)
 movq %r9, 16(%rsp)
@@ -32407,6 +32407,10 @@ subq %rdx, %rcx
 subq %rcx, %rax
 cmpq 48(%rsp), %rax
 jb ca_error
+movq 36064(%r15), %rax
+movq %rax, 56(%rsp)
+movq 36072(%r15), %rax
+movq %rax, 64(%rsp)
 movq (%rsp), %rdi
 movq 8(%rsp), %r8
 movq 40(%rsp), %r9
@@ -32415,12 +32419,23 @@ subq $1, %r14
 jb ca_exhausted
 call ca_f_apply_nstr
 movq %rax, 32(%rsp)
+movq 36064(%r15), %rax
+cmpq 56(%rsp), %rax
+jne .Lca_apply_str_22222221E
+movq 36072(%r15), %rax
+cmpq 64(%rsp), %rax
+jne .Lca_apply_str_22222221E
+movq 40(%rsp), %rax
+movq %rax, 35776(%r15)
+jmp .Lca_apply_str_22222221X
+.Lca_apply_str_22222221E:
+.Lca_apply_str_22222221X:
 movq $0, %rax
 jmp .Lca_apply_str_0R
 .Lca_apply_str_0Z:
 movq $0, %rax
 .Lca_apply_str_0R:
-addq $72, %rsp
+addq $88, %rsp
 ret
 ca_f_ar_app:
 movq %rsp, %rax
@@ -237335,9 +237350,9 @@ ret
 ca_f_pre_apply_str:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $80, %rax
+cmpq $96, %rax
 jb ca_exhausted
-subq $72, %rsp
+subq $88, %rsp
 movq %rdi, (%rsp)
 movq %r8, 8(%rsp)
 movq %r9, 16(%rsp)
@@ -237374,6 +237389,10 @@ subq %rdx, %rcx
 subq %rcx, %rax
 cmpq 48(%rsp), %rax
 jb ca_error
+movq 36064(%r15), %rax
+movq %rax, 56(%rsp)
+movq 36072(%r15), %rax
+movq %rax, 64(%rsp)
 movq (%rsp), %rdi
 movq 8(%rsp), %r8
 movq 40(%rsp), %r9
@@ -237382,12 +237401,23 @@ subq $1, %r14
 jb ca_exhausted
 call ca_f_apply_nstr
 movq %rax, 32(%rsp)
+movq 36064(%r15), %rax
+cmpq 56(%rsp), %rax
+jne .Lca_pre_apply_str_22222221E
+movq 36072(%r15), %rax
+cmpq 64(%rsp), %rax
+jne .Lca_pre_apply_str_22222221E
+movq 40(%rsp), %rax
+movq %rax, 35776(%r15)
+jmp .Lca_pre_apply_str_22222221X
+.Lca_pre_apply_str_22222221E:
+.Lca_pre_apply_str_22222221X:
 movq $0, %rax
 jmp .Lca_pre_apply_str_0R
 .Lca_pre_apply_str_0Z:
 movq $0, %rax
 .Lca_pre_apply_str_0R:
-addq $72, %rsp
+addq $88, %rsp
 ret
 ca_f_pre_byte_in:
 cmpq %r8, %rdi

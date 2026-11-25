@@ -100,14 +100,19 @@ position `nm`, `IndApply.lean`; a line that does not read aborts). -/
   return 0
 }
 
-/-- A `str` name line: the body `[c, d)`, unescaped into the pool and applied. -/
+/-- A `str` name line: the body `[c, d)`, unescaped into the pool at its top and applied; when
+the name node existed already (the `nstr` counts `CTL[36]`, `CTL[37]` unchanged) the slice is
+dropped again (the top back to `o`), as the twin drops the string it interned. -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:473-479 ConRon.Arena.Frontend.applyLine
-@[no_expose] def applyStr : FunDecl := lfn (idx, a, c, d) locals (z, o, l) {
+@[no_expose] def applyStr : FunDecl := lfn (idx, a, c, d) locals (z, o, l, n0, n1) {
   if c == 0 { abort };
   (o, l) := call str_put_esc(c, d);
   if len(POOL⟨⦃o⦄.tier⟩) < o - ⦃o⦄.base { abort };
   if len(POOL⟨⦃o⦄.tier⟩) - (o - ⦃o⦄.base) < l { abort };
+  n0 := CTL.u64[36];
+  n1 := CTL.u64[37];
   z := call apply_nstr(idx, a, o, l);
+  if CTL.u64[36] == n0 && CTL.u64[37] == n1 { CTL.u64[0] := o };
   return 0
 }
 
@@ -153,7 +158,8 @@ def scanLookupsFns : Prog :=
 abbrev ScanLookups (p : Prog) : Prop := ProgHas p scanLookupsFns
 
 /-- **The model of `apply_str`** (generated): `applyStrW`, the body `[c, d)` unescaped into the
-pool (`str_put_esc`, its slice at the old top) and applied (`apply_nstr`). -/
+pool (`str_put_esc`, its slice at the old top) and applied (`apply_nstr`), the top back to the
+slice's start on a hit. -/
 l_model applyStr_spec (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
     (hpn : p.lookup "apply_nstr" = some applyNStr) (hpt : p.lookup "apply_str" = some applyStr)
     (hE : ExprLookups p) (b : Array UInt8)
@@ -165,9 +171,17 @@ l_model applyStr_spec (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
   keep [hE.no_st8]
   grind [arena_grind] finish [Keep.size]
 
-/-- `apply_str`'s tail after `apply_nstr` passes its memory on. -/
-theorem applyStrW_kn (b : Array UInt8) (x : Option Mem) : applyStrW.k_apply_nstr b x = x := by
-  cases x <;> rfl
+/-- `apply_str`'s drop of the slice: the top back to `o` when the `nstr` counts are still `n0`,
+`n1` (the name node existed). -/
+def strDropW (o n0 n1 : Word) (m : Mem) : Mem :=
+  if rdW (m.arr64 CTL) 36 = n0 ∧ rdW (m.arr64 CTL) 37 = n1 then m.set64 CTL 0 o else m
+
+/-- `apply_str`'s tail after `apply_nstr`: the drop. -/
+theorem applyStrW_kn (b : Array UInt8) (o n0 n1 : Word) (x : Option Mem) :
+    applyStrW.k_apply_nstr b o n0 n1 x = x.map (strDropW o n0 n1) := by
+  cases x with
+  | none => rfl
+  | some m => simp only [applyStrW.k_apply_nstr, strDropW, Option.map_some]; split <;> rfl
 
 /-- A name or level line with fields `f`, applied. -/
 def lineRecW (b : Array UInt8) (m : Mem) (pl idx a c d : Word) : Option Mem :=
