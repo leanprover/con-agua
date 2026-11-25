@@ -2,7 +2,7 @@ module
 
 public import ConAgua.Arena.Globals
 public import ConAgua.Layout
-import ConAgua.L.Notation
+public import ConAgua.L.Notation
 import ConAgua.Arena.NAnonStore
 import ConAgua.Arena.NStrStore
 import ConAgua.Arena.NNumStore
@@ -37,11 +37,9 @@ namespace L.Checker
 
 open L L.Arena L.Front
 
-/-- The exchange loop: rows `d` and `s` exchanged below `n` (`d[j] ↔ s[j]` for `j < n`). -/
+/-- The exchange loop: rows `d` and `s` exchanged below `n` (`d[j] ↔ s[j]` for `j < n`; a row
+shorter than `n` stops it out of bounds). -/
 def cqXchgLoop (d s : ArrId) : Stmt := lblk (n, j, t) {
-  if len(d.u64) < n { abort };
-  if len(s.u64) < n { abort };
-  j := 0;
   for j < n {
     t := d.u64[j];
     d.u64[j] := s.u64[j];
