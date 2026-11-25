@@ -47,7 +47,6 @@ theorem cmpA_ne_accept {K c : Word} (hK : K < c) (hc : c = 9223372036854775808) 
   simp only [ACCEPT, UInt64.reduceToNat] at e2 hK
   omega
 
-set_option maxHeartbeats 1600000 in
 /-- **`ca_start_ac` on the machine.** From `ca_start_ac`, called as `CmpCall` says, the machine
 returns to `ra` with the callee-saved registers restored; an accept, an error, and a return with
 `rdx = 0`, `rax ≥ 2^63` mean the L runs `CmpAccT`, `CmpErrT`, `CmpHiT` say. -/
@@ -231,8 +230,7 @@ theorem cmpA_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abi
     refine ev_binO (op := .add) (o := oR .rcx) (v := 9223372036854775808) rfl (hC.get (i := 145) rfl)
       (Or.inr (Or.inr ⟨.rcx, rfl, rfl⟩)) fun st11 => ?_
     refine ev_movRI (hC.get (i := 146) rfl) ?_
-    refine ev_congr (j := Kc + 147) ?_ (by omega)
-    rw [← Code.label (i := 147) hC rfl]
+    refine ev_congr (j := Kc + 147) (Eq.mp (congrArg (Ev _ _) (Code.label (i := 147) hC rfl)) ?_) (by omega)
     rw [interp_c] at hlt
     simp only [decide_eq_true_eq] at hlt
     rsimp at hlt
