@@ -23,7 +23,7 @@ DESIGN.md, "The checker as one program (lane `integrate`)". Steps:
    file `checker.s` with `scripts/asm_file.py` (it needs `Checker/ProgI.lean` built).
 5. Build `ConAgua.Checker.Prog` and regenerate the call-closure lists the proofs about
    `checkerProg` check (`CLOSURES`: `core_fns.py`, `loop_fns.py`, `leaf_fns.py`, `phaseb_fns.py`,
-   `preloop_ws.py`, in that order, each after building the modules its Lean script imports).
+   `preloop_ws.py`, `nv_fns.py`, in that order, each after building the modules its Lean script imports).
    Skipped with `--no-build` or `--no-closures`.
 
 Usage: scripts/checker_prog.py [--no-build] [--no-closures] [--check]   (`--check`: fail if the file would change)
@@ -510,7 +510,8 @@ def lean_str(s):
 # The closure-list generators, in dependency order (`leaf_fns.lean` reads `loopFns`), with the
 # modules each one's Lean script imports besides the program (built before it runs).
 CLOSURES = [("core_fns.py", ["ConAgua.Arena.CoreErec"]), ("loop_fns.py", ["ConAgua.Arena.LoopFns"]),
-            ("leaf_fns.py", ["ConAgua.Arena.LeafFns"]), ("phaseb_fns.py", []), ("preloop_ws.py", [])]
+            ("leaf_fns.py", ["ConAgua.Arena.LeafFns"]), ("phaseb_fns.py", []), ("preloop_ws.py", []),
+            ("nv_fns.py", [])]
 
 
 def closures():

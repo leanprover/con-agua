@@ -247,9 +247,9 @@ def cqF0 : List FnName :=
 
 names_tree cqF0Tree : cqF0
 
-/-- The compared run's stash arrays (`223‥236`: the first parse's records, the solution's and the
+/-- The compared run's stash arrays (`223‥230`: the first parse's records, the solution's and the
 challenge's copies), which no job stores to. -/
-def cqStash (b : TieredArray) : Bool := decide (223 ≤ b.arr) && decide (b.arr ≤ 236)
+def cqStash (b : TieredArray) : Bool := decide (223 ≤ b.arr) && decide (b.arr ≤ 230)
 
 /-- The flag-`0` jobs' arrays: `cdA` but the walks' memos and the stash arrays. -/
 def cqA : List TieredArray := cdA.filter fun b => b != (NDM : TieredArray) && b != (CSM : TieredArray) &&

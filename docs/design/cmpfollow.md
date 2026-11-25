@@ -66,3 +66,32 @@ estimate about two hours with the regeneration and the frontend's rebuild: **not
 (not cheap; the brief's bar). It would save 8 MiB in every flat `Init` run as well, not only in
 the compared one. Not measured: the time, which should not move (the same unescape, no new
 pass).
+
+## 4. The sequential bank switch exchanges the index rows (D57; 17:31–18:05)
+
+Mode `8` (`cq_bank_s`) no longer copies the challenge's index rows to `CEIX*`/`CTIX*` and the
+solution's over them: `cq_swap_*` exchanges `EIX*` ↔ `SIX*`, `TIX*` ↔ `STX*` in place below
+`2 · count` (`cqXchgLoop`, a `for` loop, three words moved per index), the memory header S's view
+of the threaded run shows; mode `9` (`cq_bank_c`) exchanges them back (`cq_xchg_*`) at the extents
+`CCTL[0‥5]`. The six stash arrays are gone from the layout (`CFIRSTS`, `CDLP`, `CCTL` are now
+`228‥230`). Proofs: `xchgM` (the loop's memory, `Checker/CmpSeqSpec.lean`: `xchgM_get`,
+`xchgM_back`, the loop spec by `Triple.forUp_pre`), the switch's rows (`cqRowStep_rows`, both
+arrays), its frame (`csAS` now holds the solution's rows, `csAX = csAS`), the restore (`CqX`,
+`CqX.back`, `Checker/CmpSeqViewC.lean`: both row sets back exactly, so `CsViewC.rows` comes from the
+exchange instead of from the solution's rows being untouched); `CsKeep.sol` already excluded the
+exchanged rows. No statement of `Final/*` changed. About 35 minutes, well inside compare2's
+2–3 h estimate (the threaded mode's `csAX`/`CsViewC` were already shaped for a swap).
+
+Checks: `diff-e2e --parallel 16` 766/766 agree (UNSOUND/INCOMPLETE/CRASH/TIMEOUT 0). Init,
+`_tmp/compare/init{C,S}.ndjson`, interleaved with master's binary, 2 rounds, load about 5:
+
+| run | instructions:u master → new | wall | peak RSS |
+|---|---|---|---|
+| flat, 1 thread | 202 631.85 M → 202 631.85 M | 14.8–14.9 s both | 627 MB both |
+| flat, 16 threads | 204.02–204.12 G → 204.08–204.14 G (noise) | 2.55–2.6 s both | 764 MB both |
+| compare, 1 thread | 407 588.6 M → 407 609.9 M (+0.005 %, the loop) | 29.7–30.0 s both | 1 017 → 1 006 MB |
+| compare, 16 threads | 409 806 M → 409 808 M | 5.1–5.3 s both | 1 177 MB both |
+
+The sequential compared run's peak drops by 11 MB (H10 estimated 12); the threaded run never used
+the stash.
+`diff-e2e --refs --parallel 16`: 766/766 agree, REFDIFF 0.

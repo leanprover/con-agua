@@ -35,38 +35,37 @@ theorem csA_arr {b : TieredArray} (h : b ∈ csA) : b.hi = false ∧ (b.arr = 67
   simp only [csA, List.mem_cons, List.not_mem_nil, or_false] at h
   rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
 
-/-- `csA` and the stash arrays modes `8`/`9` keep the challenge's view in (`CDECL`, `CEIX*`,
-`CTIX*`, `CFIRSTS`, `CDLP`, `CCTL`): what a bank switch writes. -/
-def csAS : List TieredArray := csA ++ ([CDECL, CEIXA, CEIXS, CEIXN, CTIXA, CTIXS, CTIXN, CFIRSTS, CDLP, CCTL] : List ArrId).map TieredArray.t0
+/-- The solution's index rows: header S shows the challenge's `EIX*`/`TIX*` there (the swap);
+modes `8`/`9` exchange them with `EIX*`/`TIX*` in place. -/
+def solRowsS : List TieredArray := [SIXA, SIXS, SIXN, STXA, STXS, STXN]
+
+/-- `csA`, the stash arrays modes `8`/`9` keep the challenge's view in (`CDECL`, `CFIRSTS`, `CDLP`,
+`CCTL`) and the solution's rows they exchange: what a bank switch writes. -/
+def csAS : List TieredArray := csA ++ ([CDECL, CFIRSTS, CDLP, CCTL] : List ArrId).map TieredArray.t0 ++ solRowsS
 
 theorem csAS_arr {b : TieredArray} (h : b ∈ csAS) : b.hi = false ∧
-    (b.arr = 67 ∨ b.arr = 68 ∨ (129 ≤ b.arr ∧ b.arr ≤ 137) ∨ (223 ≤ b.arr ∧ b.arr ≤ 236)) := by
-  simp only [csAS, csA, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.mem_cons, List.not_mem_nil, or_false] at h
+    (b.arr = 67 ∨ b.arr = 68 ∨ (129 ≤ b.arr ∧ b.arr ≤ 137) ∨ (210 ≤ b.arr ∧ b.arr ≤ 215) ∨
+      (223 ≤ b.arr ∧ b.arr ≤ 230)) := by
+  simp only [csAS, csA, solRowsS, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.mem_cons, List.not_mem_nil, or_false] at h
   rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl |
     rfl | rfl | rfl <;> decide
 
-theorem csA_sub_csAS {b : TieredArray} (h : b ∈ csA) : b ∈ csAS := List.mem_append_left _ h
-
-/-- The solution's index rows: header S shows the challenge's `EIX*`/`TIX*` there (the swap). -/
-def solRowsS : List TieredArray := [SIXA, SIXS, SIXN, STXA, STXS, STXN]
+theorem csA_sub_csAS {b : TieredArray} (h : b ∈ csA) : b ∈ csAS :=
+  List.mem_append_left _ (List.mem_append_left _ h)
 
 /-- The arrays header S's view replaces: `csA` and the swapped solution's rows. -/
 def csAV : List TieredArray := csA ++ solRowsS
 
-/-- `csAS` and the swapped solution's rows. -/
-def csAX : List TieredArray := csAS ++ solRowsS
+/-- `csAS` (it holds the swapped solution's rows). -/
+def csAX : List TieredArray := csAS
 
 theorem csAX_arr {b : TieredArray} (h : b ∈ csAX) : b.hi = false ∧
     (b.arr = 67 ∨ b.arr = 68 ∨ (129 ≤ b.arr ∧ b.arr ≤ 137) ∨ (210 ≤ b.arr ∧ b.arr ≤ 215) ∨
-      (223 ≤ b.arr ∧ b.arr ≤ 236)) := by
-  rcases List.mem_append.mp h with h | h
-  · have := csAS_arr h; exact ⟨this.1, by omega⟩
-  · simp only [solRowsS, List.mem_cons, List.not_mem_nil, or_false] at h
-    rcases h with rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+      (223 ≤ b.arr ∧ b.arr ≤ 230)) := csAS_arr h
 
 theorem csAV_sub_csAX {b : TieredArray} (h : b ∈ csAV) : b ∈ csAX := by
   rcases List.mem_append.mp h with h | h
-  · exact List.mem_append_left _ (csA_sub_csAS h)
+  · exact csA_sub_csAS h
   · exact List.mem_append_right _ h
 
 theorem csA_sub_csAV {b : TieredArray} (h : b ∈ csA) : b ∈ csAV := List.mem_append_left _ h
@@ -299,7 +298,7 @@ theorem _root_.L.Arena.JobM.csSwapJ {J J' : Option ISolution} {t t' : Mem} (h : 
     (hf : MemFrame csAS csC t t') (hI : IndexR t' I') (hD : DeclsF (t'.arr64 DECL) (t'.arr64 DLP) ds')
     (hfz : FrozenR t' I') (hfs : I'.firsts.size = ds'.size) (hs : JSol J' t') :
     JobM pins dn ds' J' I' t' a :=
-  h.csSwapX (hf.mono (fun _ h => List.mem_append_left _ h) (fun _ h => h)) hI hD hfz hfs hs
+  h.csSwapX hf hI hD hfz hfs hs
 end
 
 /-- **Header C's view after the solution's jobs** `mC`: the memory `mS` the solution's jobs left

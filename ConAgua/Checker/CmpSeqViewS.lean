@@ -12,7 +12,8 @@ import ConAgua.Arena.IWFrame
 
 What `cq_bank_s` and `cq_ctl_s` (`Checker/CmpSeqBank.lean`, `Checker/CmpSeqMv.lean`) leave of the
 challenge's frozen memory `m9`: a frame of `csAS`/`csC` (`cqS_frame`), each stream-index row array
-the solution's below `2 · count` and the challenge's past it (`cqBankSM_eix`/`cqBankSM_tix`).
+the solution's below `2 · count` and the challenge's past it, each solution row array the other
+way round (`cqS_rows`, `cqS_srows`).
 -/
 
 namespace L.Checker
@@ -33,22 +34,29 @@ theorem MemFrame.setIn {A : List TieredArray} {C : List Word} {d : TieredArray} 
     (hc : d ≠ CTL) (m : Mem) (k v : Word) : MemFrame A C m (m.set64 d k v) :=
   (MemFrame.set64 m d hc k v).mono (fun b hb => by simp at hb; exact hb ▸ hd) (fun _ h => by simp at h)
 
-theorem cqRowStep_frame {A : List TieredArray} {C : List Word} {c d s : ArrId} {ca k : Word}
-    (hc : (c : TieredArray) ∈ A) (hd : (d : TieredArray) ∈ A) (hc1 : c ≠ CTL) (hd1 : d ≠ CTL) (hC : (CCTL : TieredArray) ∈ A) (m : Mem) :
-    MemFrame A C m (cqRowStep c d s ca k m) :=
-  ((MemFrame.copyIn hc (by simpa [TieredArray.t0] using hc1) m _ _ _ _).trans (MemFrame.copyIn hd (by simpa [TieredArray.t0] using hd1) _ _ _ _ _)).trans
+theorem MemFrame.xchgIn {A : List TieredArray} {C : List Word} {d s : TieredArray} (hd : d ∈ A) (hs : s ∈ A)
+    (hdc : d ≠ CTL) (hsc : s ≠ CTL) (m : Mem) (n : Nat) : MemFrame A C m (xchgM d s m n) :=
+  ⟨fun b hb _ => xchgM_ne _ _ _ _ (fun e => hb (e ▸ hd)) (fun e => hb (e ▸ hs)),
+   fun x _ => by rw [xchgM_ne _ _ _ _ (Ne.symm hdc) (Ne.symm hsc)],
+   fun b => xchgM_size _ _ _ _ _⟩
+
+theorem cqRowStep_frame {A : List TieredArray} {C : List Word} {d s : ArrId} {ca k : Word}
+    (hd : (d : TieredArray) ∈ A) (hs : (s : TieredArray) ∈ A) (hd1 : d ≠ CTL) (hs1 : s ≠ CTL)
+    (hC : (CCTL : TieredArray) ∈ A) (m : Mem) :
+    MemFrame A C m (cqRowStep d s ca k m) :=
+  (MemFrame.xchgIn hd hs (by simpa [TieredArray.t0] using hd1) (by simpa [TieredArray.t0] using hs1) m _).trans
     (MemFrame.setIn hC (by decide) _ _ _)
 
 /-- **`cq_bank_s` writes only `csAS`**, no `CTL` word. -/
 theorem cqBankSM_frame (C : List Word) (m : Mem) : MemFrame csAS C m (cqBankSM m) := by
-  have hR : ∀ (c d s : ArrId) (ca k : Word), (c : TieredArray) ∈ csAS → (d : TieredArray) ∈ csAS →
-      c ≠ CTL → d ≠ CTL → ∀ m, MemFrame csAS C m (cqRowStep c d s ca k m) :=
-    fun c d s ca k hc hd hc1 hd1 m => cqRowStep_frame hc hd hc1 hd1 (by decide) m
+  have hR : ∀ (d s : ArrId) (ca k : Word), (d : TieredArray) ∈ csAS → (s : TieredArray) ∈ csAS →
+      d ≠ CTL → s ≠ CTL → ∀ m, MemFrame csAS C m (cqRowStep d s ca k m) :=
+    fun d s ca k hd hs hd1 hs1 m => cqRowStep_frame hd hs hd1 hs1 (by decide) m
   have h6 : MemFrame csAS C m (cqRowsS m) := by
     unfold cqRowsS
-    exact (((((hR _ _ _ _ _ (by decide) (by decide) (by decide) (by decide) _).trans (hR _ _ _ _ _ (by decide) (by decide) (by decide) (by decide) _)).trans
-      (hR _ _ _ _ _ (by decide) (by decide) (by decide) (by decide) _)).trans (hR _ _ _ _ _ (by decide) (by decide) (by decide) (by decide) _)).trans
-      (hR _ _ _ _ _ (by decide) (by decide) (by decide) (by decide) _)).trans (hR _ _ _ _ _ (by decide) (by decide) (by decide) (by decide) _)
+    exact (((((hR _ _ _ _ (by decide) (by decide) (by decide) (by decide) _).trans (hR _ _ _ _ (by decide) (by decide) (by decide) (by decide) _)).trans
+      (hR _ _ _ _ (by decide) (by decide) (by decide) (by decide) _)).trans (hR _ _ _ _ (by decide) (by decide) (by decide) (by decide) _)).trans
+      (hR _ _ _ _ (by decide) (by decide) (by decide) (by decide) _)).trans (hR _ _ _ _ (by decide) (by decide) (by decide) (by decide) _)
   refine h6.trans ?_
   unfold cqBankSM cqTailS
   generalize cqRowsS m = M
@@ -66,28 +74,26 @@ theorem cqS_frame (m : Mem) : MemFrame csAS csC m (cqCtlSM (cqBankSM m)) :=
 
 /-! ## The rows after the switch -/
 
-theorem cqRowStep_arr {c d s : ArrId} {ca k : Word} (m : Mem) {b : TieredArray} (h1 : b ≠ c) (h2 : b ≠ d)
-    (h3 : b ≠ CCTL) : (cqRowStep c d s ca k m).arr64 b = m.arr64 b := by
-  simp only [cqRowStep, cqRowsM, Mem.arr64_set64_ne _ _ _ _ _ h3, arr64_copy64_ne _ _ _ _ _ _ h1,
-    arr64_copy64_ne _ _ _ _ _ _ h2]
+theorem cqRowStep_arr {d s : ArrId} {ca k : Word} (m : Mem) {b : TieredArray} (h1 : b ≠ d) (h2 : b ≠ s)
+    (h3 : b ≠ CCTL) : (cqRowStep d s ca k m).arr64 b = m.arr64 b := by
+  simp only [cqRowStep, cqRowsM, Mem.arr64_set64_ne _ _ _ _ _ h3, xchgM_ne _ _ _ _ h1 h2]
 
-/-- **One row swap's rows**: the solution's `s` below `2 · CTL[ca]`, the challenge's `d` past it. -/
-theorem cqRowStep_rows {c d s : ArrId} {ca k : Word} {m : Mem} (hok : CqRowsOK c d s ca m)
-    (hcd : c ≠ d) (hcs : c ≠ s) (hds : d ≠ s) (hdC : (d : TieredArray) ≠ CCTL) :
-    RowsP ((cqRowStep c d s ca k m).arr64 d) (m.arr64 s) (m.arr64 d) (rdW (m.arr64 CTL) ca).toNat := by
-  obtain ⟨h0, h1, h2, h3⟩ := hok
-  have hN : (cqRowsN m ca).toNat = 2 * (rdW (m.arr64 CTL) ca).toNat := by
-    simp [cqRowsN, UInt64.toNat_mul]; omega
-  have hcs' : (c : TieredArray) ≠ s := by simpa [TieredArray.t0] using hcs
-  have hcd' : (c : TieredArray) ≠ d := by simpa [TieredArray.t0] using hcd
-  intro j
-  simp only [cqRowStep, cqRowsM, Mem.arr64_set64_ne _ _ _ _ _ hdC]
-  generalize hM : m.copy64 c 0 d 0 (cqRowsN m ca).toNat = M
-  have hMs : M.arr64 s = m.arr64 s := by rw [← hM, arr64_copy64_ne _ _ _ _ _ _ (Ne.symm hcs')]
-  have hMd : M.arr64 d = m.arr64 d := by rw [← hM, arr64_copy64_ne _ _ _ _ _ _ (Ne.symm hcd')]
-  split
-  · rw [cq_copy64_lo hds M (by omega) (by rw [hMd]; exact h2) (by rw [hMs]; exact h3) (by omega), hMs]
-  · rw [cq_copy64_hi hds M (by omega) (by omega), hMd]
+theorem cqRowsN_toNat {m : Mem} {ca : Word} (h : (rdW (m.arr64 CTL) ca).toNat < 2 ^ 62) :
+    (cqRowsN m ca).toNat = 2 * (rdW (m.arr64 CTL) ca).toNat := by
+  simp [cqRowsN, UInt64.toNat_mul]; omega
+
+/-- **One row swap's rows**: `d` holds the solution's `s` below `2 · CTL[ca]` and the challenge's
+`d` past it; `s` the other way round. -/
+theorem cqRowStep_rows {d s : ArrId} {ca k : Word} {m : Mem} (hok : CqRowsOK d s ca m)
+    (hds : d ≠ s) (hdC : (d : TieredArray) ≠ CCTL) (hsC : (s : TieredArray) ≠ CCTL) :
+    RowsP ((cqRowStep d s ca k m).arr64 d) (m.arr64 s) (m.arr64 d) (rdW (m.arr64 CTL) ca).toNat ∧
+    RowsP ((cqRowStep d s ca k m).arr64 s) (m.arr64 d) (m.arr64 s) (rdW (m.arr64 CTL) ca).toNat := by
+  obtain ⟨h0, h2, h3⟩ := hok
+  have hN := cqRowsN_toNat h0
+  have hds' : (d : TieredArray) ≠ s := by simpa [TieredArray.t0] using hds
+  have g := xchgM_get hds' m (j := (cqRowsN m ca).toNat) (by omega) h2 h3
+  simp only [cqRowStep, cqRowsM, Mem.arr64_set64_ne _ _ _ _ _ hdC, Mem.arr64_set64_ne _ _ _ _ _ hsC]
+  exact ⟨fun j => by rw [(g j).1, hN], fun j => by rw [(g j).2, hN]⟩
 
 /-- The arrays `cq_bank_s`'s copies after the row swaps write. -/
 def cqTailA : List TieredArray := [CCTL, CDECL, L.Front.DECL, CFIRSTS, FIRSTS, CDLP, L.Front.DLP]
@@ -114,12 +120,12 @@ theorem cqS_rows {m : Mem} (hok : CqRowsSOK m) (g : Nat) (hg : g ≤ 2) :
     RowsP ((cqCtlSM (cqBankSM m)).arr64 (tixArr g)) (m.arr64 (stxArr g)) (m.arr64 (tixArr g)) (nmCnt m g) := by
   simp only [CqRowsSOK] at hok
   obtain ⟨o1, o2, o3, o4, o5, o6, -⟩ := hok
-  have r1 := cqRowStep_rows (k := 0) o1 (by decide) (by decide) (by decide) (by decide)
-  have r2 := cqRowStep_rows (k := 1) o2 (by decide) (by decide) (by decide) (by decide)
-  have r3 := cqRowStep_rows (k := 2) o3 (by decide) (by decide) (by decide) (by decide)
-  have r4 := cqRowStep_rows (k := 3) o4 (by decide) (by decide) (by decide) (by decide)
-  have r5 := cqRowStep_rows (k := 4) o5 (by decide) (by decide) (by decide) (by decide)
-  have r6 := cqRowStep_rows (k := 5) o6 (by decide) (by decide) (by decide) (by decide)
+  have r1 := (cqRowStep_rows (k := 0) o1 (by decide) (by decide) (by decide)).1
+  have r2 := (cqRowStep_rows (k := 1) o2 (by decide) (by decide) (by decide)).1
+  have r3 := (cqRowStep_rows (k := 2) o3 (by decide) (by decide) (by decide)).1
+  have r4 := (cqRowStep_rows (k := 3) o4 (by decide) (by decide) (by decide)).1
+  have r5 := (cqRowStep_rows (k := 4) o5 (by decide) (by decide) (by decide)).1
+  have r6 := (cqRowStep_rows (k := 5) o6 (by decide) (by decide) (by decide)).1
   clear o1 o2 o3 o4 o5 o6
   simp (disch := decide) only [cqRowStep_arr] at r1 r2 r3 r4 r5 r6
   have e : g = 0 ∨ g = 1 ∨ g = 2 := by omega
@@ -180,15 +186,13 @@ theorem cqMax_ge_right (a b : Word) : b.toNat ≤ (cqMax a b).toNat := by
   · exact Nat.le_refl _
   · rename_i h; have := UInt64.not_lt.mp h; exact UInt64.le_iff_toNat_le.mp this
 
-theorem cqRowsS_arr (m : Mem) {b : TieredArray} (h : b ∉ csAS) (hc : b ≠ CCTL)
-    (h2 : b ≠ CEIXA ∧ b ≠ CEIXS ∧ b ≠ CEIXN ∧ b ≠ CTIXA ∧ b ≠ CTIXS ∧ b ≠ CTIXN) :
+theorem cqRowsS_arr (m : Mem) {b : TieredArray} (h : b ∉ csAS) (hc : b ≠ CCTL) :
     (cqRowsS m).arr64 b = m.arr64 b := by
-  have hn : ∀ x : TieredArray, x ∈ csA → b ≠ x := fun x hx e => h (e ▸ csA_sub_csAS hx)
-  obtain ⟨c1, c2, c3, c4, c5, c6⟩ := h2
+  have hn : ∀ x : TieredArray, x ∈ csAS → b ≠ x := fun x hx e => h (e ▸ hx)
   simp only [cqRowsS]
-  rw [cqRowStep_arr _ c6 (hn _ (by decide)) hc, cqRowStep_arr _ c3 (hn _ (by decide)) hc,
-    cqRowStep_arr _ c5 (hn _ (by decide)) hc, cqRowStep_arr _ c2 (hn _ (by decide)) hc,
-    cqRowStep_arr _ c4 (hn _ (by decide)) hc, cqRowStep_arr _ c1 (hn _ (by decide)) hc]
+  rw [cqRowStep_arr _ (hn _ (by decide)) (hn _ (by decide)) hc, cqRowStep_arr _ (hn _ (by decide)) (hn _ (by decide)) hc,
+    cqRowStep_arr _ (hn _ (by decide)) (hn _ (by decide)) hc, cqRowStep_arr _ (hn _ (by decide)) (hn _ (by decide)) hc,
+    cqRowStep_arr _ (hn _ (by decide)) (hn _ (by decide)) hc, cqRowStep_arr _ (hn _ (by decide)) (hn _ (by decide)) hc]
 
 theorem cqS_arrT (m : Mem) {b : TieredArray} (h : b ∈ cqTailA) (hc : b ≠ CCTL) :
     (cqCtlSM (cqBankSM m)).arr64 b = (cqBankSM m).arr64 b :=
@@ -226,9 +230,9 @@ theorem _root_.L.Arena.JobM.cqViewS {J : ISolution} {IS IC : IStreamIndex} {dsS 
   -- the records' extent
   have eD : (cqRowsS m9).arr64 L.Front.DECL = m9.arr64 L.Front.DECL := by
     simp only [cqRowsS]; simp (disch := decide) only [cqRowStep_arr]
-  have eSD : (cqRowsS m9).arr64 SDECL = m9.arr64 SDECL := cqRowsS_arr m9 (by decide) (by decide) (by decide)
-  have eSF : (cqRowsS m9).arr64 SFIRSTS = m9.arr64 SFIRSTS := cqRowsS_arr m9 (by decide) (by decide) (by decide)
-  have eSP : (cqRowsS m9).arr64 SDLP = m9.arr64 SDLP := cqRowsS_arr m9 (by decide) (by decide) (by decide)
+  have eSD : (cqRowsS m9).arr64 SDECL = m9.arr64 SDECL := cqRowsS_arr m9 (by decide) (by decide)
+  have eSF : (cqRowsS m9).arr64 SFIRSTS = m9.arr64 SFIRSTS := cqRowsS_arr m9 (by decide) (by decide)
+  have eSP : (cqRowsS m9).arr64 SDLP = m9.arr64 SDLP := cqRowsS_arr m9 (by decide) (by decide)
   have eP : (cqRowsS m9).arr64 L.Front.DLP = m9.arr64 L.Front.DLP := by
     simp only [cqRowsS]; simp (disch := decide) only [cqRowStep_arr]
   have hcnt : (rdW (m.arr64 L.Front.DECL) 0).toNat = dsS.size := hDS.count

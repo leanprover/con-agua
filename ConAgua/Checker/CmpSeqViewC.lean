@@ -11,11 +11,12 @@ import ConAgua.Arena.IWFrame
 /-!
 # The challenge's view back after the solution's jobs (lane compare2, the sJ variant)
 
-Mode `8`'s switch (`cq_bank_s`) copies each array of the challenge's view (`EIX*`, `TIX*`, `DECL`,
-`FIRSTS`, `DLP`) to its stash (`CEIX*`, …) up to an extent kept in `CCTL[0‥8]`, then the
-solution's prefix over it. The solution's jobs never store to the stash arrays, the stream index's
-arrays nor `CCTL` (`cq_checkJobs_frame0`), so mode `9`'s `cq_bank_c` (copying each stash prefix
-back) restores the stream index's arrays exactly and the records and the pool in their used words
+Mode `8`'s switch (`cq_bank_s`) exchanges the stream index's rows (`EIX*`, `TIX*`) with the
+solution's (`SIX*`, `STX*`) below an extent kept in `CCTL[0‥5]` (`CqX`), and copies `DECL`, `FIRSTS`,
+`DLP` to their stashes (`CDECL`, …) up to an extent kept in `CCTL[6‥8]`, then the solution's
+prefix over them (`CqSv`). The solution's jobs never store to the stash arrays, either row set nor
+`CCTL` (`cq_checkJobs_frame0`), so mode `9`'s `cq_bank_c` (the same exchanges, and each stash
+prefix copied back) restores both row sets exactly and the records and the pool in their used words
 (`cqC_view`: `CsViewC`), and the jobs kept what `CsKeep` needs (`cqS_keep`).
 -/
 
@@ -25,8 +26,33 @@ open L L.Arena L.Front
 
 /-- The stashed arrays: (array, its stash, the extent's `CCTL` slot). -/
 def cqPairs : List (ArrId × ArrId × Word) :=
-  [(EIXA, CEIXA, 0), (TIXA, CTIXA, 1), (EIXS, CEIXS, 2), (TIXS, CTIXS, 3), (EIXN, CEIXN, 4),
-   (TIXN, CTIXN, 5), (L.Front.DECL, CDECL, 6), (FIRSTS, CFIRSTS, 7), (L.Front.DLP, CDLP, 8)]
+  [(L.Front.DECL, CDECL, 6), (FIRSTS, CFIRSTS, 7), (L.Front.DLP, CDLP, 8)]
+
+/-- The exchanged rows: (the stream index's row, the solution's, the extent's `CCTL` slot). -/
+def cqXPairs : List (ArrId × ArrId × Word) :=
+  [(EIXA, SIXA, 0), (TIXA, STXA, 1), (EIXS, SIXS, 2), (TIXS, STXS, 3), (EIXN, SIXN, 4), (TIXN, STXN, 5)]
+
+/-- **`A`'s `d` and `s` are `m`'s exchanged below the extent `CCTL[k]` of `A`** (in bounds). -/
+structure CqX (m A : Mem) (d s : ArrId) (k : Word) : Prop where
+  nd : (rdW (A.arr64 CCTL) k).toNat ≤ (m.arr64 d).size
+  ns : (rdW (A.arr64 CCTL) k).toNat ≤ (m.arr64 s).size
+  ed : A.arr64 d = (xchgM d s m (rdW (A.arr64 CCTL) k).toNat).arr64 d
+  es : A.arr64 s = (xchgM d s m (rdW (A.arr64 CCTL) k).toNat).arr64 s
+
+theorem CqX.congr {m A A' : Mem} {d s : ArrId} {k : Word} (h : CqX m A d s k)
+    (ed : A'.arr64 d = A.arr64 d) (es : A'.arr64 s = A.arr64 s)
+    (ek : rdW (A'.arr64 CCTL) k = rdW (A.arr64 CCTL) k) : CqX m A' d s k :=
+  ⟨by rw [ek]; exact h.nd, by rw [ek]; exact h.ns, by rw [ed, ek]; exact h.ed, by rw [es, ek]; exact h.es⟩
+
+/-- An exchange's rows depend only on its two arrays. -/
+theorem xchgM_congr {d s : TieredArray} (hds : d ≠ s) {m M : Mem} (hd : M.arr64 d = m.arr64 d)
+    (hs : M.arr64 s = m.arr64 s) (j : Nat) :
+    (xchgM d s M j).arr64 d = (xchgM d s m j).arr64 d ∧ (xchgM d s M j).arr64 s = (xchgM d s m j).arr64 s := by
+  induction j with
+  | zero => exact ⟨hd, hs⟩
+  | succ j ih =>
+    simp only [xchgM, Mem.arr64_set64_ne _ _ _ _ _ hds, Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hds),
+      Mem.arr64_set64_same, ih.1, ih.2, and_self]
 
 /-- **`c` holds `m`'s `b` below the extent `CCTL[k]` of `A`** (in bounds). -/
 structure CqSv (m A : Mem) (b c : ArrId) (k : Word) : Prop where
@@ -58,42 +84,29 @@ theorem CqHi.orig {m m' A : Mem} {b : ArrId} {k : Word} (h : CqHi m A b k)
     (e : m'.arr64 b = m.arr64 b) : CqHi m' A b k :=
   fun j hj => by rw [e]; exact h j hj
 
-/-- **One stash-and-overwrite step**: `c := d`, `d := s` below `N`, `N` in slot `k`. -/
-theorem cqSv_core {c d s : ArrId} (hcd : c ≠ d) (hds : d ≠ s) {M A : Mem} {k N : Word}
-    (hn : N.toNat < 2 ^ 63) (hc : N.toNat ≤ (M.arr64 c).size) (hd : N.toNat ≤ (M.arr64 d).size)
-    (eC : A.arr64 c = ((M.copy64 c 0 d 0 N.toNat).copy64 d 0 s 0 N.toNat).arr64 c)
-    (eD : A.arr64 d = ((M.copy64 c 0 d 0 N.toNat).copy64 d 0 s 0 N.toNat).arr64 d)
-    (eK : rdW (A.arr64 CCTL) k = N) : CqSv M A d c k ∧ CqHi M A d k := by
-  have hcd' : (c : TieredArray) ≠ d := by simpa [TieredArray.t0] using hcd
-  refine ⟨⟨by rw [eK]; exact hn, by rw [eK]; exact hd, by rw [eK, eC, size_copy64, size_copy64]; exact hc,
-    fun j hj => ?_⟩, fun j hj => ?_⟩
-  · rw [eK] at hj
-    rw [eC, arr64_copy64_ne _ _ _ _ _ _ hcd', cq_copy64_lo hcd M hn hc hd hj]
-  · rw [eK] at hj
-    rw [eD, cq_copy64_hi hds _ hn (by omega), arr64_copy64_ne _ _ _ _ _ _ (Ne.symm hcd')]
+/-- **A row swap of `cq_bank_s` exchanges its rows** (from a memory whose rows are `m`'s). -/
+theorem cqRowStep_x {d s : ArrId} {ca k : Word} {M m : Mem} (hok : CqRowsOK d s ca M)
+    (hk : k.toNat < (M.arr64 CCTL).size) (hds : d ≠ s) (hdC : (d : TieredArray) ≠ CCTL)
+    (hsC : (s : TieredArray) ≠ CCTL) (ed : M.arr64 d = m.arr64 d) (es : M.arr64 s = m.arr64 s) :
+    CqX m (cqRowStep d s ca k M) d s k := by
+  obtain ⟨-, h2, h3⟩ := hok
+  have hds' : (d : TieredArray) ≠ s := by simpa [TieredArray.t0] using hds
+  have eK : rdW ((cqRowStep d s ca k M).arr64 CCTL) k = cqRowsN M ca := by
+    simp only [cqRowStep]; exact cq_rdW_hit (by simp only [cqRowsM, xchgM_size]; exact hk)
+  have c := xchgM_congr hds' ed es (cqRowsN M ca).toNat
+  refine ⟨by rw [eK, ← ed]; exact h2, by rw [eK, ← es]; exact h3, ?_, ?_⟩
+  · rw [eK, ← c.1]; simp only [cqRowStep, cqRowsM, Mem.arr64_set64_ne _ _ _ _ _ hdC]
+  · rw [eK, ← c.2]; simp only [cqRowStep, cqRowsM, Mem.arr64_set64_ne _ _ _ _ _ hsC]
 
-/-- **A row swap of `cq_bank_s` stashes its row**. -/
-theorem cqRowStep_sv {c d s : ArrId} {ca k : Word} {M : Mem} (hok : CqRowsOK c d s ca M)
-    (hk : k.toNat < (M.arr64 CCTL).size) (hcd : c ≠ d) (hds : d ≠ s) (hcC : (c : TieredArray) ≠ CCTL)
-    (hdC : (d : TieredArray) ≠ CCTL) :
-    CqSv M (cqRowStep c d s ca k M) d c k ∧ CqHi M (cqRowStep c d s ca k M) d k := by
-  obtain ⟨h0, h1, h2, -⟩ := hok
-  have hN : (cqRowsN M ca).toNat = 2 * (rdW (M.arr64 CTL) ca).toNat := by
-    simp [cqRowsN, UInt64.toNat_mul]; omega
-  exact cqSv_core hcd hds (by omega) h1 h2
-    (by simp only [cqRowStep, cqRowsM, Mem.arr64_set64_ne _ _ _ _ _ hcC])
-    (by simp only [cqRowStep, cqRowsM, Mem.arr64_set64_ne _ _ _ _ _ hdC])
-    (by simp only [cqRowStep]; exact cq_rdW_hit (by simp only [cqRowsM, size_copy64]; exact hk))
-
-theorem cqRowStep_cctl {c d s : ArrId} {ca k k' : Word} (m : Mem) (hk : k' ≠ k)
-    (hc : (CCTL : TieredArray) ≠ c) (hd : (CCTL : TieredArray) ≠ d) :
-    rdW ((cqRowStep c d s ca k' m).arr64 CCTL) k = rdW (m.arr64 CCTL) k := by
+theorem cqRowStep_cctl {d s : ArrId} {ca k k' : Word} (m : Mem) (hk : k' ≠ k)
+    (hd : (CCTL : TieredArray) ≠ d) (hs : (CCTL : TieredArray) ≠ s) :
+    rdW ((cqRowStep d s ca k' m).arr64 CCTL) k = rdW (m.arr64 CCTL) k := by
   simp only [cqRowStep, cqRowsM]
-  rw [cq_rdW_idx hk, arr64_copy64_ne _ _ _ _ _ _ hd, arr64_copy64_ne _ _ _ _ _ _ hc]
+  rw [cq_rdW_idx hk, xchgM_ne _ _ _ _ hd hs]
 
-theorem cqRowStep_csize {c d s : ArrId} {ca k : Word} (m : Mem) :
-    ((cqRowStep c d s ca k m).arr64 CCTL).size = (m.arr64 CCTL).size := by
-  simp only [cqRowStep, cqRowsM, L.Mem.size64_set64, size_copy64]
+theorem cqRowStep_csize {d s : ArrId} {ca k : Word} (m : Mem) :
+    ((cqRowStep d s ca k m).arr64 CCTL).size = (m.arr64 CCTL).size := by
+  simp only [cqRowStep, cqRowsM, L.Mem.size64_set64, xchgM_size]
 
 /-! ## The tail's stashes -/
 
@@ -194,20 +207,19 @@ local macro "cq_ek" : tactic =>
 /-- The row before a swap is the frozen memory's. -/
 local macro "cq_eo" : tactic => `(tactic| simp (disch := decide) only [cqRowStep_arr])
 
-/-- **`cq_bank_s`'s row swaps stash the rows**: each row's stash holds the frozen memory's row
-below its extent, and the row past it is the frozen memory's. -/
+/-- **`cq_bank_s`'s row swaps exchange the rows** with the solution's, below their extents. -/
 theorem cqBankSM_rows {m9 : Mem} (hR : CqRowsSOK m9) :
-    ∀ p ∈ cqPairs.take 6, CqSv m9 (cqBankSM m9) p.1 p.2.1 p.2.2 ∧ CqHi m9 (cqBankSM m9) p.1 p.2.2 := by
+    ∀ p ∈ cqXPairs, CqX m9 (cqBankSM m9) p.1 p.2.1 p.2.2 := by
   simp only [CqRowsSOK] at hR
   obtain ⟨o1, o2, o3, o4, o5, o6, h9⟩ := hR
-  have hs : ∀ (c d s : ArrId) (ca k : Word) (m : Mem), ((cqRowStep c d s ca k m).arr64 CCTL).size =
-      (m.arr64 CCTL).size := fun _ _ _ _ _ m => cqRowStep_csize m
-  have s1 := cqRowStep_sv (k := 0) o1 (by simp only [UInt64.toNat_zero]; omega) (by decide) (by decide) (by decide) (by decide)
-  have s2 := cqRowStep_sv (k := 1) o2 (by simp only [hs]; simp; omega) (by decide) (by decide) (by decide) (by decide)
-  have s3 := cqRowStep_sv (k := 2) o3 (by simp only [hs]; simp; omega) (by decide) (by decide) (by decide) (by decide)
-  have s4 := cqRowStep_sv (k := 3) o4 (by simp only [hs]; simp; omega) (by decide) (by decide) (by decide) (by decide)
-  have s5 := cqRowStep_sv (k := 4) o5 (by simp only [hs]; simp; omega) (by decide) (by decide) (by decide) (by decide)
-  have s6 := cqRowStep_sv (k := 5) o6 (by simp only [hs]; simp; omega) (by decide) (by decide) (by decide) (by decide)
+  have hs : ∀ (d s : ArrId) (ca k : Word) (m : Mem), ((cqRowStep d s ca k m).arr64 CCTL).size =
+      (m.arr64 CCTL).size := fun _ _ _ _ m => cqRowStep_csize m
+  have s1 := cqRowStep_x (m := m9) (k := 0) o1 (by simp only [UInt64.toNat_zero]; omega) (by decide) (by decide) (by decide) rfl rfl
+  have s2 := cqRowStep_x (m := m9) (k := 1) o2 (by simp only [hs]; simp; omega) (by decide) (by decide) (by decide) (by cq_eo) (by cq_eo)
+  have s3 := cqRowStep_x (m := m9) (k := 2) o3 (by simp only [hs]; simp; omega) (by decide) (by decide) (by decide) (by cq_eo) (by cq_eo)
+  have s4 := cqRowStep_x (m := m9) (k := 3) o4 (by simp only [hs]; simp; omega) (by decide) (by decide) (by decide) (by cq_eo) (by cq_eo)
+  have s5 := cqRowStep_x (m := m9) (k := 4) o5 (by simp only [hs]; simp; omega) (by decide) (by decide) (by decide) (by cq_eo) (by cq_eo)
+  have s6 := cqRowStep_x (m := m9) (k := 5) o6 (by simp only [hs]; simp; omega) (by decide) (by decide) (by decide) (by cq_eo) (by cq_eo)
   clear o1 o2 o3 o4 o5 o6
   have eA : ∀ b : ArrId, (b : TieredArray) ∉ cqTailA → (b : TieredArray) ≠ CTL →
       (cqBankSM m9).arr64 b = (cqRowsS m9).arr64 b :=
@@ -215,15 +227,15 @@ theorem cqBankSM_rows {m9 : Mem} (hR : CqRowsSOK m9) :
   have eK : ∀ k : Word, k.toNat < 6 → rdW ((cqBankSM m9).arr64 CCTL) k = rdW ((cqRowsS m9).arr64 CCTL) k :=
     fun k hk => cqTailS_cctl_lo _ hk
   intro p hp
-  simp only [cqPairs, List.take, List.mem_cons, List.not_mem_nil, or_false] at hp
+  simp only [cqXPairs, List.mem_cons, List.not_mem_nil, or_false] at hp
   rcases hp with rfl | rfl | rfl | rfl | rfl | rfl
   all_goals dsimp only
-  · exact ⟨s1.1.congr (by cq_ec) (by cq_ek), s1.2.congr (by cq_ec) (by cq_ek)⟩
-  · exact ⟨(s2.1.congr (by cq_ec) (by cq_ek)).orig (by cq_eo), (s2.2.congr (by cq_ec) (by cq_ek)).orig (by cq_eo)⟩
-  · exact ⟨(s3.1.congr (by cq_ec) (by cq_ek)).orig (by cq_eo), (s3.2.congr (by cq_ec) (by cq_ek)).orig (by cq_eo)⟩
-  · exact ⟨(s4.1.congr (by cq_ec) (by cq_ek)).orig (by cq_eo), (s4.2.congr (by cq_ec) (by cq_ek)).orig (by cq_eo)⟩
-  · exact ⟨(s5.1.congr (by cq_ec) (by cq_ek)).orig (by cq_eo), (s5.2.congr (by cq_ec) (by cq_ek)).orig (by cq_eo)⟩
-  · exact ⟨(s6.1.congr (by cq_ec) (by cq_ek)).orig (by cq_eo), (s6.2.congr (by cq_ec) (by cq_ek)).orig (by cq_eo)⟩
+  · exact s1.congr (by cq_ec) (by cq_ec) (by cq_ek)
+  · exact s2.congr (by cq_ec) (by cq_ec) (by cq_ek)
+  · exact s3.congr (by cq_ec) (by cq_ec) (by cq_ek)
+  · exact s4.congr (by cq_ec) (by cq_ec) (by cq_ek)
+  · exact s5.congr (by cq_ec) (by cq_ec) (by cq_ek)
+  · exact s6.congr (by cq_ec) (by cq_ec) (by cq_ek)
 
 /-- **`cq_bank_s`'s tail stashes the records, the firsts and the pool.** -/
 theorem cqBankSM_tail {m9 : Mem} (hR : CqRowsSOK m9) (hT : CqTailSOK (cqRowsS m9)) :
@@ -269,12 +281,11 @@ theorem cqBankCM_pair (M : Mem) {b c : ArrId} {k : Word} (h : (b, c, k) ∈ cqPa
     b ≠ c ∧ ∃ M' : Mem, M'.arr64 b = M.arr64 b ∧ M'.arr64 c = M.arr64 c ∧
       (cqBankCM M).arr64 b = (M'.copy64 b 0 c 0 (rdW (M.arr64 CCTL) k).toNat).arr64 b := by
   simp only [cqPairs, List.mem_cons, List.not_mem_nil, or_false, Prod.mk.injEq] at h
-  rcases h with ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ |
-    ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ <;>
+  rcases h with ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ <;>
   · simp only [cqBankCM]
     refine ⟨by decide, ?_⟩
     try simp (disch := decide) only [arr64_copy64_ne]
-    refine ⟨_, ?_, ?_, rfl⟩ <;> simp (disch := decide) only [arr64_copy64_ne]
+    refine ⟨_, ?_, ?_, rfl⟩ <;> simp (disch := decide) only [arr64_copy64_ne, cqRowsC, xchgM_ne]
 
 /-- **`cq_bank_c` restores the stashed words.** -/
 theorem CqSv.back_lo {m A : Mem} {b c : ArrId} {k : Word} (h : CqSv m A b c k) (hp : (b, c, k) ∈ cqPairs)
@@ -297,12 +308,37 @@ theorem CqSv.back {m A : Mem} {b c : ArrId} {k : Word} (h : CqSv m A b c k) (hH 
     rw [e3, cq_copy64_hi hbc M' h.n63 hj, e1]
     exact hH j (by omega)
 
-/-- **`cq_bank_c` writes only `csA`**, no `CTL` word. -/
-theorem cqBankCM_frame (C : List Word) (m : Mem) : MemFrame csA C m (cqBankCM m) := by
-  unfold cqBankCM
-  exact ((((((((MemFrame.copyIn (by decide) (by decide) _ _ _ _ _).trans (MemFrame.copyIn (by decide) (by decide) _ _ _ _ _)).trans
-    (MemFrame.copyIn (by decide) (by decide) _ _ _ _ _)).trans (MemFrame.copyIn (by decide) (by decide) _ _ _ _ _)).trans
-    (MemFrame.copyIn (by decide) (by decide) _ _ _ _ _)).trans (MemFrame.copyIn (by decide) (by decide) _ _ _ _ _)).trans
+/-- `cq_bank_c` exchanges each row pair once, as one exchange of a memory with its arrays. -/
+theorem cqRowsC_pair (M : Mem) {d s : ArrId} {k : Word} (h : (d, s, k) ∈ cqXPairs) :
+    ∃ B : Mem, B.arr64 d = M.arr64 d ∧ B.arr64 s = M.arr64 s ∧
+      (cqBankCM M).arr64 d = (xchgM d s B (rdW (M.arr64 CCTL) k).toNat).arr64 d ∧
+      (cqBankCM M).arr64 s = (xchgM d s B (rdW (M.arr64 CCTL) k).toNat).arr64 s := by
+  simp only [cqXPairs, List.mem_cons, List.not_mem_nil, or_false, Prod.mk.injEq] at h
+  rcases h with ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ |
+    ⟨rfl, rfl, rfl⟩ <;>
+  · simp only [cqBankCM, cqRowsC]
+    simp (disch := decide) only [arr64_copy64_ne, xchgM_ne]
+    refine ⟨_, ?_, ?_, rfl, rfl⟩ <;> simp (disch := decide) only [xchgM_ne]
+
+/-- **`cq_bank_c` exchanges the rows back**: from a memory whose rows and extent are mode `8`'s. -/
+theorem CqX.back {m A M : Mem} {d s : ArrId} {k : Word} (h : CqX m A d s k) (hp : (d, s, k) ∈ cqXPairs)
+    (hds : d ≠ s) (ed : M.arr64 d = A.arr64 d) (es : M.arr64 s = A.arr64 s)
+    (ek : rdW (M.arr64 CCTL) k = rdW (A.arr64 CCTL) k) :
+    (cqBankCM M).arr64 d = m.arr64 d ∧ (cqBankCM M).arr64 s = m.arr64 s := by
+  have hds' : (d : TieredArray) ≠ s := by simpa [TieredArray.t0] using hds
+  obtain ⟨B, e1, e2, e3, e4⟩ := cqRowsC_pair M hp
+  rw [e3, e4, ek]
+  exact xchgM_back hds' m B (UInt64.toNat_lt _) h.nd h.ns (by rw [e1, ed]; exact h.ed) (by rw [e2, es]; exact h.es)
+
+/-- **`cq_bank_c` writes only `csAV`** (`csA` and the solution's rows), no `CTL` word. -/
+theorem cqBankCM_frame (C : List Word) (m : Mem) : MemFrame csAV C m (cqBankCM m) := by
+  unfold cqBankCM cqRowsC
+  exact ((((((((MemFrame.xchgIn (by decide) (by decide) (by decide) (by decide) _ _).trans
+    (MemFrame.xchgIn (by decide) (by decide) (by decide) (by decide) _ _)).trans
+    (MemFrame.xchgIn (by decide) (by decide) (by decide) (by decide) _ _)).trans
+    (MemFrame.xchgIn (by decide) (by decide) (by decide) (by decide) _ _)).trans
+    (MemFrame.xchgIn (by decide) (by decide) (by decide) (by decide) _ _)).trans
+    (MemFrame.xchgIn (by decide) (by decide) (by decide) (by decide) _ _)).trans
     (MemFrame.copyIn (by decide) (by decide) _ _ _ _ _)).trans (MemFrame.copyIn (by decide) (by decide) _ _ _ _ _)).trans
     (MemFrame.copyIn (by decide) (by decide) _ _ _ _ _)
 
@@ -314,20 +350,17 @@ theorem cq_stash_not_cqA {b : TieredArray} (h : cqStash b = true) : b ∉ cqA :=
 theorem cq_idx_not_cqA {b : TieredArray} (h : IdxArr b = true) : b ∉ cqA :=
   cq_not_cqA (.inl (cq_not_cdA (.inl h)))
 
-/-- **The solution's rows after the solution's jobs** are the frozen memory's (mode `8`'s copies
-and the jobs' stores avoid them). -/
-theorem cqS_sol {m9 mS : Mem} (hJ : MemFrame cqA cqC (cqSM m9) mS) :
-    ∀ b ∈ solArrs, mS.arr64 b = m9.arr64 b := by
-  have fS := cqS_frame m9
-  have f2 := flushMem_frame (cqCtlSM (cqBankSM m9))
-  have hJ' : MemFrame cqA cqC (flushMem (cqCtlSM (cqBankSM m9))) mS := hJ
-  have nS : ∀ b ∈ solArrs, b ∉ cqA := fun b hb => cq_not_cqA (.inl (cq_not_cdA (.inr (.inr (by
+/-- The solution's arrays a bank switch does not exchange (the mates) are not in its write set. -/
+theorem sol_not_csAS {b : TieredArray} (hb : b ∈ solArrs) (hn : b ∉ solRowsS) : b ∉ csAS := by
+  simp only [solArrs, List.mem_cons, List.not_mem_nil, or_false] at hb
+  rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    first | exact absurd (by decide) hn | decide
+
+/-- The solution's arrays are not in the flag-`0` jobs' write set. -/
+theorem sol_not_cqA {b : TieredArray} (hb : b ∈ solArrs) : b ∉ cqA :=
+  cq_not_cqA (.inl (cq_not_cdA (.inr (.inr (by
     have := solArrs_arr hb; simp only [SolArr, this.2.2, beq_self_eq_true, Bool.true_and, Bool.and_eq_true,
       decide_eq_true_eq]; omega)))))
-  intro b hb
-  have hc : b ≠ CTL := fun e => by subst e; revert hb; decide
-  rw [hJ'.arr b (nS b hb) hc, f2.arr b (by simp) hc,
-    fS.arr b (fun hm => by have := csAS_arr hm; have := solArrs_arr hb; omega) hc]
 
 /-- **Mode `9`'s switch restores the challenge's view** (`CsViewC`) after the solution's jobs, which
 stored only to the flag-`0` write set (`cq_checkJobs_frame0`) from mode `8`'s memory. -/
@@ -359,35 +392,40 @@ theorem cqC_view {m9 mS : Mem} (hR : CqRowsSOK m9) (hT : CqTailSOK (cqRowsS m9))
       (cqCtlCM (cqBankCM mS)).arr64 b = m9.arr64 b := fun hp h hH hc h1 h2 hb h3 h4 hk => by
     rw [cqCtlCM_arr _ _ h3]
     exact (sv h hc h1 h2 hk).back (hH.congr (eSB _ (cq_idx_not_cqA hb) h3 h4) (eK _ hk)) hp (hsz _)
+  -- the exchanged rows back
+  have xback : ∀ {d s : ArrId} {k : Word}, (d, s, k) ∈ cqXPairs → d ≠ s → IdxArr d = true →
+      (s : TieredArray) ∈ solArrs → (d : TieredArray) ≠ CTL → (s : TieredArray) ≠ CTL →
+      (d : TieredArray) ≠ CCTL → (s : TieredArray) ≠ CCTL → k.toNat < 16 →
+      (cqCtlCM (cqBankCM mS)).arr64 d = m9.arr64 d ∧ (cqCtlCM (cqBankCM mS)).arr64 s = m9.arr64 s :=
+    fun hp hds hd hs hdT hsT hdC hsC hk => by
+      rw [cqCtlCM_arr _ _ hdT, cqCtlCM_arr _ _ hsT]
+      exact (hr _ hp).back hp hds (eSB _ (cq_idx_not_cqA hd) hdT hdC) (eSB _ (sol_not_cqA hs) hsT hsC) (eK _ hk)
   have bF := (cqBankCM_frame csC mS)
-  have hfr : MemFrame csA csC mS (cqCtlCM (cqBankCM mS)) := bF.trans ((cqCtlCM_frame _).mono (by simp) (fun _ h => h))
+  have hfr : MemFrame csAV csC mS (cqCtlCM (cqBankCM mS)) :=
+    bF.trans ((cqCtlCM_frame _).mono (by simp) (fun _ h => h))
   have hrows : ∀ b ∈ solRowsS, (cqCtlCM (cqBankCM mS)).arr64 b = m9.arr64 b := by
     intro b hb
-    have hsa : b ∈ solArrs := by
-      simp only [solRowsS, List.mem_cons, List.not_mem_nil, or_false] at hb
-      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide
-    have ha := solArrs_arr hsa
-    rw [hfr.arr b (fun hm => by have := csA_arr hm; omega) (fun e => by subst e; revert hsa; decide),
-      cqS_sol hJ b hsa]
-  refine ⟨hfr.mono (fun _ h => csA_sub_csAV h) (fun _ h => h), hrows, fun b hb => ?_, fun j hj => ?_,
+    simp only [solRowsS, List.mem_cons, List.not_mem_nil, or_false] at hb
+    rcases hb with rfl | rfl | rfl | rfl | rfl | rfl
+    · exact (xback (d := EIXA) (s := SIXA) (k := 0) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).2
+    · exact (xback (d := EIXS) (s := SIXS) (k := 2) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).2
+    · exact (xback (d := EIXN) (s := SIXN) (k := 4) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).2
+    · exact (xback (d := TIXA) (s := STXA) (k := 1) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).2
+    · exact (xback (d := TIXS) (s := STXS) (k := 3) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).2
+    · exact (xback (d := TIXN) (s := STXN) (k := 5) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).2
+  refine ⟨hfr, hrows, fun b hb => ?_, fun j hj => ?_,
     fun j hj => ?_, ?_, ?_, fun x hx => ?_⟩
   · obtain ⟨n, hi⟩ := b
     simp only [IdxArr, Bool.and_eq_true, beq_iff_eq, Bool.or_eq_true, decide_eq_true_eq] at hb
     obtain ⟨rfl, h1⟩ := hb
     have : n = 129 ∨ n = 130 ∨ n = 131 ∨ n = 132 ∨ n = 133 ∨ n = 134 ∨ n = 137 := by omega
     rcases this with rfl | rfl | rfl | rfl | rfl | rfl | rfl
-    · exact back (b := TIXA) (c := CTIXA) (k := 1) (by decide) (hr (TIXA, CTIXA, 1) (by decide)).1
-        (hr (TIXA, CTIXA, 1) (by decide)).2 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-    · exact back (b := TIXS) (c := CTIXS) (k := 3) (by decide) (hr (TIXS, CTIXS, 3) (by decide)).1
-        (hr (TIXS, CTIXS, 3) (by decide)).2 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-    · exact back (b := TIXN) (c := CTIXN) (k := 5) (by decide) (hr (TIXN, CTIXN, 5) (by decide)).1
-        (hr (TIXN, CTIXN, 5) (by decide)).2 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-    · exact back (b := EIXA) (c := CEIXA) (k := 0) (by decide) (hr (EIXA, CEIXA, 0) (by decide)).1
-        (hr (EIXA, CEIXA, 0) (by decide)).2 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-    · exact back (b := EIXS) (c := CEIXS) (k := 2) (by decide) (hr (EIXS, CEIXS, 2) (by decide)).1
-        (hr (EIXS, CEIXS, 2) (by decide)).2 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-    · exact back (b := EIXN) (c := CEIXN) (k := 4) (by decide) (hr (EIXN, CEIXN, 4) (by decide)).1
-        (hr (EIXN, CEIXN, 4) (by decide)).2 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+    · exact (xback (d := TIXA) (s := STXA) (k := 1) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).1
+    · exact (xback (d := TIXS) (s := STXS) (k := 3) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).1
+    · exact (xback (d := TIXN) (s := STXN) (k := 5) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).1
+    · exact (xback (d := EIXA) (s := SIXA) (k := 0) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).1
+    · exact (xback (d := EIXS) (s := SIXS) (k := 2) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).1
+    · exact (xback (d := EIXN) (s := SIXN) (k := 4) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).1
     · exact back (b := FIRSTS) (c := CFIRSTS) (k := 7) (by decide) t7 t7h (by decide) (by decide) (by decide) (by decide) (by decide)
         (by decide) (by decide)
   · -- the records' used words
@@ -430,13 +468,9 @@ theorem cqS_keep {m9 mS : Mem} (hJ : MemFrame cqA cqC (cqSM m9) mS)
   have fS := cqS_frame m9
   have f2 := flushMem_frame (cqCtlSM (cqBankSM m9))
   have hJ' : MemFrame cqA cqC (flushMem (cqCtlSM (cqBankSM m9))) mS := hJ
-  have nS : ∀ b ∈ solArrs, b ∉ cqA := fun b hb => cq_not_cqA (.inl (cq_not_cdA (.inr (.inr (by
-    have := solArrs_arr hb; simp only [SolArr, this.2.2, beq_self_eq_true, Bool.true_and, Bool.and_eq_true,
-      decide_eq_true_eq]; omega)))))
-  have eS : ∀ b ∈ solArrs, mS.arr64 b = m9.arr64 b := fun b hb => by
+  have eS : ∀ b ∈ solArrs, b ∉ solRowsS → mS.arr64 b = m9.arr64 b := fun b hb hn => by
     have hc : b ≠ CTL := fun e => by subst e; revert hb; decide
-    rw [hJ'.arr b (nS b hb) hc, f2.arr b (by simp) hc,
-      fS.arr b (fun hm => by have := csAS_arr hm; have := solArrs_arr hb; omega) hc]
+    rw [hJ'.arr b (sol_not_cqA hb) hc, f2.arr b (by simp) hc, fS.arr b (sol_not_csAS hb hn) hc]
   have eC : ∀ x : Word, x ∉ cqC → x ∉ flushCtl → x ∉ csC → rdW (mS.arr64 CTL) x = rdW (m9.arr64 CTL) x :=
     fun x h1 h2 h3 => by rw [hJ'.ctl x h1, f2.ctl x h2, fS.ctl x h3]
   have hE : erecP (cqSM m9) = erecP m9 := by
@@ -448,7 +482,7 @@ theorem cqS_keep {m9 mS : Mem} (hJ : MemFrame cqA cqC (cqSM m9) mS)
         show rdW ((flushMem (cqCtlSM (cqBankSM m9))).arr64 CTL) x = _
         rcases hx with rfl | rfl <;> rw [f2.ctl _ (by decide), fS.ctl _ (by decide)]
     exact erecP_congr' (e1 _ (by decide) (by decide)) (e1 _ (by decide) (by decide)) (e2 _ (.inl rfl)) (e2 _ (.inr rfl))
-  refine ⟨fun b hb _ => eS b hb, eC _ (cq_not_cqC (.inl (cq_not_cdC (by decide)))) (by decide) (by decide),
+  refine ⟨fun b hb hn => eS b hb hn, eC _ (cq_not_cqC (.inl (cq_not_cdC (by decide)))) (by decide) (by decide),
     eC _ (cq_not_cqC (.inl (cq_not_cdC (by decide)))) (by decide) (by decide), hE ▸ hx, ?_⟩
   exact ((hW.frame fS (by decide) (by decide) (by decide) (by decide)).frame f2 (by simp) (by simp)
     (by decide) (by decide)).frame hJ' (cq_not_cqA (.inr (.inl rfl))) (cq_not_cqA (.inr (.inr (.inl rfl))))

@@ -200,7 +200,7 @@ theorem cq_nv {f : FnName} (hm : f ∈ nvFns) {n : Nat} {s₀ : St} {Q : List Wo
 def cqReadFns : List FnName :=
   ["check_bs", "check_bc", "cq_bank_s", "cq_ctl_s", "cq_bank_c", "cq_ctl_c",
    "cq_swap_eixa", "cq_swap_tixa", "cq_swap_eixs", "cq_swap_tixs", "cq_swap_eixn", "cq_swap_tixn",
-   "cq_back_eixa", "cq_back_tixa", "cq_back_eixs", "cq_back_tixs", "cq_back_eixn", "cq_back_tixn"] ++
+   "cq_xchg_eixa", "cq_xchg_tixa", "cq_xchg_eixs", "cq_xchg_tixs", "cq_xchg_eixn", "cq_xchg_tixn"] ++
     phaseBJobFns
 
 names_tree cqReadTree : cqReadFns
