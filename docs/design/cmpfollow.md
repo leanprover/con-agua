@@ -39,3 +39,30 @@ rewrite. `CmpC` already elaborates under the default limit (1.7 s tactics, 2.0 s
   flags, so a merge that regenerates the program also regenerates the lists (it stages `ConAgua`).
 * (b) `e2e.write_conron_pins` (used by `diff-e2e.py --refs` and `e2e.py`) builds `ConRon.Dump.Pins`
   before its `lake env lean` (checked in this worktree with the olean deleted).
+
+## 3. The compared run's extra 10.5 MB of `POOL` (17:20–17:30)
+
+Data: `_tmp/compare2/mem-{flat,cmp}.txt` (H10's `mincore` per slot, MiB): slot 2 (`POOL`, tier 0)
+14.7 flat, 25.2 compared, every other slot of the store equal. Cause: **the name strings of the
+second file.** `apply_str` (`Front/Line.lean`) unescapes each `str` name line's string into the
+pool at its top (`str_put_esc`) and then interns the node (`apply_nstr`); when the node exists
+already (a hit) the slice stays in the pool, unreferenced: the pool is append-only (D10). Counted
+from `initC.ndjson` (one pool word per byte, D11): its 172 206 `str` lines hold 1 395 133 bytes,
+10.64 MiB as pool words, of which 23 790 distinct strings, 2.69 MiB. So:
+
+* flat `Init`: 10.6 of the 14.7 MiB of `POOL` are name strings, **8.0 MiB of them dead** (a
+  component like `add` is unescaped once per name ending in it);
+* compared `Init` with itself: the solution's 172 206 lines all hit, **+10.6 MiB, all dead**
+  (H10 measured +10.5).
+
+con-ron does not keep them: `parseNameEntryD` interns `.str p s` with `s` a heap `String`, freed
+on a hit. So it is waste of ours, recorded as **D58** (Temporary). The fix: in `apply_str`, when
+`apply_nstr` hit (the `nstr` count `CTL[36]` unchanged; the parse runs in tier 0), reset the pool
+top `CTL[0]` to the slice's start `o`. Its refinement: on a hit `consInternM` returns the memory
+unchanged and the twin's `internNNode` the state unchanged, so the line's memory is the one before
+it except pool words above the top; the front's relations need a frame lemma for pool words
+above the top, and `FrontPreOK1`'s pre-condition proof of `applyStrW` changes with the model. I
+estimate about two hours with the regeneration and the frontend's rebuild: **not done here**
+(not cheap; the brief's bar). It would save 8 MiB in every flat `Init` run as well, not only in
+the compared one. Not measured: the time, which should not move (the same unescape, no new
+pass).
