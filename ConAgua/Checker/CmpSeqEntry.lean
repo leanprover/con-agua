@@ -18,15 +18,16 @@ words `CTL[128]`, `CTL[162‥173]` and the flag `CTL[224] = 1`; the solution's r
 and its stashed `SDECL`, `SFIRSTS`, `SDLP`, `SCTL` (`cmp_sstash`). Both phases' jobs run there,
 in place, on the one store:
 
-* mode `8`, `check_bs()`: the **bank switch to the solution's view** by small copies (never the
-  store): the challenge's index rows (`2 · count` words per name kind), records, firsts and
-  declaration pool (each the larger of the two extents) and its index words go to the `C*` stash
-  arrays, the extents to `CCTL`; the solution's are copied in (`SIX*` → `EIX*`, `STX*` → `TIX*`,
-  `SDECL`, `SFIRSTS`, `SDLP`; `CTL[128]` := the solution's counter `CTL[225]`, `CTL[162‥173]` :=
-  `SCTL`'s, the flag `CTL[224] := 0`); then the solution's jobs `PLO‥PHI - 1` as `check_b`.
-* mode `9`, `check_bc()`: the **switch back**: the challenge's view restored from the stash at the
-  extents mode `8` used; then the challenge's jobs as `check_b`, on the worker state the
-  solution's jobs left (the twin's `TwinComparesAccepts`).
+* mode `8`, `check_bs()`: the **bank switch to the solution's view** in place (never the store):
+  the stream index's rows and the solution's are exchanged (`EIX*` ↔ `SIX*`, `TIX*` ↔ `STX*`,
+  `2 · count` words per name kind, as header S's view of the threaded run shows them); the
+  challenge's records, firsts and declaration pool (each the larger of the two extents) and its
+  index words go to the `C*` stash arrays, the solution's are copied in (`SDECL`, `SFIRSTS`, `SDLP`;
+  `CTL[128]` := the solution's counter `CTL[225]`, `CTL[162‥173]` := `SCTL`'s, the flag
+  `CTL[224] := 0`); the extents to `CCTL`; then the solution's jobs `PLO‥PHI - 1` as `check_b`.
+* mode `9`, `check_bc()`: the **switch back**: the rows exchanged again and the challenge's view
+  restored from the stash at the extents mode `8` used; then the challenge's jobs as `check_b`, on
+  the worker state the solution's jobs left (the twin's `TwinComparesAccepts`).
 
 The jobs never store to the stream index's rows, `FIRSTS`, the solution's rows or those `CTL`
 words (`Checker/CmpSeqW.lean`), nor to the stash arrays, so the restore is exact.
@@ -36,27 +37,39 @@ namespace L.Checker
 
 open L L.Arena L.Front
 
-/-- `cq_swap_rows(c, d, s, ca)`: the challenge's rows of one name kind kept (`d` → `c`) and the
-solution's copied in (`s` → `d`), `2 · CTL[ca]` words each; returns the extent. -/
--- con-ron: none — the compared run's phase boundary (con-ron keeps the solution's index in its own driver state)
-@[no_expose] def cqSwapRowsG (c d s : ArrId) (ca : Word) : FunDecl := lfn () locals (n) {
-  n := CTL.u64[⟪ca⟫];
-  if 4611686018427387904 <= n { abort };
-  n := 2 * n;
-  copy!(c.u64, 0, d.u64, 0, n);
-  copy!(d.u64, 0, s.u64, 0, n);
-  return n
+/-- The exchange loop: rows `d` and `s` exchanged below `n` (`d[j] ↔ s[j]` for `j < n`). -/
+def cqXchgLoop (d s : ArrId) : Stmt := lblk (n, j, t) {
+  if len(d.u64) < n { abort };
+  if len(s.u64) < n { abort };
+  j := 0;
+  for j < n {
+    t := d.u64[j];
+    d.u64[j] := s.u64[j];
+    s.u64[j] := t
+  }
 }
 
-/-- `cq_back_rows(c, d, n)`: the challenge's rows restored (`c` → `d`, `n` words). -/
+/-- `cq_xchg(n)`: rows `d` and `s` exchanged below `n`. -/
 -- con-ron: none — the compared run's phase boundary (con-ron keeps the solution's index in its own driver state)
-@[no_expose] def cqBackG (c d : ArrId) : FunDecl := lfn (n) locals () {
-  copy!(d.u64, 0, c.u64, 0, n);
+@[no_expose] def cqXchgG (d s : ArrId) : FunDecl := lfn (n) locals (j, t) {
+  ⟪cqXchgLoop d s⟫;
   return 0
 }
 
-/-- `cq_bank_s()`: the challenge's rows, records, firsts and declaration pool kept in the `C*`
-stash arrays and the solution's copied in, the extents in `CCTL[0‥8]`. -/
+/-- `cq_swap_rows()`: the challenge's rows `d` of one name kind and the solution's `s` exchanged,
+`2 · CTL[ca]` words each; returns the extent. -/
+-- con-ron: none — the compared run's phase boundary (con-ron keeps the solution's index in its own driver state)
+@[no_expose] def cqSwapRowsG (d s : ArrId) (ca : Word) : FunDecl := lfn () locals (n, j, t) {
+  n := CTL.u64[⟪ca⟫];
+  if 4611686018427387904 <= n { abort };
+  n := 2 * n;
+  ⟪cqXchgLoop d s⟫;
+  return n
+}
+
+/-- `cq_bank_s()`: the challenge's rows and the solution's exchanged in place; the challenge's
+records, firsts and declaration pool kept in the `C*` stash arrays and the solution's copied in;
+the extents in `CCTL[0‥8]`. -/
 -- con-ron: none — the compared run's phase boundary (con-ron keeps two driver states)
 @[no_expose] def cqBankSL : FunDecl := lfn () locals (n, a, b) {
   n := call cq_swap_eixa(); CCTL.u64[0] := n; n := call cq_swap_tixa(); CCTL.u64[1] := n;
@@ -119,13 +132,13 @@ stash arrays and the solution's copied in, the extents in `CCTL[0‥8]`. -/
   return 71757147230292
 }
 
-/-- `cq_bank_c()`: the challenge's rows, records, firsts and declaration pool restored from the
-stash at the extents `cq_bank_s` used. -/
+/-- `cq_bank_c()`: the rows exchanged back, the challenge's records, firsts and declaration pool
+restored from the stash, at the extents `cq_bank_s` used. -/
 -- con-ron: none — the compared run's phase boundary (con-ron keeps two driver states)
 @[no_expose] def cqBankCL : FunDecl := lfn () locals (z, n) {
-  z := call cq_back_eixa(CCTL.u64[0]); z := call cq_back_tixa(CCTL.u64[1]);
-  z := call cq_back_eixs(CCTL.u64[2]); z := call cq_back_tixs(CCTL.u64[3]);
-  z := call cq_back_eixn(CCTL.u64[4]); z := call cq_back_tixn(CCTL.u64[5]);
+  z := call cq_xchg_eixa(CCTL.u64[0]); z := call cq_xchg_tixa(CCTL.u64[1]);
+  z := call cq_xchg_eixs(CCTL.u64[2]); z := call cq_xchg_tixs(CCTL.u64[3]);
+  z := call cq_xchg_eixn(CCTL.u64[4]); z := call cq_xchg_tixn(CCTL.u64[5]);
   n := CCTL.u64[6];
   copy!(DECL.u64, 0, CDECL.u64, 0, n);
   n := CCTL.u64[7];
@@ -171,12 +184,12 @@ stash at the extents `cq_bank_s` used. -/
 def cmpSeqProg : Prog :=
   [("check_bs", checkBSL), ("check_bc", checkBCL), ("cq_bank_s", cqBankSL), ("cq_ctl_s", cqCtlSL),
    ("cq_bank_c", cqBankCL), ("cq_ctl_c", cqCtlCL),
-   ("cq_swap_eixa", cqSwapRowsG CEIXA EIXA SIXA 34), ("cq_swap_tixa", cqSwapRowsG CTIXA TIXA STXA 34),
-   ("cq_swap_eixs", cqSwapRowsG CEIXS EIXS SIXS 36), ("cq_swap_tixs", cqSwapRowsG CTIXS TIXS STXS 36),
-   ("cq_swap_eixn", cqSwapRowsG CEIXN EIXN SIXN 38), ("cq_swap_tixn", cqSwapRowsG CTIXN TIXN STXN 38),
-   ("cq_back_eixa", cqBackG CEIXA EIXA), ("cq_back_tixa", cqBackG CTIXA TIXA),
-   ("cq_back_eixs", cqBackG CEIXS EIXS), ("cq_back_tixs", cqBackG CTIXS TIXS),
-   ("cq_back_eixn", cqBackG CEIXN EIXN), ("cq_back_tixn", cqBackG CTIXN TIXN)]
+   ("cq_swap_eixa", cqSwapRowsG EIXA SIXA 34), ("cq_swap_tixa", cqSwapRowsG TIXA STXA 34),
+   ("cq_swap_eixs", cqSwapRowsG EIXS SIXS 36), ("cq_swap_tixs", cqSwapRowsG TIXS STXS 36),
+   ("cq_swap_eixn", cqSwapRowsG EIXN SIXN 38), ("cq_swap_tixn", cqSwapRowsG TIXN STXN 38),
+   ("cq_xchg_eixa", cqXchgG EIXA SIXA), ("cq_xchg_tixa", cqXchgG TIXA STXA),
+   ("cq_xchg_eixs", cqXchgG EIXS SIXS), ("cq_xchg_tixs", cqXchgG TIXS STXS),
+   ("cq_xchg_eixn", cqXchgG EIXN SIXN), ("cq_xchg_tixn", cqXchgG TIXN STXN)]
 
 example : nanonCS.ca = 34 ∧ nstrCS.ca = 36 ∧ nnumCS.ca = 38 := ⟨rfl, rfl, rfl⟩
 
