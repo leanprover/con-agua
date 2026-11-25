@@ -2,7 +2,7 @@ module
 
 public import ConRon.Bridge.Compare.Cone
 public import ConAgua.Arena.CmpVMates
-public import ConAgua.Arena.CmpVRoots
+public import ConRon.Bridge.Modular.Roots
 import ConRon.Bridge.Specs
 import ConRon.Bridge.Checker.Canon
 
@@ -16,7 +16,7 @@ The twin's rejection of an unjustified statement (`justifyWhy`, `checkJustified`
 rejection of a compared run is a verdict only if those reads succeed. They do:
 
 * `readNameM_ok`: a denoting handle reads back, the store kept;
-* `entryNeeds_den`: every handle `entryNeeds` lists denotes (`Arena/CmpVRoots.lean`, after con-ron's `Modular/Roots.lean`, reads
+* `entryNeeds_den`: every handle `entryNeeds` lists denotes (con-ron's `Bridge/Modular/Roots.lean` reads
   a constant's and a table's names back exactly; the recursors' names are interned from denoting
   ones; the mates denote by `CvMatesDen`);
 * `coneEntry_den`, `coneGo_den`: from a work list of denoting handles, the walk's culprit denotes.
@@ -29,6 +29,7 @@ namespace ConRon.Bridge.CmpV
 set_option autoImplicit false
 
 open ConLeche ConRon.Arena ConRon.Bridge
+open ConRon.Bridge.Modular (NSeen XRel names_exact const_exact table_exact)
 
 /-- con-leche: none — every handle of the list denotes. -/
 def AllDen (st : EStore) (hs : List NIdx) : Prop := ∀ h ∈ hs, ∃ nm, denoteN st.ns h = some nm
@@ -63,7 +64,7 @@ theorem readNameM_ok {s : AState} {h : NIdx} {nm : ConLeche.Name}
 
 /-! ## The walk's state, at a larger store -/
 
-theorem NSeen.ext {st st' : EStore} {seen : Std.HashMap EIdx Bool} {seenP : Std.HashSet Expr}
+theorem _root_.ConRon.Bridge.Modular.NSeen.ext {st st' : EStore} {seen : Std.HashMap EIdx Bool} {seenP : Std.HashSet Expr}
     (h : NSeen st seen seenP) (hx : Ext st st') : NSeen st' seen seenP where
   fwd := fun k e he hc => by
     obtain ⟨e0, he0⟩ := Option.isSome_iff_exists.mp (h.dom k hc)
@@ -75,7 +76,7 @@ theorem NSeen.ext {st st' : EStore} {seen : Std.HashMap EIdx Bool} {seenP : Std.
     obtain ⟨e0, he0⟩ := Option.isSome_iff_exists.mp (h.dom k hc)
     rw [denote_ext he0 hx]; rfl
 
-theorem XRel.ext {st st' : EStore} {x : Arena.NeedsSt} {xP : ConLeche.Cached.NeedsSt}
+theorem _root_.ConRon.Bridge.Modular.XRel.ext {st st' : EStore} {x : Arena.NeedsSt} {xP : ConLeche.Cached.NeedsSt}
     (h : XRel st x xP) (hx : Ext st st') : XRel st' x xP :=
   ⟨h.1.ext hx, denoteNListE_ext hx _ _ h.2⟩
 
