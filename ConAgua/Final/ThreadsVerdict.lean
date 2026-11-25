@@ -42,7 +42,7 @@ invariant at a job's view comes from the model of the accepted prefix.
 beyond them, what `Final/Statement.lean` lists: Kraken's semantics, the assembler, linker and
 loader):
 
-* **Entry 1's call**: `ca_start_a` is called as `AbiCall` says; **first return** (`FirstReturn`):
+* **Entry 1's call**: `ca_start_a` (with a solution: `ca_start_ac`) is called as `AbiCall` says; **first return** (`FirstReturn`):
   the harness regains control at the return address in a state with every property the machine
   is guaranteed to reach there (`abiA_outcome`'s and `abiB_outcome`'s posts).
 * On a thread's failure (`ThreadFail`), for the thread's calls up to the failing call `i`, what
@@ -50,8 +50,8 @@ loader):
   and is passed to each call (route A: read-only, `mprotect`); the thread's region is its own,
   zero at the first call, and at each later call holding the bytes the previous call left; each
   call is made as `BufCallH` says; every claimed job index (in `rdx`) is below `k`
-  (`k = rax - 2^63` from entry 1, the number of records); the calls before `i` claimed smaller
-  indices than call `i` (one monotone claim counter).
+  (`k = rax - 2^63` from entry 1, the number of jobs); the thread's claims up to call `i`
+  increase (one monotone claim counter).
 * **The jobs below the failing one** (`ThreadFail`'s `others` and `below`): every job index below
   call `i`'s was claimed by a call of some thread of `ths` that returned accept, and those
   threads' calls are as `ThreadsRun` has them (`ThreadsAcc`: the buffer in place, each thread on
@@ -75,21 +75,21 @@ open L L.Compiler L.Checker L.Arena ConRon.Arena
 
 /-- **Entry 1 fails** (trusted; the module doc lists it): `ca_start_a` called at `dm₀` returns at
 `st₀` with `rdx = 2`. -/
-structure Entry1Fail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) :
-    Prop where
-  call₀ : AbiCall b pb dm₀ ra₀
-  ret₀ : FirstReturn dm₀ (label abiStartAL) ra₀ st₀
+structure Entry1Fail [Host] (b : ByteArray) (sol : Option ByteArray) (pb : ByteArray) (dm₀ : MachineData)
+    (ra₀ : Word) (st₀ : MachineState) : Prop where
+  call₀ : AbiCall b sol pb dm₀ ra₀
+  ret₀ : FirstReturn dm₀ (label (abiEntryAL sol)) ra₀ st₀
   rdx₀ : st₀.data.regs.rdx = 2
 
 /-- **A thread's call `i` fails** (trusted; the module doc lists it): entry 1 at `dm₀` returning
 at `st₀`, the buffer `B`, and the thread `t`'s calls `0, …, i` (`ThreadsRun`'s fields for them),
-the calls before `i` accepting and claiming smaller job indices, call `i` returning `rdx = 2`;
+the calls before `i` accepting, the claims up to `i` increasing, call `i` returning `rdx = 2`;
 and every job index below call `i`'s claimed by an accepting call of the threads `ths`
 (`ThreadsAcc`). -/
-structure ThreadFail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState)
-    (B : Array Word) (ths : List ThreadM) (t : ThreadM) (i : Nat) : Prop where
-  call₀ : AbiCall b pb dm₀ ra₀
-  ret₀ : FirstReturn dm₀ (label abiStartAL) ra₀ st₀
+structure ThreadFail [Host] (b : ByteArray) (sol : Option ByteArray) (pb : ByteArray) (dm₀ : MachineData)
+    (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM) (t : ThreadM) (i : Nat) : Prop where
+  call₀ : AbiCall b sol pb dm₀ ra₀
+  ret₀ : FirstReturn dm₀ (label (abiEntryAL sol)) ra₀ st₀
   rdx₀ : st₀.data.regs.rdx = 0
   rax₀ : 9223372036854775808 ≤ st₀.data.regs.rax.toNat
   /-- the buffer: `OUT`'s first `len` words, `len` its word `1` -/
@@ -109,19 +109,19 @@ structure ThreadFail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Wo
   next : ∀ i', i' < i → ∀ x, t.base ≤ x → x < t.base + t.blen →
     (t.dm (i' + 1)).dmem.get? (A x) = (t.st i').data.dmem.get? (A x)
   claimed : ∀ i' ≤ i, (t.dm i').regs.rdx < st₀.data.regs.rax - 9223372036854775808
-  /-- the thread's earlier calls claimed smaller job indices -/
-  before : ∀ i' < i, (t.dm i').regs.rdx < (t.dm i).regs.rdx
+  /-- the thread's claims up to call `i` increase (the claim counter is monotone) -/
+  incr : ∀ i₁ i₂, i₁ < i₂ → i₂ ≤ i → (t.dm i₁).regs.rdx < (t.dm i₂).regs.rdx
   /-- the jobs below call `i`'s: each claimed by an accepting call of a thread of `ths` -/
   others : ThreadsAcc dm₀ st₀ B ths
   below : ∀ j < (t.dm i).regs.rdx, ∃ t' ∈ ths, ∃ i' < t'.n, (t'.dm i').regs.rdx = j
 
 /-- **The threaded harness reports a failure with the code `k`**: entry 1 failed with
 `rax = k`, or a thread's call `i` failed with `rax = k`. -/
-def ThreadsFail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState)
-    (k : Word) : Prop :=
-  (Entry1Fail b pb dm₀ ra₀ st₀ ∧ k = st₀.data.regs.rax) ∨
+def ThreadsFail [Host] (b : ByteArray) (sol : Option ByteArray) (pb : ByteArray) (dm₀ : MachineData)
+    (ra₀ : Word) (st₀ : MachineState) (k : Word) : Prop :=
+  (Entry1Fail b sol pb dm₀ ra₀ st₀ ∧ k = st₀.data.regs.rax) ∨
   ∃ (B : Array Word) (ths : List ThreadM) (t : ThreadM) (i : Nat),
-    ThreadFail b pb dm₀ ra₀ st₀ B ths t i ∧ k = (t.st i).data.regs.rax
+    ThreadFail b sol pb dm₀ ra₀ st₀ B ths t i ∧ k = (t.st i).data.regs.rax
 
 /-- **A thread's failing call, at the L level**: entry 1 (`check` with the mode word `1`)
 returned `2^63 + k`, the buffer `B` is `OUT`'s first `len` words, a thread with a fresh region
@@ -183,11 +183,11 @@ set_option linter.constructorNameAsVariable false in
 theorem entry1Fail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (hV : Entry1Verdict checkerProg)
-    (hF : Entry1Fail b pb dm₀ ra₀ st₀) (hk : st₀.data.regs.rax &&& 3 ≠ 0) :
+    (hF : Entry1Fail b none pb dm₀ ra₀ st₀) (hk : st₀.data.regs.rax &&& 3 ≠ 0) :
     TwinVerdict [b] (st₀.data.regs.rax &&& 3) := by
   have hc := code_of_checkerFile_par hcode
-  have hE := abiA_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok checkerTab_abiIO checkerProgI_wf MODE PLO PHI OUT HDRF CTLF 138
-    frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hF.call₀
+  have hE := abiA_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok checkerTab_abiIO checkerProgI_wf MODE PLO PHI OUT HDRF CTLF hdrHw
+    frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hF.call₀.toAbiArgs
   obtain ⟨⟨-, -, -, hout₀⟩, hsz⟩ := hF.ret₀ _ hE (fun s h => h.1.1)
   have hne : st₀.data.regs.rdx ≠ 1 := by rw [hF.rdx₀]; decide
   obtain ⟨hb, hpb⟩ := hsz.resolve_left hne
@@ -213,14 +213,14 @@ set_option linter.constructorNameAsVariable false in
 theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
-    (t : ThreadM) (i : Nat) (hV : ThreadEVerdict) (hR : ThreadFail b pb dm₀ ra₀ st₀ B ths t i)
+    (t : ThreadM) (i : Nat) (hV : ThreadEVerdict) (hR : ThreadFail b none pb dm₀ ra₀ st₀ B ths t i)
     (hk : (t.st i).data.regs.rax &&& 3 ≠ 0) :
     TwinVerdictPooled [b] ((t.st i).data.regs.rax &&& 3) := by
   have hc := code_of_checkerFile_par hcode
   have hnres : 1 ≤ checkerTab.nres := by decide
   -- entry 1 (as `threadsRun_twinAcceptsPooled_regs`)
-  have hE := abiA_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok checkerTab_abiIO checkerProgI_wf MODE PLO PHI OUT HDRF CTLF 138
-    frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hR.call₀
+  have hE := abiA_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok checkerTab_abiIO checkerProgI_wf MODE PLO PHI OUT HDRF CTLF hdrHw
+    frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hR.call₀.toAbiArgs
   obtain ⟨⟨-, -, -, hout₀⟩, hsz⟩ := hR.ret₀ _ hE (fun s h => h.1.1)
   have hne : st₀.data.regs.rdx ≠ 1 := by rw [hR.rdx₀]; decide
   obtain ⟨hb, hpb⟩ := hsz.resolve_left hne
@@ -252,7 +252,7 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     simp only [abiLayout_tab] at this
     rw [abiLayout_b64 _ _ _ _ _ _ hOUTp, abiOff_slot (by rw [checkerTab.wAt_pos64 hOUT]; decide)] at this
     simpa only [outAddr, abiSlot64] using this
-  have hH : hdrW = 136 := by decide
+  have hH := hdrW_eq
   have hBsz : B.size = ((m₁.arr64 OUT).getD 1 0).toNat := by
     obtain ⟨w, hw, hwB⟩ := hR.buflen
     have h1 := hget 1 (by omega)
@@ -271,8 +271,8 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
   have hhdr : ∀ i < frozenIdsL.length, 9 + 2 * i < B.size := by
     intro i hi
     have : frozenIdsL.length = frozen.length + 1 := by rw [frozenIdsL_eq]; simp
-    have : frozen.length = 63 := frozen_length
-    have := h126; have : hdrW = 136 := by decide
+    have  := frozen_length
+    have := h126; have  := hdrW_eq
     omega
   have hdisj : ∀ i < frozenIdsL.length, ∀ i' < frozenIdsL.length, i ≠ i' →
       (bufEntry B i).1 + (bufEntry B i).2 ≤ (bufEntry B i').1 ∨
@@ -281,6 +281,9 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     rcases Nat.lt_or_gt_of_ne hne with h | h
     · exact Or.inl (hinc' i hi i' hi' h)
     · exact Or.inr (Or.inl (hinc' i' hi' i hi h))
+  have hk2 : st₀.data.regs.rax - 9223372036854775808 ≤ B.getD 2 0 := by
+    rw [hrax₁]
+    exact entry1_k b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq (by have := hhdr 0 (by decide); omega)
   -- the thread: a call's outcome, at any region memory
   obtain ⟨hH0, -, hcx0, h80⟩ := hR.calls 0 (Nat.zero_le _)
   have hneed : workerNeed parOwnedL ≤ t.blen := h80 ▸ hH0.need
@@ -295,9 +298,10 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
       ⟨⟨hH.need, hH.fits, hH.bend, hhdr, hent', hdisj, hH.apart⟩, hH.hB, hH.hmap, hH.hra, hH.hcs,
         hH.hcs24, hH.hcs8⟩
     have hEv := abiB_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok checkerProgI_wf MODE PLO PHI OUT HDRF
-      CTLF 138 frozenIdsL parOwnedL (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      CTLF hdrHw frozenIdsL parOwnedL (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) B r (t.dm i') (t.ra i') hbc
-      (by rw [hcx]; exact hr) checker_bufMinOk
+      (by rw [hcx]; exact hr) checker_bufMinOk (by have := hhdr 0 (by decide); omega)
+      (.inl (cp_lt_of_lt_le (hR.claimed i' hi) hk2))
     rw [hdi, hcx] at hEv
     exact hR.ret i' hi _ hEv (fun s h => h.1)
   -- the calls before `i` (`thread_chain`)
@@ -321,7 +325,7 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
   rw [h0] at hruns
   -- the other threads' calls (`threadsAcc_runs`)
   obtain ⟨f, hf⟩ := Classical.axiomOfChoice
-    (threadsAcc_runs k0 hcode dm₀ st₀ B ths hR.others hhdr hent' hdisj)
+    (threadsAcc_runs k0 hcode dm₀ st₀ B ths hR.others hhdr hent' hdisj hk2)
   have hzero : ∀ a ∈ parOwnedL, (zeroMem checkerTab).arr64 a = zeros (m₁.arr64 a).size := by
     intro a ha
     have hl := parOwnedL_dom a ha
@@ -336,7 +340,7 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (fun j hj => ?_)
   · obtain ⟨i', hi', rfl⟩ := List.mem_map.mp hc
     rw [List.mem_range'] at hi'
-    exact hR.before i' (by omega)
+    exact hR.incr i' i (by omega) (Nat.le_refl _)
   · obtain ⟨t', ht, rfl⟩ := List.mem_map.mp ht'
     obtain ⟨h1, h2, -, -, -⟩ := hf t' ht
     exact ⟨hzero, rfl, h1, fun c hc => by rw [← hrax₁]; exact h2 c hc⟩
@@ -355,7 +359,7 @@ a thread's call returned `rdx = 2` after its earlier calls accepted) and the cla
 theorem checkerFile_threads_verdict_of [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (k : Word)
-    (hV : ThreadVerdicts) (hF : ThreadsFail b pb dm₀ ra₀ st₀ k) (hk : k &&& 3 ≠ 0) :
+    (hV : ThreadVerdicts) (hF : ThreadsFail b none pb dm₀ ra₀ st₀ k) (hk : k &&& 3 ≠ 0) :
     TwinVerdictPooled [b] (k &&& 3) := by
   rcases hF with ⟨hE, rfl⟩ | ⟨B, ths, t, i, hT, rfl⟩
   · exact (entry1Fail_twin k0 hcode b pb h64 dm₀ ra₀ st₀ hV.entry1 hE hk).pooled

@@ -12,7 +12,7 @@ public import ConAgua.Final.SeqLayout
 /-!
 # The sequential driver `ca_start` on the machine (lane parmode)
 
-`drv_outcome`: the harness calls the driver `ca_start` (`AbiCall`; the region must be 16 bytes
+`drv_outcome`: the harness calls the driver `ca_start` (`AbiArgs`; the region must be 64 bytes
 larger than the setup stub's, `drvNeed`). The driver saves the caller's `r15` and its return
 address past the setup stub's region (`drvSave`), calls entry 1 (`ca_start_a0`, `abiA0_outcome`) on the region
 without them, and if that run returns `2^63 + k`, calls `ca_check_seq` (`abiS_outcome`) on the
@@ -67,10 +67,10 @@ theorem ev_seq [Host] {P Q : MachineState → Prop} {s : MachineData} {pc : Int6
     (k : ∀ st, P st → Ev Q st.data st.pc) : Ev Q s pc :=
   eventually_trans _ P Q ⟨s, pc⟩ h fun st hst => k st hst
 
-/-- **`AbiCall` on a smaller region**: the same buffers, the region `[base, base + n9)` of the
+/-- **`AbiArgs` on a smaller region**: the same buffers, the region `[base, base + n9)` of the
 caller's, a memory that differs from the caller's at most past `n9` in the region and in the
 return-address slot, and a new return address. -/
-theorem AbiCall.shrink {b pb : ByteArray} {dm : MachineData} {ra : Word} (hc : AbiCall b pb dm ra)
+theorem AbiArgs.shrink {b pb : ByteArray} {dm : MachineData} {ra : Word} (hc : AbiArgs b pb dm ra)
     (dm' : MachineData) (ra' : Word)
     (hdi : dm'.regs.rdi = dm.regs.rdi) (hsi : dm'.regs.rsi = dm.regs.rsi) (hdx : dm'.regs.rdx = dm.regs.rdx)
     (hcx : dm'.regs.rcx = dm.regs.rcx) (h8 : dm'.regs.r8 = dm.regs.r8) (hsp : dm'.regs.rsp = dm.regs.rsp)
@@ -78,7 +78,7 @@ theorem AbiCall.shrink {b pb : ByteArray} {dm : MachineData} {ra : Word} (hc : A
     (hgrow : ∀ y, (dm.dmem.get? y).isSome → (dm'.dmem.get? y).isSome)
     (hsame : ∀ x < 2 ^ 64, (x < dm.regs.r8.toNat + dm'.regs.r9.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x) →
       (x < dm.regs.rsp.toNat ∨ dm.regs.rsp.toNat + 8 ≤ x) → dm'.dmem.get? (A x) = dm.dmem.get? (A x))
-    (hra : rdW dm'.dmem (A dm.regs.rsp.toNat) = some ra') : AbiCall b pb dm' ra' := by
+    (hra : rdW dm'.dmem (A dm.regs.rsp.toNat) = some ra') : AbiArgs b pb dm' ra' := by
   have hfits := hc.hfits
   have hcs := hc.hcs
   have hcs8 := hc.hcs8
@@ -185,7 +185,7 @@ theorem drv_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : ab
     (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
     (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProgX X tab q "check")) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
-    (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiArgs b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → DrvAccepts tab p mode plo phi out hdrf ctlf hw b pb) ∧
         (st.data.regs.rdx = 2 → DrvErr tab p mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))

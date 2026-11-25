@@ -59,7 +59,9 @@ theorem buf_offs (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^
       hdrW + fzSum m frozen.length ≤ (m.arr64 OUT).size := by
   have hW := parCompactOK_hdr hok
   simp only [parCompactOK, Bool.and_eq_true] at hok
-  exact (pcGo_good m 1 hW (fun _ => hlt) frozen.length (Nat.le_refl _) hok.1.1.1).1 one_ne_zero'
+  have := (pcGo_good m 1 0 (by simpa using hW) (by simp; have := hdrW_eq; omega) (fun _ => hlt) frozen.length
+    (Nat.le_refl _) hok.1.1.1).1 one_ne_zero'
+  simpa using this
 
 /-- **The buffer's length** is `hdrW` plus the extents. -/
 theorem bufOf_size (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64) :
@@ -94,7 +96,7 @@ next counter `CTL[128]`. -/
 theorem bufOf_cnt (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64) :
     (bufOf m).getD 2 0 = rd64 m L.Front.DECL 0 ∧ (bufOf m).getD 3 0 = rd64 m CTL 128 := by
   have := hdrW_le_len hok hlt
-  have h136 : hdrW = 136 := by decide
+  have h136 := hdrW_eq
   rw [bufOf_getD hok hlt (by omega), bufOf_getD hok hlt (by omega)]
   exact ⟨(parCompactMem_hdr hok).2.2.1, (parCompactMem_hdr hok).2.2.2.1⟩
 
@@ -102,7 +104,7 @@ theorem bufOf_cnt (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 
 theorem bufEntry_zero (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64) :
     bufEntry (bufOf m) 0 = (0, hdrW) := by
   have := hdrW_le_len hok hlt
-  have h136 : hdrW = 136 := by decide
+  have h136 := hdrW_eq
   have h8 := (parCompactMem_hdr hok).2.2.2.2.2.1
   have h9 := (parCompactMem_hdr hok).2.2.2.2.2.2
   simp only [bufEntry, Nat.mul_zero, Nat.add_zero]
@@ -118,8 +120,8 @@ theorem bufEntry_succ (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size 
     bufEntry (bufOf m) (i + 1) = ((fzOff m i).toNat, fzExt m (fzAt i)) ∧
       (fzOff m i).toNat = hdrW + fzSum m i := by
   have := hdrW_le_len hok hlt
-  have h136 : hdrW = 136 := by decide
-  have h63 : frozen.length = 63 := frozen_length
+  have h136 := hdrW_eq
+  have h63 := frozen_length
   have he := parCompactMem_entry hok (fun _ => hlt) hi
   refine ⟨?_, (buf_offs hok hlt).1 i (by omega)⟩
   simp only [bufEntry]
@@ -130,14 +132,14 @@ theorem bufEntry_succ (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size 
     he.1, he.2, UInt64.toNat_ofNat_of_lt' (by rw [fzExt_eq]; exact UInt64.toNat_lt_size _)]
 
 /-- The extent of frozen entry `i` fits its source array. -/
-theorem fzExt_le_src (hok : parCompactOK m 1 = true) {i : Nat} (hi : i < frozen.length) :
+theorem fzExt_le_src {b : Word} (hok : parCompactOK m 1 b = true) {i : Nat} (hi : i < frozen.length) :
     fzExt m (fzAt i) ≤ (m.arr64 (fzAt i).src).size := by
   simp only [parCompactOK, Bool.and_eq_true] at hok
   have h1 := hok.1.1.1
   obtain ⟨k, hk⟩ : ∃ k, frozen.length = i + 1 + k := ⟨frozen.length - (i + 1), by omega⟩
   rw [hk, List.range_add, pcOK_append, Bool.and_eq_true, pcOK_range_succ, Bool.and_eq_true] at h1
   have h2 := h1.1.2
-  have hF := OutFrame.pcGo 1 (List.range i) m (UInt64.ofNat hdrW)
+  have hF := OutFrame.pcGo 1 b (List.range i) m (UInt64.ofNat hdrW)
   have hz := fzAt_ok hi
   have he := fzEv_congr hF.arr _ hz.1
   simp only [fzOK, he.1, hF.size, hF.arr _ (TieredArray.t0_ne hz.2), Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq,
@@ -151,8 +153,8 @@ theorem buf_entries_inside (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).
     {i : Nat} (hi : i < frozenIdsL.length) :
     (bufEntry (bufOf m) i).1 + (bufEntry (bufOf m) i).2 ≤ (bufOf m).size := by
   have hs := bufOf_size hok hlt
-  have h63 : frozen.length = 63 := frozen_length
-  have h64 : frozenIdsL.length = 64 := rfl
+  have h63 := frozen_length
+  have h64 := frozenIdsL_length
   rcases i with _ | i
   · rw [bufEntry_zero hok hlt, hs.1]; have := hdrW_le_len hok hlt; simpa using this
   · obtain ⟨he, ho⟩ := bufEntry_succ hok hlt (i := i) (by omega)
@@ -166,8 +168,8 @@ theorem bufImg_succ (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 
     (hi : i < frozen.length) :
     bufImg (bufOf m) (i + 1) = (m.arr64 (fzAt i).src).extract 0 (fzExt m (fzAt i)) := by
   have hin := buf_entries_inside hok hlt (i := i + 1) (by
-    have : frozenIdsL.length = 64 := rfl
-    have : frozen.length = 63 := frozen_length
+    have  := frozenIdsL_length
+    have  := frozen_length
     omega)
   obtain ⟨he, ho⟩ := bufEntry_succ hok hlt hi
   have hsrc := fzExt_le_src hok hi
@@ -231,7 +233,7 @@ theorem bufImg_hdr (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2
     (bufImg (bufOf m) 0).getD 2 0 = rd64 m L.Front.DECL 0 ∧
       (bufImg (bufOf m) 0).getD 3 0 = rd64 m CTL 128 := by
   have := hdrW_le_len hok hlt
-  have h136 : hdrW = 136 := by decide
+  have h136 := hdrW_eq
   have hs := bufOf_size hok hlt
   simp only [bufImg, bufEntry_zero hok hlt, Nat.zero_add]
   rw [getD_extract_lt _ _ _ _ (by simp only [Array.size_extract]; omega), Nat.zero_add,
@@ -257,7 +259,7 @@ theorem bufMem_glob_phi (B : Array Word) (r : Mem) (j : Word) :
 
 /-- The frozen entries but the header and the seed: their position in `frozenIdsL`, not `CTL`,
 not zeroed by `freshMem`. -/
-theorem frozen_facts_all : (List.range 63).all (fun k => k == 0 ||
+theorem frozen_facts_all : (List.range frozen.length).all (fun k => k == 0 ||
     (frozenIdsL.idxOf? ↑(frozen.map (·.1))[k]! == some (k + 1) &&
       !(freshZ.contains ↑(frozen.map (·.1))[k]!) &&
       (frozen.map (·.1))[k]! != CTL)) = true := by
@@ -266,7 +268,7 @@ theorem frozen_facts_all : (List.range 63).all (fun k => k == 0 ||
 theorem frozen_facts {k : Nat} (hk : k < frozen.length) (h1 : 1 ≤ k) :
     frozenIdsL.idxOf? ↑frozen[k].1 = some (k + 1) ∧ (frozen[k].1 : TieredArray) ∉ freshZ ∧
       frozen[k].1 ≠ CTL := by
-  have := List.all_eq_true.mp frozen_facts_all k (List.mem_range.mpr (by rwa [frozen_length] at hk))
+  have := List.all_eq_true.mp frozen_facts_all k (List.mem_range.mpr hk)
   rw [getElem!_pos (frozen.map (·.1)) k (by simpa using hk),
     getElem!_pos (frozen.map fun x => (↑x.1 : TieredArray)) k (by simpa using hk),
     List.getElem_map, List.getElem_map] at this

@@ -143,3 +143,273 @@ path twice is a usage error), one thread, `instructions:u`, peak RSS, wall, agai
   `CmpLoop`, built, zero `sorry`). `Final/CmpMain.lean` (the driver theorem, work in progress) is
   not in this landing (it stays on H4's branch). OVERVIEW and `main.c` say that no final
   theorem covers `--compare` yet.
+* 19:40 H4 done, merged: `cmp_outcome(_regs)` (`Final/CmpMain.lean`): from `CmpCall` (`AbiCall` plus the
+  solution's buffer as the two stack arguments), the L-level premise `CmpGuard` and `cmpNeed < 2^64`,
+  every run of `ca_compare` returns to the caller with the callee-saved registers restored, and
+  `rdx = 0, rax = ACCEPT` means `CmpAccepts` (the chain of L runs), `rdx = 2` means `CmpErr`. The
+  setup stub on a region holding an L memory (`memRel_restub`), the worker loop (`cmp_loop`), the
+  file equation with the tail. `AbiCall` became `AbiCallM` in the setup stub's theorem (callers
+  pass `hc.toM`); no other Final statement changed. 0 `sorry`.
+* H6 (modes 4, 5; the stage lemmas generalised: `StagesOut`, `pinsStage_gen`, `buildR_of_out`) done
+  and merged; H6b continues (mode 6, the jobs, the composition, the guard). H8 makes the gates green
+  for a first step landing.
+* 20:05 **What went wrong: the buffer's "kept" premise.** H4's machine theorem needed every solution
+  worker to leave the frozen buffer as it found it (as the threaded mode assumes, by `mprotect`,
+  route A). At the L level that is a tier-0 invariant the job proofs never state (check_decl's
+  write set includes tier 0 of every store). Instead of a new trusted fact or that invariant, the
+  workers are now treated as the in-place jobs are: each runs on the buffer as the previous one left
+  it, the relation to the twin is carried by the job relation, and the machine only needs the
+  buffer's header unchanged (a closure fact: no phase-B function stores to `HDRF`/`CTLF`). Helper
+  H9 (`compare-redesign`) rewrites `CmpJobs`/`cmp_loop`/`cmp_outcome` and the solution's job chain
+  accordingly; H6b does mode 6.
+* 20:55 **step landing 1** (`compare-land` 91e5c9aef, #325, master 2165b2ead): everything above up to
+  modes 4–5 and the machine building blocks; H8 made the gates green (55 unused imports, a name
+  clash `recOK_congr`, `leafFns` regenerated, an anchor).
+* Later: H9 (no "kept" premise; `CmpHdrKeep`, `cmpSJobs_twin`, `checker_cmpGuard`), H10 (the guard under
+  the setup stub's size checks; `checkerFile_compare_runs_regs`), H6c (mode 6, `checkC3_run`; the job
+  lemmas over `FoldOn`/`StagesOut`), H6d (`JobM` at `J = some`, the challenge's jobs by a `J = some`
+  list induction mirroring con-ron's `pooledAcceptsJ_bridge`, `cmpAccepts_twin`) merged; the lead's
+  `Final/CompareTwin.lean` and the end-to-end theorems in `Final/Compare.lean`. 0 `sorry`.
+  (The times in this log after about 18:30 are approximate.)
+
+## 2. What is mirrored
+
+| con-ron (8021ddac) | L |
+|---|---|
+| `compare_json` (`driver/compare_json.rs`): one store, the challenge's parse, the solution's, its preparation, the pins, its check phase, the challenge's preparation, side records, `solution_of`, its check phase with the solution | `check_c1`‥`check_c3` (`Checker/CompareEntry.lean`) and the driver `ca_compare` (`Compiler/AbiCmp.lean`): the solution's jobs on a worker region over the frozen buffer (`ca_check_b`), the challenge's in place (`ca_check_seq`) |
+| `freeze_tier`/`thaw_tier` (the index handed back) | the index's rows moved to the solution's rows `SIX*`/`STX*` (`index_to_solution`), so the challenge's index is built from empty in the flat arrays |
+| `Needs.lean` (15 functions) | `Arena/Needs.lean`, generated models, `NeedsRef*.lean` |
+| `Justify.lean` (`builtinAxiomName` … `checkRecord`, `recordCheck`/`recordJob`/`runJob`/`checkJobList` at `J`) | `Arena/Justify.lean`, `JustifySide.lean`, `JustifyIface.lean` (`ISolution.find?`, `findTable?`), `record_job`'s branch on `CTL[224]`; refinements `JustifyRef1‥7`, `JustifySideRef*`, `Jobs.lean` at `J` |
+| the usage checks (two files, two different files) | `main.c` `run_compare`, exit 3 |
+| `model_exists_compare`, `no_False_compare` (twin side: `stagesC_model`, `stagesC_no_False`) | `checkerFile_compare_model`, `checkerFile_compare_no_False` (through `twinComparesAccepts_model`/`_no_False`) |
+
+Loops where the Rust has loops (the cone walk, the side records, `solution_of`, the move); the
+Rust's cursor recursions over lists are loops too (same behaviour, less stack); `needsGo` and
+`matesInsert` recurse as the Rust does. Not mirrored: the messages (D16), `--jobs` (D51), the
+move instead of the tier's move (D52), `--olean --compare` and the modular modes (D44, D50).
+
+## 3. Final statements (new; no existing headline statement changed)
+
+`Final/CompareTwin.lean`: `SeqAcceptsJ`, `TwinComparesAccepts` (the text in the coordinator message
+of 20:15 and in the file), `twinComparesAccepts_model`, `twinComparesAccepts_no_False`.
+`Final/CmpAbi.lean`: `CmpCall` (`AbiCall` of the challenge and the pins, plus the solution's buffer
+`sa`/`bS.size` as the two stack arguments, apart from the region, the other buffers and the stack
+window). `Final/Compare.lean`: `checkerFile_compare_runs_regs` (the machine theorem at the L level),
+`checkerFile_compare_accepts(_regs)`, `checkerFile_compare_model`, `checkerFile_compare_no_False`;
+all pinned at propext, Classical.choice, Quot.sound. Changed: `Final/Abi.lean`'s `abi_harness` and
+`abi_start_outcome` take `AbiCallM` (`AbiCall` without the zero region; callers pass `hc.toM`);
+`code_of_checkerFile_par` is a prefix lemma (the file has a tail). No trusted fact or axiom was
+added; unlike the threaded mode, no harness hypothesis either.
+
+## 4. Performance
+
+`Init` (`init435.ndjson`, its hard link under a second name for the solution), one thread,
+`perf stat -e instructions:u`, `time -f "%e %M"`, load below 1, two rounds for the flat runs
+(identical to ±0.0001 %), 2026-11-23 20:20; master = `d84b7c756` (before step 1), con-ron = 8021ddac.
+
+| run | instructions:u | wall | peak RSS |
+|---|---:|---:|---:|
+| flat `Init`, master | 202 631.66 M | 14.64 s | 626 MB |
+| flat `Init`, compare | 202 631.83 M (+0.0001 %) | 14.77 s | 628 MB |
+| `--compare` `Init` with itself | 408 327 M | 29.39 s | 1 259 MB |
+| con-ron `--jobs=1 --compare`, same | 333 863 M | 28.93 s | 368 MB |
+
+The compared run costs 2.015 flat runs (con-ron 2.016) and 1.016 con-ron's wall; its RSS is two
+flat runs' (D52).
+
+## 5. What went wrong
+
+* **The buffer's "kept" premise** (above): an early machine design needed a fact the L proofs
+  cannot give; replaced by chaining the solution's workers like in-place jobs (H9). Two helper
+  shifts went into it.
+* **Helper context.** The chain took four shifts (H6, H6b, H6c, H6d), the cone two (H2, H2b); the
+  hand-overs worked.
+* **Integration fallout** after the wiring: the closure lists, `import all` in the whole-program
+  checks, the dispatch proofs, a `maxRecDepth` in the generated `checkerProg` (its list grew past
+  the code generator's default), name clashes between helpers' files (`pinW_frame`, `rdW_dw`,
+  `recOK_congr`), 55 unused imports, a stale `leafFns`.
+* **Open, not blocking:** the challenge's job driver (`Checker/CompareJobs.lean`, `*_seqR`) repeats the
+  `vcgen` parts of the flat `*_seqO` ones; deriving the flat ones from it would rebuild the flat
+  chain, left for a later cleanup.
+
+## 6. Checks before the final landing
+
+* `scripts/gates.sh` all 16 steps OK on `compare-land2` d68fb96e5 (master merged; H11: 26 unused
+  imports, 5 warnings, 3 anchors).
+* `diff-e2e --refs --parallel 16 --tests` at con-leche bc667610 (con-ron 8021ddac, con-ron-lean-twin
+  at this branch): **766/766 agree** (447 accepted, 319 not), UNSOUND/INCOMPLETE/CRASH/TIMEOUT/REFDIFF
+  0; 7 skipped (`--max-nat-size`, D49).
+
+## 7. compare2: threads and verdicts (lane compare2, 2026-11-23/24)
+
+The user's answers (2026-11-23): the statements of §3 approved; `--compare` takes `--jobs` like
+con-ron (D51 removed), the threaded compared run proved as the flat threaded mode is; the compare
+verdict theorem (reject/decline lines) required in the first landing, sequential and threaded.
+
+**Design.** The threaded compared run: `ca_compare_a` (modes 4, the descriptor swap, 5: the
+solution's frozen buffer) → the flat mode's worker threads (`ca_check_b`, unchanged, route A) →
+`ca_compare_b` (mode 7 = mode 6 with `par_compact(1)`, on the driver region as the first call
+left it: the challenge's frozen buffer) → the same worker threads at `J = some`. The challenge's
+jobs read the solution's rows (`SIX*`, `STX*`, `MAT*`), so they move from the owned arrays to the
+frozen ones, their extents gated by the flag `CTL[224]` (empty in the flat buffer and the
+solution's). The sequential driver `ca_compare` stays. Twin side: `TwinComparesAcceptsPooled`
+(con-ron's `PooledAccepts`/`PooledAcceptsJ`), `twinCompareRun` (con-ron's `compareJsonTail`
+order, `checkStreamJ`), `TwinCompareVerdict`, `TwinCompareVerdictPooled`.
+
+### Progress log
+* 23:15 start (branch `compare2` from `compare-land2` 6a6e84fbb). 23:20 the twin statements
+  (15cf26fa7), sent to the coordinator. 23:22 helpers H1 `compare2-verdict`, H2
+  `compare2-freeze`, H3 `compare2-abi` (briefs `_tmp/compare2/brief-*.md`).
+* 23:35–23:50 helpers' plans. H1: `JwGuard` is dischargeable (the twin's `justifyWhy` runs ok on L's
+  abort path; the names read back denote: the record's name, and the cone's culprit by a
+  `coneGo` induction; the mates need a new store-level fact `CvMatesDen`); `JobGs` loses its
+  `JwGuard` conjunct. H2: the 9 rows appended to `frozen` with extents `CTL[224] · 2 · count`
+  (the mates' slices are in the frozen `EREC` image; the walks' memos are fine on a fresh worker);
+  `frozen.length` 63 → 72, `hdrW` 136 → 154; mode 7 = `check_c3(1)`. H3: **no new driver stubs**:
+  the threaded harness calls the existing mode entries `ca_start_a4`, `ca_start_a5` and a new
+  `ca_start_a7` (one directive more), whose machine theorems (`abiMode_outcome`,
+  `abiModeM_outcome`) exist; the cost is three trusted first returns and the region carried
+  between the calls (harness facts of `ThreadsAcc.next`'s kind) instead of ~250 lines of stub
+  proof.
+* H1: the justification guard discharged (0edecae38, merged): `JwGuard` is no hypothesis anywhere;
+  `CrsG` is program-only; the cone's culprit denotes (`Arena/CmpVCone.lean`), the mates by
+  `CvMatesDen` (`Arena/CmpVMates.lean`). Debt: `Arena/CmpVRoots.lean` carries con-ron's
+  `Bridge/Modular/Roots.lean` needs-walk lemmas (the vendored module's modular half does not build
+  at our pin, so it cannot be imported); to be deleted when it does.
+* H3: the harness and `ca_start_a7` wired (5114a9f40); `CmpThreadsRun` and the threaded accept,
+  model, no-`False` theorems drafted (fb0ead731), sent to the coordinator.
+* 2026-11-24: H2's frozen rows (7282b8ad9; flat `Init` instructions unchanged at 1 and 16
+  threads: 202 633.5 M both), H1b's L-level verdict claims (`cmpErr_twin` complete; modes 6 and 7
+  claim nothing, class 0; the solution's threaded jobs `cmpV_tjobS`) merged.
+* **The harness shape, redone.** The user rejected the three-entry harness (keep facts across
+  three driver calls). Options weighed: (A) one buffer frozen after the challenge's preparation
+  (the solution's jobs on an extended store: the approved twin statement changes; and two
+  indices keyed by the same names: a selector in every lookup), (B) the flat entries with an
+  optional solution and a phase loop in `main.c`, and the user's "bank switching" (an L primitive
+  swapping two arrays' descriptors: the compiler's simulation fixes one layout per run, so that
+  is a change to the whole simulation chain). Chosen (A'): bank switching in the header. One
+  entry-1 call freezes the solution's buffer (mode 5) and, after the challenge's preparation
+  (mode 7), the challenge's self-contained buffer right after it; entry 2 reads the phase from the
+  buffer and the global job index, so `main.c` is the flat loop. Each phase's jobs see exactly
+  their mode's frozen image, so the twin statements stay. One pool for both phases: the reported
+  failure is the smallest failing index, and every solution index is below every challenge
+  index, so the verdict is con-ron's.
+* H2: the challenge's threads at `J = some` (`cmpThreadsC_pooledJ`, `Checker/CmpThreadsC.lean`,
+  `CmpThreadsPool.lean`: the multi-worker pool with a solution; `JobM.truncJ`, `SolR.trunc`,
+  `JSol.fresh`) merged (d28e0d7b9; 0 `sorry`, the whole tree builds).
+* A' in detail (H3's hand-over, H3b, H4, H2): shrinking `OUT` for mode 7 would cost days (the
+  mode-6 chain's frames fix every array's size), so L does the chaining: mode 7 reads
+  `base := OUT[1]`, writes the challenge's buffer at `OUT[base‥)` (`par_compact` with a base;
+  0 for the flat run and mode 6), sets `OUT[5] := base` and `OUT[1] := base + LC`. Entry 2
+  (`ca_check_b`) gets a prologue: `j ≥ buf[2]` and `buf[5] ≠ 0` shift the buffer, the index and
+  the region to the second phase and its worker sub-region (`ca_worker_size = 2 · workerNeed`);
+  the flat path never shifts. The solution's jobs see the whole buffer, which agrees with mode
+  5's on its prefix except header words 1 and 5 (`BufAgreeS`).
+* H1b: the challenge's threaded job failure at `J = some` (`cmpV_tjobC`, the error half of
+  `cmpThreadsC_pooledJ`) merged (463fa6d83). Every L-level verdict claim is now proved: modes 4,
+  5 (`cmpV_a4`, `cmpV_a5`), modes 6, 7 claim nothing (`cmpV_a67`, class 0), the solution's jobs
+  (`cmpV_sjob`, threaded `cmpV_tjobS`), the challenge's (`cmpV_cjob`, threaded `cmpV_tjobC`), and
+  `cmpErr_twin` for the sequential driver.
+* The user then asked for one frozen store image with two headers (the solution's terms not
+  duplicated) and an independent design review of the one-pool layout; the buffer/entry work
+  (H2b, H3b, H4) is on hold until it is decided.
+* **Decision (user, 2026-11-24): design (i)**, with an independent review's four amendments
+  (`_tmp/coordinator/compare-design-decision.md`): ONE frozen store image and two headers; both
+  phases' jobs start from the state after the challenge's index (`sI`); the solution's index
+  rows read through header S's `EIX*`/`TIX*` entries. The twin statements change accordingly
+  (`Final/CompareTwinI.lean`): `stagesCI_model` re-proves con-ron's `stagesC_model` with the
+  solution's pure fold at `sI` (`pooled_fold_records` is generic in its start state; its
+  hypotheses move from the solution's index state to `sI` by `Ext`/`PExt` monotonicity; checked
+  in Lean first, it went through at the first attempt). Helpers H2b (the compaction and the
+  headers), H4 (entry 2, `main.c`, the threaded theorems), H5 (the solution's phase at `sI`).
+* H5: the solution's phase at `sI` (`Checker/CmpSPhase*.lean`: the view of header S as a
+  hypothesis `CsViewS`, `cmpThreadsS_poolI`, `cmpThreadsC_poolI`, `cmpThreads_twinPooledI`;
+  `Verdict/CmpVSPhase.lean`: `cmpV_tjobSI`, `cmpV_tjobCI`) merged, 0 `sorry`.
+* **The sequential run (user's choice: in place, no harness hypotheses, peak about one store).**
+  H6 found H9's wall again: after the solution's jobs run in place, the challenge's jobs would
+  have to start from a memory related to `sI.worker`, i.e. tier 0 of the store unchanged by the
+  solution's jobs. The twin proves only `PExt` across a job (tier 0 unchanged holds by inspection:
+  interns append to the scratch tier), and the L job relation fixes tier-0 words only up to the
+  store relation; of the 1482 functions in `check_b`'s closure none stores to a frozen array at a
+  constant tier, but the cons pushes, `erec_put` (~40 callers) and ~35 pool writers store at a
+  runtime tier. Approved fix (user): in the sequential run the challenge's jobs continue on the
+  worker state the solution's jobs left (`sJ`): `TwinComparesAcceptsSeqI`,
+  `TwinCompareVerdictSeqI`; the threaded statements stay (`…I`). **Follow-up idea, not this lane:**
+  the full tier-0 invariant (no job stores below the tier-0 counts) would also discharge the
+  threaded mode's trusted `BufKept` premise (route A's `mprotect`).
+* **Worker address space** (amendment 3 check, numbers from `checker.s`): a flat worker region is
+  `ca_worker_size` = 3 848 290 697 216 bytes (3.85 TB virtual, `MAP_NORESERVE`: 112 slots of
+  32 GiB; only touched pages cost memory), unchanged by this lane; `ca_worker_size` stays one
+  `workerNeed`. A compared run's thread maps two sub-regions (`main.c`: twice that when the
+  buffer's word 5 is nonzero), 7.70 TB. With a 47-bit user address space (128 TiB = 140.7 TB)
+  and the driver region unmapped after entry 1 except `OUT`, that allows about 36 flat threads
+  and about 18 compared threads before `mmap` fails (a startup failure, exit 3, never a verdict).
+* Integrated tree (H2d, compare2 1fcad087f, builds; named stand-ins left): `diff-e2e --only cmp` at
+  `--jobs=1` and `--jobs=4`: 18/18 agree, UNSOUND/INCOMPLETE/CRASH/TIMEOUT 0. First Init
+  self-compare (one run each, machine busy): sequential 29.6 s, 1 043 MB; `--jobs=16` 5.2 s,
+  1 206 MB; flat Init 15.2 s, 641 MB (old sequential compare: 29.4 s, 1 259 MB).
+* H6b–H6e: the sequential compared run in place, sorry-free (`Final/Compare.lean`:
+  `checkerFile_compare_accepts(_regs)` with the verdict, `_model`, `_no_False`; `Final/CmpSeqTwin.lean`
+  `cmpAccS_twin`, `cmpErrS_twin`; `Checker/CmpSeq*.lean`). Mode 8 switches to the solution's
+  view by copying index rows, records and words (`check_bs` = `cq_bank_s`; `cq_ctl_s`; flush;
+  `check_jobs`), mode 9 restores the challenge's (`check_bc`); each phase is one `check_jobs`
+  call refined directly. One `vcgen` over the whole of `check_bs` did not finish in 590 s, so the
+  switch was split into four L functions (no behaviour change). `check_jobs`' whole closure (1481
+  functions) never stores to the index, record, solution or pin arrays (`checkerProg_jobsW`).
+* H2c–H2e: the compaction with two headers (`par_compact(c, b)`, `cmp_hdr_s`, `cmp_sstash`),
+  `check_b`'s per-call `seed_reread()`, `check_c3`'s chain (`checkC3_of_stages`, `PostC3`),
+  `F6.csStash`; the integrated regeneration (the asm part modules needed `maxRecDepth`).
+* H7/H7b: one worker region per thread; the boundary needs every frozen id to have the same length
+  under both headers (all job-relation transports go through `MemFrame`, which fixes sizes):
+  extents now read only words both headers share (a compare-mode word, the larger of the two
+  record counts and declaration-pool tops), so the solution's view sees the solution rows too
+  (it never reads them) and its record arrays up to the larger count.
+* Checks at compare2 c6d4a0e80 (binary final up to the pending header-S swap): `diff-e2e --refs`
+  766/766 agree (447 accepted, 319 not), REFDIFF/UNSOUND/INCOMPLETE/CRASH/TIMEOUT 0; `--jobs 4`
+  766/766 agree. Init self-compare, interleaved with con-ron 8021ddac (`scripts/perf-compare-threads.sh`,
+  2 rounds, load about 2):
+
+  | run | instructions:u | wall | peak RSS |
+  |---|---:|---:|---:|
+  | checker `--compare`, 1 thread (in place) | 407 589 M | 29.7–30.0 s | 1 018 MB |
+  | con-ron `--compare --jobs=1` | 333 863 M | 28.8–29.1 s | 362–368 MB |
+  | checker `--jobs=16 --compare` | 409 807–409 819 M | 5.15–5.25 s | 1 177 MB |
+  | con-ron `--compare --jobs=16` | 338 104–338 273 M | 5.31–5.38 s | 655–656 MB |
+
+  Wall at con-ron's (1.03× at 1 thread, 0.97× at 16); instructions 1.22× (the flat run's ratio).
+  Peak RSS is 2.8× con-ron's sequentially (flat: 641 MB against 388 MB); the compared run adds
+  about 380 MB over the flat one, where con-ron adds nothing. Not yet analysed: candidates are the
+  two phases' records and environment records in one store, and the stash copies.
+* H2f: header S swaps the solution's and the challenge's index rows (`hsE`: SIX*/STX* ↦ the
+  challenge's EIX*/TIX* images), so both headers are permutations of one image set (the layout
+  cannot alias two ids to one image, and every extent stays equal across headers); `cmp7_out`
+  proved: **0 `sorry`**. H9: gates green (16 Lean warnings, 178 unused imports); `CmpCall` moved out
+  of `Final/` (internal, `AbiCall.cmp`); `checkerFile_drv_accepts_regs` takes `AbiCall b none`.
+* Final checks (compare2 d526c7dd6): `diff-e2e --refs` 766/766 agree, REFDIFF/UNSOUND/INCOMPLETE/
+  CRASH/TIMEOUT 0; `--jobs 4` 766/766. Flat Init against master (H2f, instructions:u, 2 rounds):
+  1 thread 202 631.84 M both (±5 k), 16 threads 204.10–204.13 G against 204.12–204.14 G (noise),
+  RSS 627/764 MB both.
+* **Memory** (H10, `mincore` per slot and `/proc/self/status`; raw `_tmp/compare2/mem-*.txt`): of
+  the compared run's extra ~400 MB over the flat run, 338 MB are the second input file's mapped
+  pages (clean page cache; the flat run's own input is 341 of its 652 MB, the main gap to con-ron in
+  both modes); the anonymous extra is +62 MB sequential, +86 MB at 16 threads: the store +0
+  (hash-consing: one Init), POOL +10.5 (not explained yet), EREC +4.2 and the two indices ≈ +21
+  (con-ron holds them too), the stash copies (D57) ≈ +23 sequential / +10 threaded (ours; keeping
+  the challenge's index rows in place in the sequential switch would save ~12 MB), Ind.MCM +4.2,
+  OUT +38 (threaded: the solution's images and the POOL/EREC growth). Follow-up idea: unmap the
+  challenge's input after its parse (needs an entry boundary in `main.c`; would help the flat run's
+  input the same way).
+
+### What went wrong (compare2)
+* **Three harness designs.** The three-entry harness (H3) was built and proved, then rejected (the
+  user: two entries, `main.c` stupid); the two-buffers design (A') was then rejected for
+  duplicating the solution's terms; design (i) (one image, two headers) took an independent review
+  and four amendments. Lesson: send the user the harness and memory shape before the machine
+  proofs, not the statements alone.
+* **The tier-0 wall again** (in-place sequential run): lane compare's H9 had hit it; the fix was a
+  statement change (the challenge's jobs continue on the solution's worker, `sJ`), not a proof.
+* **Equal lengths across headers** were found late (H7b): every job-relation transport goes
+  through `MemFrame`, which fixes array sizes; then aliasing in header S (H2f) — both cost an L
+  change and a regeneration each.
+* **Helper context**: 20 helper shifts; regenerations (~15 min each) and full rebuilds (~15 min)
+  dominated the integration; one memory kill (17 GB, a `let` over `workerNeed parOwnedL`).

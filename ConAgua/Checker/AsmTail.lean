@@ -10,7 +10,7 @@ meta import ConAgua.AsmFile.Eq
 # The committed file's tail
 
 `checkerTail`: the code of `checker.s` after the compiled checker, from the label `ca_start_a4`
-on (`asm_tail`, `ConAgua/AsmFile/Eq.lean`): the compared run's entries and driver (`cmpStub`,
+on (`asm_tail`, `ConAgua/AsmFile/Eq.lean`): the compared run's entries (`cmpStub`,
 `ConAgua/Compiler/AbiCmp.lean`). Apart from `AsmFileEq.lean`, as `AsmStub.lean`, so that
 `checkerTail_eq` (`ConAgua/Checker/AsmTailEq.lean`) does not wait for the compiled checker.
 -/

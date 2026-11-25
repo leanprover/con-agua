@@ -8,6 +8,8 @@ import ConAgua.Checker.CheckARun
 meta import ConAgua.Checker.LoopProgTac
 import all ConAgua.Checker.Entry
 import all ConAgua.Checker.CompareEntry
+import all ConAgua.Arena.FreezeCmp
+import all ConAgua.Checker.CmpSeqEntry
 import ConAgua.Checker.PrepProgHoist
 import ConAgua.Front.ChunkBridge
 import ConAgua.Front.FrontRunRef
@@ -259,8 +261,8 @@ theorem check_dispatch4 {p : Prog} (hp : p.lookup "check" = some checkL) (n : Na
   rw [invoke_eq _ hp]
   simp only [callFn, checkL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (hC ·),
-    (L.invoke_loc p (exec p n) "check_a" [·] ·), (L.invoke_loc p (exec p n) "check_b" [] ·),
-    (L.invoke_loc p (exec p n) "check_c2" [] ·), (L.invoke_loc p (exec p n) "check_c3" [] ·)]
+    (L.invoke_loc p (exec p n) "check_a" [·] ·), (L.invoke_loc p (exec p n) "check_bs" [] ·), (L.invoke_loc p (exec p n) "check_bc" [] ·), (L.invoke_loc p (exec p n) "check_b" [] ·),
+    (L.invoke_loc p (exec p n) "check_c2" [] ·), (L.invoke_loc p (exec p n) "check_c3" [·] ·)]
   all_goals (try simp only [Sig.retVal, Sig.retOr, L.St.setLoc_mem, List.headD_cons,
     St.setLocs_cons, St.setLocs_nil, St.setLoc_loc] at *)
   all_goals grind [lang_grind]

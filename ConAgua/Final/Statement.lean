@@ -13,7 +13,7 @@ meta import ConAgua.Layout
 The final theorems (`ConAgua/Final/EndToEnd.lean`: `checkerFile_accepts`,
 `checkerFile_accepts_regs`, `checkerFile_model_exists`, `checkerFile_no_False`) are
 about the committed file `asm/checker.s`, called at `ca_start(in, in_len, pins, pins_len, base,
-base_len)` as the harness calls it (`AbiCall`, `ConAgua/Final/Abi.lean`): if the machine returns
+base_len)` as the harness calls it (`AbiCall` without a solution, `ConAgua/Final/Abi.lean`): if the machine returns
 `rdx = 0` and `rax = ACCEPT`, the twin (con-ron's arena checker) accepts `[b]` (`TwinAccepts`,
 `ConAgua/Final/Twin.lean`); in con-leche's terms, con-leche's own parser reads `b`, con-leche's
 pure fold accepts the parsed records (prepared with some prelude, at some pin list), the accepted
@@ -21,8 +21,8 @@ environment has a model in every set theory, and a file declaring a theorem of t
 never accepted.
 
 `ca_start` is the sequential driver (`parStub`, `ConAgua/Compiler/Abi.lean`). It checks the
-region size (`drvNeed`: the setup stub's region plus 16 bytes), keeps its return address and the
-caller's `r15` in those 16 bytes past the setup stub's region (`drvSave`) and holds `base` in
+region size (`drvNeed`: the setup stub's region plus 64 bytes), keeps its return address and the
+caller's `r15` in the first 16 of those bytes past the setup stub's region (`drvSave`) and holds `base` in
 `r15`. Then it calls entry 1 (`ca_start_a0`: the mode word `3`, then the setup stub `ca_setup`,
 which lays out the table, the L stack and the arrays in the region and enters the trampoline
 `ca_enter`; `check` runs the stages and the stream index and writes the frozen buffer's header)

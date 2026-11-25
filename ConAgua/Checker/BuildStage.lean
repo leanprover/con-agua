@@ -272,7 +272,7 @@ theorem buildR_of_out {b pb : ByteArray} {sz : TieredArray → Nat} (hsz : ∀ s
     by rw [ha _ (by decide), ha _ (by decide)]; exact h7.decls, ?_, hdrv, hoff, ?_, ?_,
     (since_indMemos hS hctl).frame hf (fun b hb => by simp at hb) (fun x hx => by
       simp only [litCtl, List.mem_cons, List.not_mem_nil, or_false] at hx
-      rcases hx with h | h | h | h | h | h | h | h | h | h <;> subst h <;> decide), ?_⟩
+      rcases hx with h | h | h | h | h | h | h | h | h | h <;> subst h <;> decide), ?_, ?_⟩
   · intro i hi b' nP e
     exact ho.front i hi b' nP e
   · intro x hx
@@ -287,6 +287,7 @@ theorem buildR_of_out {b pb : ByteArray} {sz : TieredArray → Nat} (hsz : ∀ s
     subst hx
     exact ⟨k, by simp [dnOf, hk, hd], hd⟩
   · rw [ha _ (by decide), hS.frame.size, loadMem_arr, Array.size_replicate]; exact hsz _
+  · show (0 : Nat) < 2 ^ 32; decide
 
 /-- **The index build's start**, for the flat run (`buildR_of_out`). -/
 theorem buildR_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} (hsz : ∀ s, sz s < 2 ^ 64)
@@ -337,6 +338,28 @@ structure FoldAt (b pb : ByteArray) (sz : TieredArray → Nat) (PA : PhaseA b) (
   grow : BKeep m₇ m
   frame : MemFrame biA biC m₇ m
   bytes : m.bytes = m₇.bytes
+
+/-- **What an index build leaves** (`FoldAt` at explicit twin values): `R7` at the memory `m₇`
+before the build, `BuildR` at the built index after it, the record pool's prefix kept, and the
+build's write set. -/
+structure FoldOn (b pb : ByteArray) (sz : TieredArray → Nat) (ds : Array IDeclaration)
+    (ipins : List INatOpPinSet) (sE : AState) (I : IStreamIndex) (sF : AState) (m₇ m : Mem) : Prop where
+  r7 : R7 (ConAgua.Final.loadMem b pb sz) m₇ pb ds ipins sE
+  build : BuildR (dnOf sE.store) ds m sF I
+  frozen : FrozenR m I
+  fsize : I.firsts.size = ds.size
+  grow : BKeep m₇ m
+  frame : MemFrame biA biC m₇ m
+  bytes : m.bytes = m₇.bytes
+
+/-- `FoldAt` is `FoldOn` at the phase's values. -/
+theorem FoldAt.on {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
+    (h : FoldAt b pb sz PA m₇ m) : FoldOn b pb sz PA.ds PA.ipins PA.sE PA.I PA.sF m₇ m :=
+  ⟨h.r7, h.build, h.frozen, h.fsize, h.grow, h.frame, h.bytes⟩
+
+/-- The twin's facts after a phase A's stages (`StagesOut.flat`). -/
+theorem PhaseA.out {b : ByteArray} (PA : PhaseA b) : StagesOut PA.sE PA.ds PA.ipins PA.pins :=
+  StagesOut.flat PA.pfx
 
 /-- `FoldAt` at an accepting twin phase A. -/
 def FoldA (b pb : ByteArray) (sz : TieredArray → Nat) (m : Mem) : Prop :=

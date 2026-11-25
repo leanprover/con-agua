@@ -9,15 +9,12 @@ import Kraken.X64.Registers
 @[expose] public section
 
 /-!
-# The compared run's driver `ca_compare` on the machine (lane compare)
+# The compared run's entries `ca_start_ac`, `ca_start_c` on the machine: the pieces (lanes compare, compare2)
 
-`cmp_outcome`: the harness calls `ca_compare` (`CmpCall`). The driver saves the caller's `r15`, its
-return address and the four buffer words past the setup stub's region (`cmpSave`), calls the mode
-entries `4` (`abiMode_outcome`, a zero region), `5` and `6` (`abiModeM_outcome`, the region holding
-the run before's memory), between them the jobs of the solution, one `ca_check_b` call each, on
-the worker region `W` (`abiB_outcome`; `R` left alone: `CmpAgree`), and finally `ca_check_seq`
-(`abiS_outcome`). It returns to the caller with the callee-saved registers restored; `rdx = 0`,
-`rax = ACCEPT` means `CmpAccepts`, `rdx = 2` means `CmpErr` with the code in `rax`.
+The entries' code as one list literal (`cmpStubL`), the frame between the front's calls
+(`CmpFrame`: the save area, the callee-saved registers, the stack window), the exit
+(`cmp_exit`), the test after a mode entry's call (`cmp_okGe`), and what a return means
+(`CmpPost`, `CmpPostH`). The theorems: `ConAgua/Final/CmpMain.lean`.
 -/
 
 namespace ConAgua.Final
@@ -61,11 +58,18 @@ def CmpPost (dm : MachineData) (ra : Word) (Acc : Prop) (Err : Word → Prop) (s
   st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
     (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → Acc) ∧ (st.data.regs.rdx = 2 → Err st.data.regs.rax)
 
+/-- `CmpPost`, and what a return with `rdx = 0`, `rax ≥ 2^63` means (`Hi`, of `rax` and the
+memory; the threaded run's entry 1). -/
+def CmpPostH (dm : MachineData) (ra : Word) (Acc : Prop) (Err : Word → Prop) (Hi : Word → DataMem → Prop)
+    (st : MachineState) : Prop :=
+  CmpPost dm ra Acc Err st ∧
+    (st.data.regs.rdx = 0 → 2 ^ 63 ≤ st.data.regs.rax.toNat → Hi st.data.regs.rax st.data.dmem)
+
 section
-variable [Host] {tab : Tab} {mode : GVar} {out : ArrId} {own : List TieredArray}
+variable [Host] {tab : Tab} {mode : GVar}
 
 /-- `cmpStub` as one list literal (directive `i` at index `i`). -/
-def cmpStubL (tab : Tab) (mode : GVar) (out : ArrId) (own : List TieredArray) : Program :=
+def cmpStubL (tab : Tab) (mode : GVar) : Program :=
   [.label abiStartA4L,
    movRI .rax (abiNeed tab).toUInt64,
    i64 (.cmp (.reg (rr .r9)) (oR .rax)),
@@ -87,8 +91,20 @@ def cmpStubL (tab : Tab) (mode : GVar) (out : ArrId) (own : List TieredArray) : 
    movRI .rax 6,
    movMR (mb .r8 (tab.globOff mode)) .rax,
    jmpL abiSetupL,
-   .label abiCompareL,
-   movRI .rax (cmpNeed tab own).toUInt64,
+   .label abiStartA7L,
+   movRI .rax (abiNeed tab).toUInt64,
+   i64 (.cmp (.reg (rr .r9)) (oR .rax)),
+   jccL .c abiSetupL,
+   movRI .rax 7,
+   movMR (mb .r8 (tab.globOff mode)) .rax,
+   jmpL abiSetupL,
+   .label abiStartCL,
+   movRI .r10 0,
+   jmpL abiCmpFrontL,
+   .label abiStartACL,
+   movRI .r10 1,
+   .label abiCmpFrontL,
+   movRI .rax (drvNeed tab).toUInt64,
    i64 (.cmp (.reg (rr .r9)) (oR .rax)),
    jccL .c abiCmpDeclineL,
    movRI .rax (cmpSave tab).toUInt64,
@@ -102,6 +118,7 @@ def cmpStubL (tab : Tab) (mode : GVar) (out : ArrId) (own : List TieredArray) : 
    movMR (mb .rax 24) .r11,
    movMR (mb .rax 32) .rdx,
    movMR (mb .rax 40) .rcx,
+   movMR (mb .rax 56) .r10,
    movRR .r15 .r8,
    movRI .r9 (abiNeed tab).toUInt64,
    callL abiStartA4L,
@@ -129,33 +146,9 @@ def cmpStubL (tab : Tab) (mode : GVar) (out : ArrId) (own : List TieredArray) : 
    movRI .rax (cmpSave tab).toUInt64,
    i64 (.add (.reg (rr .rax)) (oR .r15)),
    movMR (mb .rax 48) .rdx,
-   movRI .rdx 0,
-   movMR (mb .rax 56) .rdx,
-   .label abiCmpLoopL,
-   movRI .rax (cmpSave tab).toUInt64,
-   i64 (.add (.reg (rr .rax)) (oR .r15)),
-   movRM .rdx (mb .rax 56),
-   i64 (.cmp (.reg (rr .rdx)) (oM (mb .rax 48))),
-   jccL .nc abiCmpAfterL,
-   movRI .rdi (abiSlot * abiSlot64 tab out).toUInt64,
-   i64 (.add (.reg (rr .rdi)) (oR .r15)),
-   movRM .rsi (mb .rdi 8),
-   movRI .rcx (cmpW tab).toUInt64,
-   i64 (.add (.reg (rr .rcx)) (oR .r15)),
-   movRI .r8 (workerNeed own).toUInt64,
-   callL abiCheckBL,
-   i64 (.cmp (.reg (rr .rdx)) (oI 0)),
-   jccL .nz abiCmpDoneL,
-   movRI .rcx 71757147230292,
-   i64 (.cmp (.reg (rr .rax)) (oR .rcx)),
-   jccL .nz abiCmpDoneL,
-   movRI .rax (cmpSave tab).toUInt64,
-   i64 (.add (.reg (rr .rax)) (oR .r15)),
-   movRM .rdx (mb .rax 56),
-   i64 (.add (.reg (rr .rdx)) (oI 1)),
-   movMR (mb .rax 56) .rdx,
-   jmpL abiCmpLoopL,
-   .label abiCmpAfterL,
+   movRM .r11 (mb .rax 56),
+   i64 (.cmp (.reg (rr .r11)) (oI 0)),
+   jccL .nz abiCmpThrL,
    movRI .rax (cmpSave tab).toUInt64,
    i64 (.add (.reg (rr .rax)) (oR .r15)),
    movRM .rdi (mb .rax 16),
@@ -172,9 +165,58 @@ def cmpStubL (tab : Tab) (mode : GVar) (out : ArrId) (own : List TieredArray) : 
    jccL .c abiCmpDoneL,
    i64 (.sub (.reg (rr .rax)) (oR .rcx)),
    movRR .rdx .rax,
+   movRI .rax (cmpSave tab).toUInt64,
+   i64 (.add (.reg (rr .rax)) (oR .r15)),
+   movMR (mb .rax 56) .rdx,
+   movRI .r10 8,
+   movRI .rsi 0,
+   movRM .rdx (mb .rax 48),
+   movRR .r8 .r15,
+   callL abiCheckSML,
+   i64 (.cmp (.reg (rr .rdx)) (oI 0)),
+   jccL .nz abiCmpDoneL,
+   movRI .rcx 71757147230292,
+   i64 (.cmp (.reg (rr .rax)) (oR .rcx)),
+   jccL .nz abiCmpDoneL,
+   movRI .rax (cmpSave tab).toUInt64,
+   i64 (.add (.reg (rr .rax)) (oR .r15)),
+   movRM .rdx (mb .rax 56),
+   movRI .r10 9,
    movRI .rsi 0,
    movRR .r8 .r15,
-   callL abiCheckSL,
+   movRI .rax (abiSlot + abiStack).toUInt64,
+   i64 (.add (.reg (rr .rax)) (oR .r15)),
+   movMR (mb .r15 Tab.stackTop) .rax,
+   callL abiCheckSGL,
+   jmpL abiCmpDoneL,
+   .label abiCmpThrL,
+   movRI .rax (cmpSave tab).toUInt64,
+   i64 (.add (.reg (rr .rax)) (oR .r15)),
+   movRM .rdi (mb .rax 16),
+   movRM .rsi (mb .rax 24),
+   movRM .rdx (mb .rax 32),
+   movRM .rcx (mb .rax 40),
+   movRR .r8 .r15,
+   movRI .r9 (abiNeed tab).toUInt64,
+   callL abiStartA7L,
+   i64 (.cmp (.reg (rr .rdx)) (oI 0)),
+   jccL .nz abiCmpDoneL,
+   movRI .rcx 9223372036854775808,
+   i64 (.cmp (.reg (rr .rax)) (oR .rcx)),
+   jccL .c abiCmpDoneL,
+   i64 (.sub (.reg (rr .rax)) (oR .rcx)),
+   movRR .rdx .rax,
+   movRI .rax (cmpSave tab).toUInt64,
+   i64 (.add (.reg (rr .rax)) (oR .r15)),
+   movRM .rax (mb .rax 48),
+   i64 (.add (.reg (rr .rax)) (oR .rdx)),
+   i64 (.cmp (.reg (rr .rax)) (oR .rcx)),
+   jccL .c abiCmpKokL,
+   movRI .rdx 1,
+   jmpL abiCmpDoneL,
+   .label abiCmpKokL,
+   i64 (.add (.reg (rr .rax)) (oR .rcx)),
+   movRI .rdx 0,
    .label abiCmpDoneL,
    movRR .rcx .rax,
    movRI .rax (cmpSave tab).toUInt64,
@@ -189,41 +231,45 @@ def cmpStubL (tab : Tab) (mode : GVar) (out : ArrId) (own : List TieredArray) : 
    movRI .rdx 1,
    i64 .ret]
 
+set_option maxRecDepth 20000 in
 omit [Host] in
 /-- `cmpStub` as one list literal. -/
-theorem cmpStub_lit : cmpStub tab mode out own = cmpStubL tab mode out own := by
-  simp only [cmpStub, cmpOkGe, cmpArgsS, cmpSaveRax, List.cons_append, List.nil_append, cmpStubL]
+theorem cmpStub_lit : cmpStub tab mode = cmpStubL tab mode := by
+  simp only [cmpStub, cmpEntries, cmpFront, cmpSeqTail, cmpThrTail, cmpExit, cmpModeEntry, cmpOkGe, cmpArgsS,
+    cmpSaveRax, List.cons_append, List.nil_append, cmpStubL]
 
 /-- **The exit** (`ca_cmp_done`): the caller's `r15` and the return address back from the save
 area, the return. -/
-theorem cmp_exit {Kc : Nat} (hC : Code (cmpStubL tab mode out own) Kc) (dm : MachineData) (ra sa : Word)
+theorem cmp_exit {Kc : Nat} (hC : Code (cmpStubL tab mode) Kc) (dm : MachineData) (ra sa : Word)
     {nS base rsp0 : Nat} (hfit : base + abiNeed tab + 64 < 2 ^ 64) (hrsp : 24 ≤ rsp0 ∧ rsp0 + 8 < 2 ^ 64)
     (hrsp0 : dm.regs.rsp.toNat = rsp0)
-    (Acc : Prop) (Err : Word → Prop) (s : MachineData) (hf : CmpFrame tab dm ra sa nS base rsp0 s)
-    (hacc : s.regs.rdx = 0 → s.regs.rax = ACCEPT → Acc) (herr : s.regs.rdx = 2 → Err s.regs.rax) :
-    Ev (CmpPost dm ra Acc Err) s (label abiCmpDoneL) := by
-  rw [Code.label (i := 109) hC rfl]
-  refine ev_label (hC.get (i := 109) rfl) ?_
-  refine ev_movRR (hC.get (i := 110) rfl) ?_
-  refine ev_movRI (hC.get (i := 111) rfl) ?_
-  refine ev_binO (op := .add) (o := oR .r15) rfl (hC.get (i := 112) rfl)
+    (Acc : Prop) (Err : Word → Prop) (Hi : Word → DataMem → Prop) (s : MachineData)
+    (hf : CmpFrame tab dm ra sa nS base rsp0 s)
+    (hacc : s.regs.rdx = 0 → s.regs.rax = ACCEPT → Acc) (herr : s.regs.rdx = 2 → Err s.regs.rax)
+    (hhi : s.regs.rdx = 0 → 2 ^ 63 ≤ s.regs.rax.toNat → ∀ v, Hi s.regs.rax (wrW s.dmem (A rsp0) v)) :
+    Ev (CmpPostH dm ra Acc Err Hi) s (label abiCmpDoneL) := by
+  rw [Code.label (i := 147) hC rfl]
+  refine ev_label (hC.get (i := 147) rfl) ?_
+  refine ev_movRR (hC.get (i := 148) rfl) ?_
+  refine ev_movRI (hC.get (i := 149) rfl) ?_
+  refine ev_binO (op := .add) (o := oR .r15) rfl (hC.get (i := 150) rfl)
     (Or.inr (Or.inr ⟨.r15, rfl, rfl⟩)) fun st => ?_
   have hsa : (BinOp.add.eval (cmpSave tab).toUInt64 s.regs.r15).toNat = base + abiNeed tab := by
     simp only [BinOp.eval, UInt64.toNat_add, cmpSave, hf.r15, Nat.toUInt64]
     rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
     omega
-  refine ev_movRM (hC.get (i := 113) rfl) ⟨by decide, by decide⟩ (v := ra) ?_ ?_
+  refine ev_movRM (hC.get (i := 151) rfl) ⟨by decide, by decide⟩ (v := ra) ?_ ?_
   · rsimp; rw [hsa]; exact hf.sv1
-  refine ev_movRM (hC.get (i := 114) rfl) ⟨by decide, by decide⟩ (v := dm.regs.r15) ?_ ?_
+  refine ev_movRM (hC.get (i := 152) rfl) ⟨by decide, by decide⟩ (v := dm.regs.r15) ?_ ?_
   · rsimp; rw [hsa]; exact hf.sv0
-  refine ev_movRR (hC.get (i := 115) rfl) ?_
+  refine ev_movRR (hC.get (i := 153) rfl) ?_
   have e1 : s.regs.rsp.toBitVec - 8 = A rsp0 := by
     rw [toBitVec_eq_A, hf.rsp, A_sub8 _ (by omega) (by omega)]; rfl
-  refine ev_push (hC.get (i := 116) rfl) ?_ ?_
+  refine ev_push (hC.get (i := 154) rfl) ?_ ?_
   · rsimp; rw [e1]; exact isSome_rdW fun j hj => by rw [A_add]; exact hf.win _ (by omega) (by omega)
-  refine ev_ret (hC.get (i := 117) rfl) (ra := ra) ?_ ?_
+  refine ev_ret (hC.get (i := 155) rfl) (ra := ra) ?_ ?_
   · rsimp; rw [rdW_wrW_same]
-  refine Eventually.done _ ⟨rfl, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_, ?_⟩
+  refine Eventually.done _ ⟨⟨rfl, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_, ?_⟩, ?_⟩
   · rsimp; rw [BitVec.sub_add_cancel]; show s.regs.rsp.toNat = _; rw [hf.rsp, hrsp0]
   · rsimp; exact hf.rbp
   · rsimp; exact hf.r14
@@ -233,6 +279,7 @@ theorem cmp_exit {Kc : Nat} (hC : Code (cmpStubL tab mode out own) Kc) (dm : Mac
   · rsimp; exact hf.r13
   · rsimp; exact hacc
   · rsimp; exact herr
+  · rsimp; rw [e1]; exact fun h0 h1 => hhi h0 h1 _
 
 omit [Host] in
 /-- A frame survives a change of registers other than the frame's and of no memory. -/
@@ -264,12 +311,12 @@ theorem CmpFrame.regs {dm : MachineData} {ra sa : Word} {nS base rsp0 : Nat} {s 
 
 /-- **A mode entry's verdict** (`cmpOkGe`, five instructions at `i`): unless `rdx = 0` and
 `rax ≥ 2^63`, to the exit with the registers but `rcx` and the flags; else on, `rcx = 2^63`. -/
-theorem cmp_okGe {Kc i : Nat} (hC : Code (cmpStubL tab mode out own) Kc)
-    (h0 : (cmpStubL tab mode out own)[i]? = some (i64 (.cmp (.reg (rr .rdx)) (oI 0))))
-    (h1 : (cmpStubL tab mode out own)[i + 1]? = some (jccL .nz abiCmpDoneL))
-    (h2 : (cmpStubL tab mode out own)[i + 2]? = some (movRI .rcx 9223372036854775808))
-    (h3 : (cmpStubL tab mode out own)[i + 3]? = some (i64 (.cmp (.reg (rr .rax)) (oR .rcx))))
-    (h4 : (cmpStubL tab mode out own)[i + 4]? = some (jccL .c abiCmpDoneL))
+theorem cmp_okGe {Kc i : Nat} (hC : Code (cmpStubL tab mode) Kc)
+    (h0 : (cmpStubL tab mode)[i]? = some (i64 (.cmp (.reg (rr .rdx)) (oI 0))))
+    (h1 : (cmpStubL tab mode)[i + 1]? = some (jccL .nz abiCmpDoneL))
+    (h2 : (cmpStubL tab mode)[i + 2]? = some (movRI .rcx 9223372036854775808))
+    (h3 : (cmpStubL tab mode)[i + 3]? = some (i64 (.cmp (.reg (rr .rax)) (oR .rcx))))
+    (h4 : (cmpStubL tab mode)[i + 4]? = some (jccL .c abiCmpDoneL))
     {Q : MachineState → Prop} (s : MachineData)
     (hbad : ∀ s' : MachineData, s'.dmem = s.dmem → (∀ r, r ≠ .rcx → s'.regs.get64 r = s.regs.get64 r) →
       (s.regs.rdx ≠ 0 ∨ s.regs.rax.toNat < 2 ^ 63) → Ev Q s' (label abiCmpDoneL))
@@ -298,17 +345,13 @@ theorem cmp_okGe {Kc i : Nat} (hC : Code (cmpStubL tab mode out own) Kc)
     exact hgood hrdx0 (by simpa using hge) _
 
 /-- **The driver's geometry**: the region `[base, base + blen)` in the address space and large
-enough (`cmpNeed`), the stack window around `rsp0` apart from it, the buffer (`nB` words at `buf`)
-inside the setup stub's part of it. -/
-structure CmpGeo (tab : Tab) (own : List TieredArray) (base blen rsp0 buf nB : Nat) : Prop where
+enough (`drvNeed`), the stack window around `rsp0` apart from it. -/
+structure CmpGeo (tab : Tab) (base blen rsp0 : Nat) : Prop where
   fits : base + blen < 2 ^ 64
-  need : cmpNeed tab own ≤ blen
+  need : drvNeed tab ≤ blen
   win : ∀ x, rsp0 - 24 ≤ x → x < rsp0 + 8 → x < base ∨ base + blen ≤ x
   r24 : 24 ≤ rsp0
   r8 : rsp0 + 8 < 2 ^ 64
-  bufLo : base + 2 ^ 31 ≤ buf
-  bufHi : buf + 8 * nB ≤ base + abiNeed tab
-  buf16 : buf + 16 ≤ base + abiNeed tab
 
 omit [Host] in
 /-- `a + r` as the code computes it (`movRI`, then `add r15`). -/

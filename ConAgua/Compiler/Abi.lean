@@ -91,12 +91,13 @@ def abiOff (tab : Tab) (p : Nat) : Nat :=
 
 /-- The region size the stub needs. -/
 def abiNeed (tab : Tab) : Nat := abiSlot * tab.nslot
-/-- The driver's save area (the caller's `r15` and its return address): the 16 bytes past
-`ca_setup`'s region (`abiNeed`), which the driver needs in addition (`drvNeed`). Entry 1 is called
+/-- The driver's save area (the caller's `r15` and its return address): the first 16 of the 64
+bytes past `ca_setup`'s region (`abiNeed`), which the drivers need in addition (`drvNeed`; the
+compared run's entry 1 `ca_start_ac` uses all 64, `cmpSave`). Entry 1 is called
 on the region without them (`r9 := abiNeed`), so it sees a zero region. -/
 def drvSave (tab : Tab) : Nat := abiNeed tab
 /-- The region size the driver needs. -/
-def drvNeed (tab : Tab) : Nat := abiNeed tab + 16
+def drvNeed (tab : Tab) : Nat := abiNeed tab + 64
 
 /-! ## The stores
 
@@ -182,7 +183,7 @@ def abiStub (tab : Tab) : Program :=
 
 /-- The stub's symbols for the harness: `ca_region_size` (the least `base_len`), `ca_slot` and
 `ca_w0` (the offset of the first word position's slot; the harness advises huge pages for the
-slots from there). `ca_region_size` is the sequential driver's need (`drvNeed`, 16 bytes above
+slots from there). `ca_region_size` is the sequential driver's need (`drvNeed`, 64 bytes above
 `ca_setup`'s, which it covers). -/
 def abiSymbols (tab : Tab) : String :=
   s!".section .rodata\n.globl ca_region_size\n.globl ca_slot\n.globl ca_w0\nca_region_size: .quad {drvNeed tab}\nca_slot: .quad {abiSlot}\nca_w0: .quad {abiSlot * tab.slotOf tab.nb}\n"
@@ -215,12 +216,17 @@ arrays.
   frozen array `i` at `buf + 8 · buf[8 + 2i]` with length `buf[9 + 2i]`, every other array
   `(0, 0)`, the constant data as `ca_setup`; `plo := j`, `phi := j + 1` (one pending group), the
   mode word `2`; then `ca_enter`. Declines (`rdx = 1`) if a frozen array is shorter than its
-  minimum length (`Tab.min64`, `bufMinStub`) or `region_len < workerNeed own`.
+  minimum length (`Tab.min64`, `bufMinStub`) or `region_len < workerNeed own`. A buffer with two
+  phases (the compared run: `buf[5]`, the second phase's offset, nonzero) maps a job index
+  `j ≥ buf[2]` to job `j - buf[2]` of the second phase's buffer at `buf + 8 · buf[5]`, on the
+  same region as the first phase's jobs (`cpProStub`: a thread continues from its first-phase
+  jobs to its second-phase jobs on one region of `ca_worker_size` bytes).
 * `ca_check_seq` (**entry 2 in place**, the sequential driver; the region in `r8`, the range
   `lo`, `hi` in `rsi`, `rdx`), on a region entry 1 left: the table as `ca_setup` lays it out, except
   that `out`, the seed of `CTL` and the byte arrays get no memory and the header `hdrf` is the
   first `hw` words of `out`'s slot (`seqVals`: static words, as `abiStub`'s); `plo`, `phi`, the
-  mode word `2`; then `ca_enter`. The frozen arrays are phase A's own, whole (only the threads
+  mode word `2` (from `ca_check_seq_m`: the mode word in `r10`, the compared run's modes `8`, `9`);
+  then `ca_enter`. The frozen arrays are phase A's own, whole (only the threads
   read images cut to their extents).
 * `ca_start(in, in_len, pins, pins_len, base, base_len)` (**the sequential driver**, what the
   harness calls): entry 1 with the mode word `3` (`ca_start_a0`: the buffer's header only); if it
@@ -228,17 +234,24 @@ arrays.
   result is the result. It needs no more memory than `ca_setup`: entry 2 runs on phase A's region,
   on the arrays as phase A left them.
   It keeps its return address and the caller's `r15` past `ca_setup`'s region (`drvSave`; the
-  driver's region is 16 bytes larger, `drvNeed`, the size `ca_region_size` names), pops its return
+  driver's region is 64 bytes larger, `drvNeed`, the size `ca_region_size` names), pops its return
   address off the machine stack before each `call` and holds `base` in `r15` (which `ca_enter`
-  restores); so each callee's machine stack is the caller's (the 32 bytes `AbiCall` names) and
+  restores); so each callee's machine stack is the caller's (the 32 bytes `AbiArgs` names) and
   the driver touches no callee-saved register but `r15`. -/
 
 def abiStartAL : Label := "ca_start_a"
 def abiStartA0L : Label := "ca_start_a0"
 def abiCheckBL : Label := "ca_check_b"
+/-- `ca_check_b` past its phase prologue (`cpProStub`), at its length tests. -/
+def abiCheckB0L : Label := "ca_check_b_min"
 /-- `ca_check_b` past its length tests (`bufMinStub`). -/
 def abiCheckB1L : Label := "ca_check_b_go"
 def abiCheckSL : Label := "ca_check_seq"
+/-- `ca_check_seq` with the mode word in `r10` (the compared run's modes `8`, `9`). -/
+def abiCheckSML : Label := "ca_check_seq_m"
+/-- `ca_check_seq_m` past its table stores (the table already in place, the caller writes the
+stack's top: a second run in place). -/
+def abiCheckSGL : Label := "ca_check_seq_g"
 def abiDrvDoneL : Label := "ca_drv_done"
 def abiDrvDeclineL : Label := "ca_drv_decline"
 
@@ -327,9 +340,22 @@ def bufMinChk (tab : Tab) : Nat → List TieredArray → Program
       [i64 (.cmp (.mem (mb .rdi (8 * (9 + 2 * i : Nat)))) (oI (tab.min64 a))), jccL .c abiDeclineL]) ++
     bufMinChk tab (i + 1) l
 
-/-- `ca_check_b`'s entry: the length tests (`bufMinChk`), then the stub proper (`parStub0`). -/
+/-- **`ca_check_b`'s phase prologue** (a buffer with two phases, the compared run): with `rdi`
+the buffer, `rdx` the job index `j`, `rcx`/`r8` the region: if `j ≥ buf[2]` (the first phase's job
+count) and `buf[5] ≠ 0` (the second phase's offset, in words; `0` in a one-phase buffer), then
+`j := j - buf[2]` and `buf := buf + 8 · buf[5]` (the second phase's self-contained buffer), on
+the same region; else nothing. The buffer length (`rsi`) stays: entry 2 never reads it. -/
+def cpProStub : Program :=
+  [movRM .rax (mb .rdi 16), i64 (.cmp (.reg (rr .rdx)) (oR .rax)), jccL .c abiCheckB0L,
+   movRM .rax (mb .rdi 40), i64 (.cmp (.reg (rr .rax)) (oI 0)), jccL .z abiCheckB0L,
+   movRR .rax .rdx, i64 (.sub (.reg (rr .rax)) (oM (mb .rdi 16))), movRR .rdx .rax,
+   movRM .rax (mb .rdi 40), i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
+   i64 (.add (.reg (rr .rax)) (oR .rdi)), movRR .rdi .rax]
+
+/-- `ca_check_b`'s entry: the phase prologue (`cpProStub`), the length tests (`bufMinChk`), then
+the stub proper (`parStub0`). -/
 def bufMinStub (tab : Tab) (fz : List TieredArray) : Program :=
-  [.label abiCheckBL] ++ bufMinChk tab 0 fz ++ [jmpL abiCheckB1L]
+  [.label abiCheckBL] ++ cpProStub ++ ([.label abiCheckB0L] ++ bufMinChk tab 0 fz ++ [jmpL abiCheckB1L])
 
 /-- The parallel mode's entries, for the globals `mode`, `plo`, `phi`, the buffer array `out`, the
 frozen arrays `fz` and the owned arrays `own` (`ca_check_b`'s length tests apart, `parStub`). -/
@@ -355,11 +381,13 @@ def parStub0 (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat
   [movMR (mb .rcx (tab.globOff plo)) .rdx, movMR (mb .rcx (tab.globOff phi)) .r9,
    movRI .rax 2, movMR (mb .rcx (tab.globOff mode)) .rax,
    movRR .rdi .rcx, movRI .rsi abiFuelM.toUInt64, jmpL enterL,
-  -- entry 2 in place (the region in `r8`, the range in `rsi`, `rdx`)
-   .label abiCheckSL] ++
+  -- entry 2 in place (the region in `r8`, the range in `rsi`, `rdx`; from `ca_check_seq_m`, the
+  -- mode word in `r10`; from `ca_check_seq_g`, past the table's stores)
+   .label abiCheckSL, movRI .r10 2, .label abiCheckSML] ++
   storesCode 0 (seqVals tab out hdrf ctlf hw) ++
-  [movMR (mb .r8 (tab.globOff plo)) .rsi, movMR (mb .r8 (tab.globOff phi)) .rdx,
-   movRI .rax 2, movMR (mb .r8 (tab.globOff mode)) .rax,
+  [.label abiCheckSGL,
+   movMR (mb .r8 (tab.globOff plo)) .rsi, movMR (mb .r8 (tab.globOff phi)) .rdx,
+   movMR (mb .r8 (tab.globOff mode)) .r10,
    movRR .rdi .r8, movRI .rsi abiFuelM.toUInt64, jmpL enterL,
   -- the sequential driver (its return address and the caller's `r15` in the save area, the
   -- region in `r15`; each `call` puts its return address in the caller's slot)

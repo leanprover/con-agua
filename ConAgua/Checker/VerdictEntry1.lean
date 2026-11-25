@@ -87,7 +87,7 @@ theorem checkA_err_of_stages {p : Prog} (hp : p.lookup "check_a" = some checkAL)
       (fun s => Triple.and_err (h5 n hn' s) (e5 n hn' s)),
       (fun s => Triple.and_err (h6 n hn' s) (nv_at hnv hm6 n [] s)),
       (fun s => Triple.and_err (h7 n hn' s) (nv_at hnv hm7 n [] s)),
-      (fun v c s => nv_at hnv hm9 n [v] s), (fun v c s => nv_at hnv hm8 n [v] s)]
+      (fun v c s => nv_at hnv hm9 n [v] s), (fun v w c s => nv_at hnv hm8 n [v, w] s)]
     all_goals (try simp only [L.St.setLoc_mem,
       St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, Cmp.eval, ite_true,
       UInt64.toNat_zero, bne_iff_ne, ne_eq, Decidable.not_not] at *)
@@ -104,8 +104,8 @@ theorem check_err_dispatchA {p : Prog} (hp : p.lookup "check" = some checkL) (n 
   rw [invoke_eq _ hp]
   simp only [callFn, checkL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (hA · ·),
-    (L.invoke_loc p (exec p n) "check_b" [] ·), (L.invoke_loc p (exec p n) "check_c1" [] ·),
-    (L.invoke_loc p (exec p n) "check_c2" [] ·), (L.invoke_loc p (exec p n) "check_c3" [] ·)]
+    (L.invoke_loc p (exec p n) "check_b" [] ·), (L.invoke_loc p (exec p n) "check_bs" [] ·), (L.invoke_loc p (exec p n) "check_bc" [] ·), (L.invoke_loc p (exec p n) "check_c1" [] ·),
+    (L.invoke_loc p (exec p n) "check_c2" [] ·), (L.invoke_loc p (exec p n) "check_c3" [·] ·)]
   all_goals (try simp only at *)
   all_goals grind [lang_grind]
 

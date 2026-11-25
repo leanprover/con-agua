@@ -827,7 +827,7 @@ def main (args : List String) : IO Unit := do
   let lo := (args.getD 2 "0").toNat!
   let hi := (args.getD 3 "1000000").toNat!
   let code := compileProg2 fl checkerTab checkerProg "check" lo hi
-  IO.FS.writeFile out (asmTextAbiPar checkerTab L.Arena.MODE L.Arena.PLO L.Arena.PHI L.Arena.OUT L.Arena.HDRF L.Arena.CTLF 126 L.Arena.frozenIdsL
+  IO.FS.writeFile out (asmTextAbiPar checkerTab L.Arena.MODE L.Arena.PLO L.Arena.PHI L.Arena.OUT L.Arena.HDRF L.Arena.CTLF L.Arena.hdrHw L.Arena.frozenIdsL
       L.Arena.parOwnedL code ++
     tabSymbols checkerTab ++ ".globl ca_diag\nca_diag: .quad -1\n")
   IO.println s!"wrote {out}: {code.length} directives"

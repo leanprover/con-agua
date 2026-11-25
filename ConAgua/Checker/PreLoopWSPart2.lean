@@ -29,6 +29,7 @@ import all ConAgua.Arena.FVarRange
 import all ConAgua.Arena.FVarStore
 import all ConAgua.Arena.ForallStore
 import all ConAgua.Arena.Freeze
+import all ConAgua.Arena.FreezeCmp
 import all ConAgua.Arena.HasFvar
 import all ConAgua.Arena.ImaxStore
 import all ConAgua.Arena.IndDeclConsts
@@ -126,6 +127,7 @@ import all ConAgua.Arena.WhnfProj
 import all ConAgua.Arena.WhnfSpineArgs
 import all ConAgua.Arena.WhnfSpineRefine
 import all ConAgua.Arena.ZeroStore
+import all ConAgua.Checker.CmpSeqEntry
 import all ConAgua.Checker.CompareEntry
 import all ConAgua.Checker.Entry
 import all ConAgua.Checker.Hoist

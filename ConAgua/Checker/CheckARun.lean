@@ -136,7 +136,16 @@ theorem checkerProg_fz : ∀ i < frozen.length, checkerProg.lookup (fzName i) = 
   | 60, _ => show checkerProg.lookup "fz_60" = some (fzF 60); chk_lk
   | 61, _ => show checkerProg.lookup "fz_61" = some (fzF 61); chk_lk
   | 62, _ => show checkerProg.lookup "fz_62" = some (fzF 62); chk_lk
-  | _ + 63, h => exact absurd h (by omega)
+  | 63, _ => show checkerProg.lookup "fz_63" = some (fzF 63); chk_lk
+  | 64, _ => show checkerProg.lookup "fz_64" = some (fzF 64); chk_lk
+  | 65, _ => show checkerProg.lookup "fz_65" = some (fzF 65); chk_lk
+  | 66, _ => show checkerProg.lookup "fz_66" = some (fzF 66); chk_lk
+  | 67, _ => show checkerProg.lookup "fz_67" = some (fzF 67); chk_lk
+  | 68, _ => show checkerProg.lookup "fz_68" = some (fzF 68); chk_lk
+  | 69, _ => show checkerProg.lookup "fz_69" = some (fzF 69); chk_lk
+  | 70, _ => show checkerProg.lookup "fz_70" = some (fzF 70); chk_lk
+  | 71, _ => show checkerProg.lookup "fz_71" = some (fzF 71); chk_lk
+  | _ + 72, h => exact absurd h (by omega)
 
 /-! ## Entry 1 -/
 

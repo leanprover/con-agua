@@ -55,6 +55,8 @@ import all ConAgua.Arena.Needs
 import all ConAgua.Arena.Justify
 import all ConAgua.Arena.JustifySide
 import all ConAgua.Checker.CompareEntry
+import all ConAgua.Arena.FreezeCmp
+import all ConAgua.Checker.CmpSeqEntry
 import all ConAgua.Arena.Knot
 import all ConAgua.Arena.LamStore
 import all ConAgua.Arena.LetStore

@@ -17,7 +17,7 @@ import ConAgua.L.WordOff
 /-!
 # The verdict theorem for the sequential driver of the committed file
 
-`checkerFile_verdict_of`: the harness calls the driver `ca_start` of `checker.s` as `AbiCall` says.
+`checkerFile_verdict_of`: the harness calls the driver `ca_start` of `checker.s` as `AbiCall` says (no solution).
 The machine returns to the caller, and if it reports `rdx = 2` with a code whose class
 `rax &&& 3` is `1` (reject) or `2` (decline), the twin's pipeline on `[b]` fails with an error of
 that class (`TwinVerdict`): `invalid` for a reject, `notImplemented` for a decline. Every other
@@ -35,7 +35,7 @@ open L L.Compiler L.Checker L.Arena ConRon.Arena
 the entries' verdict claims, gives `TwinVerdict [b]` at that class. -/
 theorem drvErr_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (k : Word)
     (hV : SeqVerdicts checkerProg)
-    (h : DrvErr checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF 138 b pb k) (hk : k &&& 3 ≠ 0) :
+    (h : DrvErr checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF hdrHw b pb k) (hk : k &&& 3 ≠ 0) :
     TwinVerdict [b] (k &&& 3) := by
   obtain ⟨hb, hpb, h⟩ := h
   have hin : InputsOK b pb (abiSz checkerTab) := ⟨h64, hb, hpb, fun s => by
@@ -47,7 +47,7 @@ theorem drvErr_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (k :
   · subst hc
     rw [L.getD_zero] at hge he
     refine hV.entry2 b pb _ hin abiFuel hN rs₁ m₁ h₁ hge abiFuel (by simp [abiFuel])
-      (seqMem m₁ MODE PLO PHI OUT HDRF CTLF 138 0 (rs₁.headD 0 - 9223372036854775808))
+      (seqMem m₁ MODE PLO PHI OUT HDRF CTLF hdrHw 0 (rs₁.headD 0 - 9223372036854775808))
       ?_ rfl rfl rfl ?_ ?_ e he hk
     · intro a ha
       rw [seqMem_arr64]
@@ -60,9 +60,9 @@ theorem drvErr_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (k :
       rw [ite_eq_right (by decide), ite_eq_left trivial]
       simp only [Array.getD_eq_getD_getElem?, Array.getElem?_extract]
       by_cases h3 : 3 < (m₁.arr64 OUT).size
-      · have h4 : 3 < min 138 (m₁.arr64 OUT).size := by omega
+      · have h4 : 3 < min hdrHw (m₁.arr64 OUT).size := by simp only [hdrHw]; omega
         simp [h4]
-      · have h4 : ¬ 3 < min 138 (m₁.arr64 OUT).size := by omega
+      · have h4 : ¬ 3 < min hdrHw (m₁.arr64 OUT).size := by simp only [hdrHw]; omega
         simp [h4, Array.getElem?_eq_none (Nat.le_of_not_lt h3)]
 
 /-- **The verdict theorem for the driver of `checker.s`**: the machine returns to `ra`, and if it
@@ -71,15 +71,15 @@ fails with an error of that class, given the entries' verdict claims (`SeqVerdic
 theorem checkerFile_verdict_of [Host]
     (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (dm : MachineData) (ra : Word)
-    (hc : AbiCall b pb dm ra) :
+    (hc : AbiCall b none pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
         (SeqVerdicts checkerProg → st.data.regs.rdx = 2 → st.data.regs.rax &&& 3 ≠ 0 →
           TwinVerdict [b] (st.data.regs.rax &&& 3)))
       dm (label abiStartL) :=
   eventually_weaken _ _ _ _ (fun _ ⟨hpc, _, _, h⟩ => ⟨hpc, fun hV h2 hk => drvErr_twin b pb h64 _ hV (h h2) hk⟩)
     (drv_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok checkerTab_abiIO checkerProgI_wf (by decide) MODE PLO PHI OUT
-      HDRF CTLF 138 frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
-      (code_of_checkerFile_par hcode) L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm ra hc)
+      HDRF CTLF hdrHw frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
+      (code_of_checkerFile_par hcode) L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm ra hc.toAbiArgs)
 
 /-- info: 'ConAgua.Final.checkerFile_verdict_of' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms checkerFile_verdict_of

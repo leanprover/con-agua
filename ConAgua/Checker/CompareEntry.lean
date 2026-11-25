@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.JustifyIface
+public import ConAgua.Arena.FreezeCmp
 
 @[expose] public section
 
@@ -22,12 +23,16 @@ mode between them (docs/design/compare.md §0):
   solution's jobs run on a worker region over it, so this region stays the twin's driver state);
   returns `2^63 + k` for the solution's `k` records, or `1`.
 * (the solution's jobs, `ca_check_b` on a worker region, `J = none`)
-* mode `6`, `check_c3()`: the solution's index moved to the solution's rows
+* mode `6`, `check_c3(0)`: the solution's index moved to the solution's rows
   (`index_to_solution`, con-ron's `thaw_tier` handing the index back), the challenge's records
   back (`cmp_restore`; the twin's `prelude_ix_dup` is the prelude's copy kept in `CDECL`),
   `prepare_prelude`, `side_records`, `solution_of` (the record mates), `build_index`, the flag
   `CTL[224] := 1`, `par_compact(0)`; returns `2^63 + k`.
 * (the challenge's jobs in place, `ca_check_seq`, `J = some sol`)
+* mode `7`, `check_c3(1)`: as mode `6` (from mode `5`'s memory: the threaded compared run's
+  solution jobs ran on the threads' regions) but `par_compact(1)`: the challenge's frozen buffer,
+  with the solution's rows (`SIX*`, `STX*`, `MAT*`, extents gated by `CTL[224]`), for its jobs on
+  the threads' regions (`ca_check_b`, `J = some sol`).
 -/
 
 namespace L.Checker
@@ -83,14 +88,50 @@ parse left them). -/
   z := call intern_all_pins();
   cnt := DECL.u64[0];
   z := call build_index(cnt);
-  z := call par_compact(1);
   return 9223372036854775808 + cnt
 }
 
-/-- `check_c3()`: the solution's index moved out, the challenge's records back and prepared, its
-side records, the record mates, its index, the flag, the buffer's header. -/
+/-- `cmp_sstash()`: what the solution's jobs read and the challenge's preparation overwrites,
+kept: its records `DECL` in `SDECL`, its index firsts `FIRSTS` in `SFIRSTS`, its declaration pool
+`DLP` in `SDLP`, `CTL[0‥256)` in `SCTL`. -/
+-- con-ron: none — L keeps one driver state; the twin's driver holds the solution's `ParseResultD` and index
+@[no_expose] def cmpSStashL : FunDecl := lfn () locals (a, b, c) {
+  if 576460752303423488 <= DECL.u64[0] { abort };
+  a := 1 + 8 * DECL.u64[0];
+  b := DECL.u64[0];
+  c := 1 + DLP.u64[0];
+  copy!(SDECL.u64, 0, DECL.u64, 0, a);
+  copy!(SFIRSTS.u64, 0, FIRSTS.u64, 0, b);
+  copy!(SDLP.u64, 0, DLP.u64, 0, c);
+  copy!(SCTL.u64, 0, CTL.u64, 0, 256);
+  return 0
+}
+
+/-- `cmp_ext()`: the compared run's extent words (`Arena/Freeze.lean`): the flag `CTL[229]`
+(`cmpCW`) := `1`, `CTL[230]` (`cmpKD`) := the larger of the two phases' record counts (the
+challenge's `DECL[0]`, the solution's `SDECL[0]`), `CTL[231]` (`cmpKP`) := the larger of their pool
+tops (`DLP[0]`, `SDLP[0]`): every frozen array then has one extent under both headers. -/
+-- con-ron: none — con-ron's two driver states keep their own tables; L shares one image set
+@[no_expose] def cmpExtL : FunDecl := lfn () locals (a, b) {
+  CTL.u64[229] := 1;
+  a := DECL.u64[0];
+  b := SDECL.u64[0];
+  if a < b { a := b };
+  CTL.u64[230] := a;
+  a := DLP.u64[0];
+  b := SDLP.u64[0];
+  if a < b { a := b };
+  CTL.u64[231] := a;
+  return 0
+}
+
+/-- `check_c3(c)`: the solution's index moved out, the challenge's records back and prepared, its
+side records, the record mates, its index, the flag, the extent words (`cmp_ext`), the frozen buffer (`par_compact(c)`: the
+header only for mode `6`, `c = 0`, whose jobs run in place; header and images for mode `7`,
+`c = 1`, whose jobs run on the threads' regions). -/
 -- con-ron: none — the Rust driver `compare_json` (h8S's thaw, h4, hside, hsol, h6, h7), which the twin states as premises
-@[no_expose] def checkC3L : FunDecl := lfn () locals (z, cnt) {
+@[no_expose] def checkC3L : FunDecl := lfn (c) locals (z, cnt) {
+  z := call cmp_sstash();
   cnt := DECL.u64[0];
   z := call index_to_solution(cnt);
   z := call cmp_restore();
@@ -100,13 +141,20 @@ side records, the record mates, its index, the flag, the buffer's header. -/
   z := call solution_of(cnt);
   z := call build_index(cnt);
   CTL.u64[⟪SOLC⟫] := 1;
-  z := call par_compact(0);
+  z := call cmp_ext();
+  if c != 0 {
+    z := call par_compact(1, ⟪hdrWW⟫);
+    z := call cmp_hdr_s(z)
+  } else {
+    z := call par_compact(0, 0)
+  };
   return 9223372036854775808 + cnt
 }
 
 /-- The compared run's entry functions. -/
 def compareEntryProg : Prog :=
   [("cmp_stash", cmpStashL), ("cmp_restore", cmpRestoreL), ("check_c1", checkC1L),
-   ("check_c2", checkC2L), ("check_c3", checkC3L)]
+   ("check_c2", checkC2L), ("check_c3", checkC3L), ("cmp_sstash", cmpSStashL),
+   ("cmp_ext", cmpExtL), ("cmp_hdr_s", cmpHdrSL), ("fzs_60", fzsF 60), ("fzs_61", fzsF 61), ("fzs_62", fzsF 62)]
 
 end L.Checker

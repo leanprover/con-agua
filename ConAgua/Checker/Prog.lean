@@ -28,6 +28,7 @@ public import ConAgua.Arena.FVarRange
 public import ConAgua.Arena.FVarStore
 public import ConAgua.Arena.ForallStore
 public import ConAgua.Arena.Freeze
+public import ConAgua.Arena.FreezeCmp
 public import ConAgua.Arena.HasFvar
 public import ConAgua.Arena.ImaxStore
 public import ConAgua.Arena.IndDeclConsts
@@ -123,6 +124,7 @@ public import ConAgua.Arena.WhnfProj
 public import ConAgua.Arena.WhnfSpineArgs
 public import ConAgua.Arena.WhnfSpineRefine
 public import ConAgua.Arena.ZeroStore
+public import ConAgua.Checker.CmpSeqEntry
 public import ConAgua.Checker.CompareEntry
 public import ConAgua.Checker.Hoist
 public import ConAgua.Checker.Presize
@@ -164,7 +166,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1932 functions, 0 of them stubs.
+1966 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -642,6 +644,7 @@ def checkerProg : Prog := [
   ("check_abs_ctor_sorts_all", L.Ind.checkAbsCtorSortsAll),
   ("check_abs_ctor_sorts_one", L.Ind.checkAbsCtorSortsOne),
   ("check_b", L.Checker.checkBL),
+  ("check_bc", L.Checker.checkBCL),
   ("check_block", L.Ind.checkBlock),
   ("check_block_agree", L.Ind.checkBlockAgree),
   ("check_block_agree_one", L.Ind.checkBlockAgreeOne),
@@ -664,6 +667,7 @@ def checkerProg : Prog := [
   ("check_block_tail_stream", L.Ind.checkBlockTailStream),
   ("check_block_tele", L.Ind.checkBlockTele),
   ("check_block_teles", L.Ind.checkBlockTeles),
+  ("check_bs", L.Checker.checkBSL),
   ("check_c1", L.Checker.checkC1L),
   ("check_c2", L.Checker.checkC2L),
   ("check_c3", L.Checker.checkC3L),
@@ -813,7 +817,10 @@ def checkerProg : Prog := [
   ("close_lams_go", L.Ind.closeLamsGo),
   ("close_telescope", L.Ind.closeTelescope),
   ("close_telescope_go", L.Ind.closeTelescopeGo),
+  ("cmp_ext", L.Checker.cmpExtL),
+  ("cmp_hdr_s", L.Arena.cmpHdrSL),
   ("cmp_restore", L.Checker.cmpRestoreL),
+  ("cmp_sstash", L.Checker.cmpSStashL),
   ("cmp_stash", L.Checker.cmpStashL),
   ("cone_entry", L.Arena.coneEntryL),
   ("cone_go", L.Arena.coneGoL),
@@ -832,6 +839,22 @@ def checkerProg : Prog := [
   ("consts_resolve_ffast", L.Stubs.constsResolveFFastL),
   ("copy_b", L.Arena.copyBL),
   ("copy_n", L.Arena.copyN),
+  ("cq_back_eixa", L.Checker.cqBackG L.Checker.CEIXA L.Arena.EIXA),
+  ("cq_back_eixn", L.Checker.cqBackG L.Checker.CEIXN L.Arena.EIXN),
+  ("cq_back_eixs", L.Checker.cqBackG L.Checker.CEIXS L.Arena.EIXS),
+  ("cq_back_tixa", L.Checker.cqBackG L.Checker.CTIXA L.Arena.TIXA),
+  ("cq_back_tixn", L.Checker.cqBackG L.Checker.CTIXN L.Arena.TIXN),
+  ("cq_back_tixs", L.Checker.cqBackG L.Checker.CTIXS L.Arena.TIXS),
+  ("cq_bank_c", L.Checker.cqBankCL),
+  ("cq_bank_s", L.Checker.cqBankSL),
+  ("cq_ctl_c", L.Checker.cqCtlCL),
+  ("cq_ctl_s", L.Checker.cqCtlSL),
+  ("cq_swap_eixa", L.Checker.cqSwapRowsG L.Checker.CEIXA L.Arena.EIXA L.Arena.SIXA 34),
+  ("cq_swap_eixn", L.Checker.cqSwapRowsG L.Checker.CEIXN L.Arena.EIXN L.Arena.SIXN 38),
+  ("cq_swap_eixs", L.Checker.cqSwapRowsG L.Checker.CEIXS L.Arena.EIXS L.Arena.SIXS 36),
+  ("cq_swap_tixa", L.Checker.cqSwapRowsG L.Checker.CTIXA L.Arena.TIXA L.Arena.STXA 34),
+  ("cq_swap_tixn", L.Checker.cqSwapRowsG L.Checker.CTIXN L.Arena.TIXN L.Arena.STXN 38),
+  ("cq_swap_tixs", L.Checker.cqSwapRowsG L.Checker.CTIXS L.Arena.TIXS L.Arena.STXS 36),
   ("cr_leaf", L.Stubs.crLeaf),
   ("cr_lit_pins", L.Stubs.crLitPins),
   ("crf_go", L.Stubs.crfGo),
@@ -1095,9 +1118,21 @@ def checkerProg : Prog := [
   ("fz_60", L.Arena.fzF 60),
   ("fz_61", L.Arena.fzF 61),
   ("fz_62", L.Arena.fzF 62),
+  ("fz_63", L.Arena.fzF 63),
+  ("fz_64", L.Arena.fzF 64),
+  ("fz_65", L.Arena.fzF 65),
+  ("fz_66", L.Arena.fzF 66),
+  ("fz_67", L.Arena.fzF 67),
+  ("fz_68", L.Arena.fzF 68),
+  ("fz_69", L.Arena.fzF 69),
   ("fz_7", L.Arena.fzF 7),
+  ("fz_70", L.Arena.fzF 70),
+  ("fz_71", L.Arena.fzF 71),
   ("fz_8", L.Arena.fzF 8),
   ("fz_9", L.Arena.fzF 9),
+  ("fzs_60", L.Arena.fzsF 60),
+  ("fzs_61", L.Arena.fzsF 61),
+  ("fzs_62", L.Arena.fzsF 62),
   ("gcd_step", L.Arena.gcdStep),
   ("gen_rec_check", L.Ind.genRecCheckL),
   ("gen_rec_check_any_no_member", L.Ind.genRecCheckAnyNoMember),
@@ -2030,6 +2065,7 @@ def checkerProg : Prog := [
   ("sd_move_a", L.Arena.sdMoveAL),
   ("sd_move_n", L.Arena.sdMoveNL),
   ("sd_move_s", L.Arena.sdMoveSL),
+  ("seed_reread", L.Checker.seedRereadL),
   ("shift_left_refused", L.Arena.shiftLeftRefusedL),
   ("shl_n", L.Arena.shlN),
   ("shr_n", L.Arena.shrN),

@@ -45,6 +45,8 @@ import all ConAgua.Arena.Needs
 import all ConAgua.Arena.Justify
 import all ConAgua.Arena.JustifySide
 import all ConAgua.Checker.CompareEntry
+import all ConAgua.Arena.FreezeCmp
+import all ConAgua.Checker.CmpSeqEntry
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
 import all ConAgua.Arena.IndStream
@@ -240,43 +242,49 @@ def biFns : List FnName :=
 names_tree biTree : biFns
 
 /-- The arrays `build_index` may write: all but the pins, the records `DECL`, their pool `DLP`,
-the compared run's kept records `CDECL` (`Checker/CompareEntry.lean`) and the preparation's memos
-`HSEEN`, `HNIX`. -/
+the compared run's kept records `CDECL` (`Checker/CompareEntry.lean`), the preparation's memos
+`HSEEN`, `HNIX`, and the compared run's arrays `210‥222` (the solution's rows, the mates, the
+walks' memos and stacks, `Arena/JustifyIface.lean`). -/
 def biA : List TieredArray := checkerWordArrays.filter fun b =>
-  b != PINS && b != L.Front.DECL && b != L.Front.DLP && b != CDECL && b != HSEEN && b != HNIX
+  b != PINS && b != L.Front.DECL && b != L.Front.DLP && b != CDECL && b != HSEEN && b != HNIX &&
+    !(210 ≤ b.arr && b.arr ≤ 222)
 
 /-- The `CTL` words `build_index` may write: all but the pin sets' words, the solution's flag
-(`CTL[224]`, `Arena/JustifyIface.lean`), the preparation's memo stamps (`CTL[73]`, `CTL[75]`) and the
-prelude's record count (`CTL[240]`). -/
+(`CTL[224]`), the solution's counters and the walks' memo stamps and stack tops (`CTL[220‥228]`,
+`Arena/JustifyIface.lean`), the preparation's memo stamps (`CTL[73]`, `CTL[75]`) and the
+prelude's record count (`CTL[240]`) and the compared run's extent words (`CTL[229‥231]`). -/
 def biC : List Word := ((List.range 1024).filter fun x => x != 150 && x != 151 && x != 224 &&
-  x != 73 && x != 75 && x != 240).map UInt64.ofNat
+  x != 73 && x != 75 && x != 240 && !(220 ≤ x && x ≤ 231)).map UInt64.ofNat
 
 /-- The arrays of `biA`, as a test. -/
 def biPa (b : TieredArray) : Bool := checkerWordArrays.contains b && b != PINS && b != L.Front.DECL &&
-  b != L.Front.DLP && b != CDECL && b != HSEEN && b != HNIX
+  b != L.Front.DLP && b != CDECL && b != HSEEN && b != HNIX && !(210 ≤ b.arr && b.arr ≤ 222)
 
 /-- The `CTL` words of `biC`, as a test. -/
 def biPc (x : Word) : Bool := decide (x.toNat < 1024) && x.toNat != 150 && x.toNat != 151 &&
-  x.toNat != 224 && x.toNat != 73 && x.toNat != 75 && x.toNat != 240
+  x.toNat != 224 && x.toNat != 73 && x.toNat != 75 && x.toNat != 240 &&
+    !(decide (220 ≤ x.toNat) && decide (x.toNat ≤ 231))
 
 theorem biPa_mem (b : TieredArray) (h : biPa b = true) : b ∈ biA := by
   simp only [biPa, Bool.and_eq_true, List.contains_iff_mem] at h
   simp only [biA, List.mem_filter, Bool.and_eq_true]
-  exact ⟨h.1.1.1.1.1.1, by simp only [h, and_self]⟩
+  exact ⟨h.1.1.1.1.1.1.1, by simp only [h, and_self]⟩
 
 theorem biPc_mem (x : Word) (h : biPc x = true) : x ∈ biC := by
   simp only [biPc, Bool.and_eq_true, bne_iff_ne, ne_eq, decide_eq_true_eq] at h
   simp only [biC, List.mem_filter, List.mem_map, List.mem_range]
-  refine ⟨x.toNat, ⟨h.1.1.1.1.1.1, ?_⟩, UInt64.ofNat_toNat⟩
-  simp only [Bool.and_eq_true, bne_iff_ne, ne_eq]
+  refine ⟨x.toNat, ⟨h.1.1.1.1.1.1.1, ?_⟩, UInt64.ofNat_toNat⟩
+  simp only [Bool.and_eq_true, bne_iff_ne, ne_eq, Bool.not_eq_true', Bool.and_eq_false_iff,
+    decide_eq_false_iff_not] at h ⊢
   omega
 
 theorem not_mem_biC {x : Word} (h : x.toNat = 150 ∨ x.toNat = 151 ∨ x.toNat = 224 ∨ x.toNat = 73 ∨
-    x.toNat = 75 ∨ x.toNat = 240) : x ∉ biC := by
+    x.toNat = 75 ∨ x.toNat = 240 ∨ (220 ≤ x.toNat ∧ x.toNat ≤ 231)) : x ∉ biC := by
   intro hm
   simp only [biC, List.mem_map, List.mem_filter, List.mem_range] at hm
   obtain ⟨y, ⟨hy, hb⟩, rfl⟩ := hm
-  simp only [Bool.and_eq_true, bne_iff_ne, ne_eq] at hb
+  simp only [Bool.and_eq_true, bne_iff_ne, ne_eq, Bool.not_eq_true', Bool.and_eq_false_iff,
+    decide_eq_false_iff_not] at hb
   rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)] at h
   omega
 

@@ -97,6 +97,29 @@ def fzPExt (k : Nat) : Expr := .bin .shr (.bin .add (fzCtl k) (fzC 1)) (fzC 1)
 def fzSlotExt (sa : ArrId) : Expr :=
   .bin .add (fzC 2) (.bin .add (.ld64 sa (fzC 0)) (.const SN0))
 
+/-- The compared run's `CTL` words the extents read (`cmp_ext`, mode `6`/`7`; `0` on a flat run,
+never written elsewhere, not patched in the solution's seed): the compare flag, the larger of the
+two record counts, the larger of the two declaration pool tops. -/
+def cmpCW : Nat := 229
+def cmpKD : Nat := 230
+def cmpKP : Nat := 231
+
+/-- `e` on a flat run, `CTL[k]` on a compared one (`e + CTL[cmpCW] · (CTL[k] − e)`): the same
+under both headers of a compared run, whatever `e` reads. -/
+def fzCmpOr (e : Expr) (k : Nat) : Expr :=
+  .bin .add e (.bin .mul (fzCtl cmpCW) (.bin .sub (fzCtl k) e))
+
+/-- The extent of `FIRSTS` (and `DECL`'s, `1 + 8 ·` it): the number of the front's records, on a
+compared run the larger of the two phases'. -/
+def fzDeclX : Expr := fzCmpOr fzDecl cmpKD
+
+/-- The pool top `DLP[0]`, on a compared run the larger of the two phases'. -/
+def fzDlpX : Expr := fzCmpOr (.ld64 L.Front.DLP (fzC 0)) cmpKP
+
+/-- The extent of a solution row (`SIX*`, `STX*`, `MAT*`, by the name handle's index): `2 · count`
+of its name store on a compared run (`CTL[cmpCW] = 1`), else `0`. -/
+def fzSolExt (ca : Nat) : Expr := .bin .mul (fzCtl cmpCW) (.bin .mul (fzC 2) (fzCtl ca))
+
 /-- **The frozen arrays**, in header order: (the id entry 2 reads it as, how entry 1 makes it). -/
 def frozen : List (ArrId × Fz) :=
   [(CTLF, ⟨CTL, fzC 256⟩), (POOL, ⟨POOL, fzCtl 0⟩)] ++
@@ -112,26 +135,29 @@ def frozen : List (ArrId × Fz) :=
    (TIXS, ⟨TIXS, .bin .mul (fzC 2) (fzCtl nstrCS.ca.toNat)⟩),
    (TIXN, ⟨TIXN, .bin .mul (fzC 2) (fzCtl nnumCS.ca.toNat)⟩),
    (EREC, ⟨EREC, fzCtl 129⟩),
-   (FIRSTS, ⟨FIRSTS, fzDecl⟩),
-   (L.Front.DECL, ⟨L.Front.DECL, .bin .add (fzC 1) (.bin .mul (fzC 8) fzDecl)⟩),
-   (L.Front.DLP, ⟨L.Front.DLP, .bin .add (fzC 1) (.ld64 L.Front.DLP (fzC 0))⟩)]
+   (FIRSTS, ⟨FIRSTS, fzDeclX⟩),
+   (L.Front.DECL, ⟨L.Front.DECL, .bin .add (fzC 1) (.bin .mul (fzC 8) fzDeclX)⟩),
+   (L.Front.DLP, ⟨L.Front.DLP, .bin .add (fzC 1) fzDlpX⟩)] ++
+  [(SIXA, ⟨SIXA, fzSolExt nanonCS.ca.toNat⟩), (SIXS, ⟨SIXS, fzSolExt nstrCS.ca.toNat⟩),
+   (SIXN, ⟨SIXN, fzSolExt nnumCS.ca.toNat⟩), (STXA, ⟨STXA, fzSolExt nanonCS.ca.toNat⟩),
+   (STXS, ⟨STXS, fzSolExt nstrCS.ca.toNat⟩), (STXN, ⟨STXN, fzSolExt nnumCS.ca.toNat⟩),
+   (MATA, ⟨MATA, fzSolExt nanonCS.ca.toNat⟩), (MATS, ⟨MATS, fzSolExt nstrCS.ca.toNat⟩),
+   (MATN, ⟨MATN, fzSolExt nnumCS.ca.toNat⟩)]
 
 /-- The ids entry 2 maps into the buffer: the header, then the frozen arrays. -/
 def frozenIds : List TieredArray := ↑HDRF :: frozen.map (fun x => ↑x.1)
 
 /-- **The worker's own arrays**: every word array phase B (`check_b`'s call closure) touches that
 is not frozen: `CTL`, the pool's tier 1 and `PT0`, the memos and caches, the env index's tier 1, the walk stacks and
-scratch heaps, the stores' tier-1 arrays, and the comparison's arrays (`SIXA`‥`CWK`: the solution's
-rows are read only by the challenge's jobs, which run in place, so in a worker region they stay
-zero and unread; the walks' memos and stacks are the job's own). Entry 2 gives them slots in the worker region; any
+scratch heaps, the stores' tier-1 arrays, and the comparison's walks' memos and stacks (`NDM`‥`CWK`,
+the job's own; the solution's rows `SIX*`/`STX*`/`MAT*` are frozen). Entry 2 gives them slots in the worker region; any
 other array gets no memory (an access is out of bounds, an error). `Checker/ParOwned.lean` checks
 the list against the program. -/
 def parOwned : List TieredArray :=
   tier0s [CTL, BMEMO, IMEMO, FRMEMO, ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, PT0, WCM, WKM, WH,
     INM, IOM, DEM, CTM, CV, RRM, LQ, LSQ, OIXA, OIXS, OIXN, OTXA, OTXS, OTXN, SPN, BSTK, WSM,
     FLM, LSM, LVS, Stubs.CRM, LH, Ind.IW, LMEMO, ILFM, Ind.MAM, Ind.NOM, Ind.DPM, Ind.RFM,
-    Ind.RAM, Ind.TAM, Ind.HBM, Ind.MCM, L.Rom.RSTK, L.Rom.RMEMO, L.Rom.RSET, SIXA, SIXS, SIXN,
-    STXA, STXS, STXN, MATA, MATS, MATN, NDM, CSM, NACC, CWK] ++
+    Ind.RAM, Ind.TAM, Ind.HBM, Ind.MCM, L.Rom.RSTK, L.Rom.RMEMO, L.Rom.RSET, NDM, CSM, NACC, CWK] ++
   tier1s [POOL, EREC, OIXA, OIXS, OIXN, OTXA, OTXS, OTXN] ++
   ((fzStores.flatMap (fun (x : ArrId × ArrId × Nat × Nat) => [tier1 x.1, tier1 x.2.1]) ++
     fzPCols.map (fun (x : ArrId × Nat) => tier1 x.1) ++
@@ -142,17 +168,19 @@ def hdrW : Nat := 10 + 2 * frozen.length
 
 /-- con-ron: none — the phase boundary's copy of a prefix (con-ron moves its tables, `freeze_tier`)
 
-`fz_i(o, c)` for the prefix image of `src` with extent `e` in header entry `i`: writes `(o, e)` into
-the header and, if `c ≠ 0`, the image at `OUT[o‥o+e)`; returns `o + e`. Locals `o c e`. -/
+`fz_i(o, c, b)` for the prefix image of `src` with extent `e` in header entry `i` of the header at
+`OUT[b‥)` (`o` relative to `b`): writes `(o, e)` into the header and, if `c ≠ 0`, the image at
+`OUT[b+o‥b+o+e)`; returns `o + e`. Locals `o c b e d` (`d = b + o`). -/
 @[no_expose] def fzPreG (src : ArrId) (e : Expr) (i : Nat) : FunDecl :=
   let body : Stmt :=
-    .seq (.set 2 e) <|
+    .seq (.set 3 e) <|
     .seq (.ite (.cmp .ne (.var 1) (fzC 0))
-      (.copy64 (.plain OUT) (.var 0) (.plain src) (.const 0) (.var 2)) .skip) <|
-    .seq (.st64 OUT (fzC (10 + 2 * i)) (.var 0)) <|
-    .seq (.st64 OUT (fzC (11 + 2 * i)) (.var 2)) <|
-    .ret [.bin .add (.var 0) (.var 2)]
-  { nparams := 2, nlocals := 3, body }
+      (.seq (.set 4 (.bin .add (.var 2) (.var 0)))
+        (.copy64 (.plain OUT) (.var 4) (.plain src) (.const 0) (.var 3))) .skip) <|
+    .seq (.st64 OUT (.bin .add (.var 2) (fzC (10 + 2 * i))) (.var 0)) <|
+    .seq (.st64 OUT (.bin .add (.var 2) (fzC (11 + 2 * i))) (.var 3)) <|
+    .ret [.bin .add (.var 0) (.var 3)]
+  { nparams := 3, nlocals := 5, body }
 
 /-- The name of frozen entry `i`'s function. -/
 def fzName (i : Nat) : FnName := "fz_" ++ toString i
@@ -163,26 +191,31 @@ The image function of frozen entry `i` (`entryProg` binds `fz_i` to it). -/
 @[no_expose] def fzF (i : Nat) : FunDecl :=
   match frozen[i]? with
   | some (_, z) => fzPreG z.src z.e i
-  | none => { nparams := 2, nlocals := 2, body := .abort (.const 0) }
+  | none => { nparams := 3, nlocals := 3, body := .abort (.const 0) }
 
-/-- The calls of the image functions, in order: `o := fz_i(o, c)`. -/
-def fzCalls : List Stmt := (List.range frozen.length).map fun i => .call [1] (fzName i) [.var 1, .var 0]
+/-- The calls of the image functions, in order: `o := fz_i(o, c, b)` (locals `c b o`). -/
+def fzCalls : List Stmt := (List.range frozen.length).map fun i => .call [2] (fzName i) [.var 2, .var 0, .var 1]
+
+/-- `OUT[b + k] := v`. -/
+def fzSt (k : Nat) (v : Expr) : Stmt := .st64 OUT (.bin .add (.var 1) (fzC k)) v
 
 /-- con-ron: none — the phase boundary's copy (con-ron moves its persistent tables, `freeze_tier`)
 
-`par_compact(c)`: the frozen buffer (the images if `c ≠ 0`, then the header); returns its
-length. Locals `c o`. -/
+`par_compact(c, b)`: the frozen buffer at `OUT[b‥)` (the images if `c ≠ 0`, then the header;
+offsets relative to `b`; word `5`, the next phase's header, `0`); returns its length. Locals
+`c b o`. -/
 @[no_expose] def parCompactL : FunDecl :=
   let tail : Stmt :=
-    .seq (.st64 OUT (fzC 0) (.const fzMagic)) <|
-    .seq (.st64 OUT (fzC 1) (.var 1)) <|
-    .seq (.st64 OUT (fzC 2) fzDecl) <|
-    .seq (.st64 OUT (fzC 3) (fzCtl 128)) <|
-    .seq (.st64 OUT (fzC 4) (fzC frozen.length)) <|
-    .seq (.st64 OUT (fzC 8) (fzC 0)) <|
-    .seq (.st64 OUT (fzC 9) (fzC hdrW)) <|
-    .ret [.var 1]
-  { nparams := 1, nlocals := 2, body := .seq (.set 1 (fzC hdrW)) (fzCalls.foldr .seq tail) }
+    .seq (fzSt 0 (.const fzMagic)) <|
+    .seq (fzSt 1 (.var 2)) <|
+    .seq (fzSt 2 fzDecl) <|
+    .seq (fzSt 3 (fzCtl 128)) <|
+    .seq (fzSt 4 (fzC frozen.length)) <|
+    .seq (fzSt 5 (fzC 0)) <|
+    .seq (fzSt 8 (fzC 0)) <|
+    .seq (fzSt 9 (fzC hdrW)) <|
+    .ret [.var 2]
+  { nparams := 2, nlocals := 3, body := .seq (.set 2 (fzC hdrW)) (fzCalls.foldr .seq tail) }
 
 /-- `frozenIds` as a literal (what the entry stub is built from: the kernel checks the committed
 file's stub against it, and a computed list would be re-evaluated in every piece). -/
@@ -191,15 +224,15 @@ def frozenIdsL : List TieredArray :=
    PREC, PSLOT, SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT, LAREC,
    LASLOT, FAREC, FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC,
    LSSLOT, ADER, LADER, FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, PINS, EIXA,
-   EIXS, EIXN, TIXA, TIXS, TIXN, EREC, FIRSTS, L.Front.DECL, L.Front.DLP]
+   EIXS, EIXN, TIXA, TIXS, TIXN, EREC, FIRSTS, L.Front.DECL, L.Front.DLP, SIXA, SIXS, SIXN,
+   STXA, STXS, STXN, MATA, MATS, MATN]
 
 /-- `parOwned` as a literal (as `frozenIdsL`). -/
 def parOwnedL : List TieredArray :=
   tier0s [CTL, BMEMO, IMEMO, FRMEMO, ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, PT0, WCM, WKM, WH,
     INM, IOM, DEM, CTM, CV, RRM, LQ, LSQ, OIXA, OIXS, OIXN, OTXA, OTXS, OTXN, SPN, BSTK, WSM,
     FLM, LSM, LVS, Stubs.CRM, LH, Ind.IW, LMEMO, ILFM, Ind.MAM, Ind.NOM, Ind.DPM, Ind.RFM,
-    Ind.RAM, Ind.TAM, Ind.HBM, Ind.MCM, L.Rom.RSTK, L.Rom.RMEMO, L.Rom.RSET, SIXA, SIXS, SIXN,
-    STXA, STXS, STXN, MATA, MATS, MATN, NDM, CSM, NACC, CWK] ++
+    Ind.RAM, Ind.TAM, Ind.HBM, Ind.MCM, L.Rom.RSTK, L.Rom.RMEMO, L.Rom.RSET, NDM, CSM, NACC, CWK] ++
   tier1s [POOL, EREC, OIXA, OIXS, OIXN, OTXA, OTXS, OTXN, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT,
     IREC, ISLOT, PREC, PSLOT, SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC,
     FVSLOT, LAREC, LASLOT, FAREC, FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC,
@@ -208,7 +241,19 @@ def parOwnedL : List TieredArray :=
 
 #guard frozenIdsL == frozenIds
 #guard parOwnedL == parOwned
-#guard frozen.length = 63
-#guard hdrW = 136
+/-- The header's view in `ca_check_seq` (`HDRF`'s words in place): room for an entry per id of
+`frozenIdsL` past word `10`. -/
+def hdrHw : Nat := 156
+
+#guard frozen.length = 72
+#guard hdrW = 154
+#guard hdrHw = 10 + 2 * frozenIdsL.length
+
+/-! The sizes, stated once (proofs use these, not the numbers). -/
+
+theorem frozen_length : frozen.length = 72 := by decide
+theorem frozenIdsL_length : frozenIdsL.length = 73 := rfl
+theorem hdrW_eq : hdrW = 154 := by decide
+theorem hdrHw_eq : hdrHw = 10 + 2 * frozenIdsL.length := rfl
 
 end L.Arena

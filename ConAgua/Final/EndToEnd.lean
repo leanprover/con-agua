@@ -17,7 +17,7 @@ import all ConAgua.Checker.Entry
 
 What is proved about the committed assembly file `checker.s`, in two modes of use.
 
-**Sequential driver** (called at `ca_start`, as `AbiCall` states: input and pin buffers, a zero
+**Sequential driver** (called at `ca_start`, as `AbiCall` states, without a solution: input and pin buffers, a zero
 region, the machine stack; and `numBits = 64`; the instance `Host`
 and `Code checkerFile k0` say that the machine runs the file). The driver runs entry 1 (the
 stages and the stream index) and then entry 2 (every record's job, in order, each at the stream
@@ -34,7 +34,8 @@ index's view of its position) in place on the caller's region.
 * `checkerFile_model_exists`: on accept, the input parses and its declarations check, and the
   resulting environment has a model in any set theory `V`.
 * `checkerFile_no_False`: if the input declares a theorem of type `False`
-  (`jsonWithTheoremFalse`), the machine does not report accept.
+  (`jsonWithTheoremFalse`), the machine does not report accept (a return state reporting accept
+  gives `False`).
 
 **Threaded harness** (`ThreadsRun`: the harness runs entry 1, hands the buffer it left to its
 threads, and each thread calls `ca_check_b` per claimed job index, a record's position, on its own
@@ -77,7 +78,7 @@ the theorem does not state. -/
 theorem checkerFile_accepts_regs [Host]
     (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    (dm : MachineData) (ra : Word) (hc : AbiCall b none pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]) ∧
         (st.data.regs.rdx = 2 → st.data.regs.rax &&& 3 ≠ 0 →
@@ -87,8 +88,8 @@ theorem checkerFile_accepts_regs [Host]
       ⟨hpc, hr, fun h0 h1 => drvAccepts_twin b pb h64 (h h0 h1),
         fun hd hk => drvErr_twin b pb h64 _ seqVerdicts_proved (h2 hd) hk⟩)
     (drv_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok checkerTab_abiIO checkerProgI_wf (by decide) MODE PLO PHI OUT
-      HDRF CTLF 138 frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
-      (code_of_checkerFile_par hcode) L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm ra hc)
+      HDRF CTLF hdrHw frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
+      (code_of_checkerFile_par hcode) L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm ra hc.toAbiArgs)
 
 /-- **The final theorem for the committed file `checker.s`** (called at the driver `ca_start`,
 `AbiCall`), with no named hypothesis left beyond the call's own: if the machine reports `rdx = 0`
@@ -96,7 +97,7 @@ with `rax = ACCEPT`, the twin's pipeline accepts `[b]`. -/
 theorem checkerFile_accepts [Host]
     (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    (dm : MachineData) (ra : Word) (hc : AbiCall b none pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]) ∧
         (st.data.regs.rdx = 2 → st.data.regs.rax &&& 3 ≠ 0 →
@@ -116,7 +117,7 @@ Lean itself): it gives its conclusion only given such a model. -/
 theorem checkerFile_model_exists (V : Type w) [ConLeche.SetTheory V] [Host]
     (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    (dm : MachineData) (ra : Word) (hc : AbiCall b none pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT →
           ∃ (pins : List ConLeche.NatOpPinSet) (preC : ConLeche.Frontend.PreludeIx)
@@ -132,7 +133,9 @@ theorem checkerFile_model_exists (V : Type w) [ConLeche.SetTheory V] [Host]
 
 /-- **No `False`** (`checker.s`, called at `ca_start`), with nothing left to assume beyond the
 call: if `b` declares a theorem of type `False` (in `jsonWithTheoremFalse`'s shape), the machine
-returns and does not report accept.
+does not return reporting accept: no state `st` the machine reaches at the return address
+(`FirstReturn`: `st` has every property the machine is guaranteed to reach at `ra`; a definition,
+not a fact about the harness) reports `rdx = 0` with `rax = ACCEPT`.
 
 **Relative to set theory.** The theorem assumes `[ConLeche.SetTheory V]`: a model of ZF⁻ with an
 ω-chain of Grothendieck universes (`vendor/con-leche/ConLeche/SetTheory/Core.lean`). No instance
@@ -143,13 +146,11 @@ theorem checkerFile_no_False (V : Type w) [ConLeche.SetTheory V] [Host]
     (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (hfalse : ConLeche.jsonWithTheoremFalse [b])
     (h64 : System.Platform.numBits = 64)
-    (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-        ¬ (st.data.regs.rdx = 0 ∧ st.data.regs.rax = ACCEPT))
-      dm (label abiStartL) :=
-  eventually_weaken _ _ _ _
-    (fun _ ⟨hpc, h, _⟩ => ⟨hpc, fun ⟨hrdx, hacc⟩ => twinAccepts_no_False V hfalse (h hrdx hacc)⟩)
-    (checkerFile_accepts k0 hcode b pb h64 dm ra hc)
+    (dm : MachineData) (ra : Word) (hc : AbiCall b none pb dm ra)
+    (st : MachineState) (hret : FirstReturn dm (label abiStartL) ra st)
+    (hrdx : st.data.regs.rdx = 0) (hacc : st.data.regs.rax = ACCEPT) : False :=
+  twinAccepts_no_False V hfalse
+    ((hret _ (checkerFile_accepts k0 hcode b pb h64 dm ra hc) (fun _ h => h.1)).2.1 hrdx hacc)
 
 /-- **Threaded accept**: if the harness runs as `ThreadsRun` says (entry 1, then `ca_check_b` per
 claimed job index on each thread's own region, every call accepting, every index claimed, each
@@ -157,7 +158,7 @@ thread's claims increasing), the twin's pooled pipeline accepts `[b]`. -/
 theorem checkerFile_threads_accept [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
-    (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] :=
+    (hR : ThreadsRun b none pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] :=
   threadsRun_twinAcceptsPooled k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR
 
 /-- **The threaded harness's registers**: if the harness runs as `ThreadsRun` says, entry 1 and
@@ -165,7 +166,7 @@ every `ca_check_b` call return with the caller's callee-saved registers intact. 
 theorem checkerFile_threads_regs [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
-    (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) :
+    (hR : ThreadsRun b none pb dm₀ ra₀ st₀ B ths) :
     RegsRestored dm₀.regs st₀.data.regs ∧ ∀ t ∈ ths, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs :=
   (threadsRun_twinAcceptsPooled_regs k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR).2
 
@@ -178,7 +179,7 @@ class (`TwinVerdictPooled`). -/
 theorem checkerFile_threads_verdict [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (k : Word)
-    (hF : ThreadsFail b pb dm₀ ra₀ st₀ k) (hk : k &&& 3 ≠ 0) : TwinVerdictPooled [b] (k &&& 3) :=
+    (hF : ThreadsFail b none pb dm₀ ra₀ st₀ k) (hk : k &&& 3 ≠ 0) : TwinVerdictPooled [b] (k &&& 3) :=
   checkerFile_threads_verdict_of k0 hcode b pb h64 dm₀ ra₀ st₀ k threadVerdicts_proved hF hk
 
 /-- **An accepting threaded run has a model** (relative to set theory, as
@@ -186,7 +187,7 @@ theorem checkerFile_threads_verdict [Host] (k0 : Nat) (hcode : Code checkerFile 
 theorem checkerFile_threads_model (V : Type w) [ConLeche.SetTheory V] [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
-    (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) :
+    (hR : ThreadsRun b none pb dm₀ ra₀ st₀ B ths) :
     ∃ (pins : List ConLeche.NatOpPinSet) (preC : ConLeche.Frontend.PreludeIx)
       (rc : ConLeche.Frontend.ParseResultD) (F : Nat) (env : ConLeche.Env),
       ConLeche.Frontend.parseChunks [b] = .ok rc ∧
@@ -199,8 +200,8 @@ theorem checkerFile_threads_model (V : Type w) [ConLeche.SetTheory V] [Host] (k0
 theorem checkerFile_threads_no_False (V : Type w) [ConLeche.SetTheory V] [Host] (k0 : Nat)
     (hcode : Code checkerFile k0) (b pb : ByteArray) (hfalse : ConLeche.jsonWithTheoremFalse [b])
     (h64 : System.Platform.numBits = 64)
-    (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM) :
-    ¬ ThreadsRun b pb dm₀ ra₀ st₀ B ths := fun hR =>
+    (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
+    (hR : ThreadsRun b none pb dm₀ ra₀ st₀ B ths) : False :=
   twinAcceptsPooled_no_False V hfalse (checkerFile_threads_accept k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR)
 
 /-- info: 'ConAgua.Final.checkerFile_accepts' depends on axioms: [propext, Classical.choice, Quot.sound] -/

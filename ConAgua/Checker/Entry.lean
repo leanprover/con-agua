@@ -128,12 +128,29 @@ not scan). -/
   z := call intern_all_pins();
   cnt := L.Front.DECL.u64[0];
   z := call build_index(cnt);
-  z := call par_compact(c);
+  z := call par_compact(c, 0);
   return 9223372036854775808 + cnt
 }
 
+/-- `seed_reread()`: with a seed (`CTLF` nonempty; none in place), its phase words `CTL[128]`,
+`CTL[162‥173]`, `CTL[224]` (the stream index's counter, the frozen literal names, the solution's flag)
+copied into `CTL`: the compared run's second phase continues on the first phase's worker region with
+its own header's seed. -/
+-- con-ron: none — the compared run's one worker region (con-ron's workers keep two driver states)
+@[no_expose] def seedRereadL : FunDecl := lfn () locals () {
+  if len(CTLF.u64) != 0 {
+    CTL.u64[128] := CTLF.u64[128];
+    copy!(CTL.u64, 162, CTLF.u64, 162, 12);
+    CTL.u64[224] := CTLF.u64[224]
+  };
+  return 0
+}
+
 /-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer; on every call
-the core caches flushed (the worker's empty caches: in place, the index build's level-equality
+the phase's words of the seed (`CTL[128]`, `CTL[162‥173]`, `CTL[224]`: the stream index's counter,
+the frozen literal names, the solution's flag; the compared run's second phase continues on the
+first phase's region with its own header's seed) re-read from the buffer (none in place: `CTLF`
+empty), and the core caches flushed (the worker's empty caches: in place, the index build's level-equality
 entries would remain; between two calls they are empty already, every job ending in
 `scratch_drop`), then the jobs `PLO‥PHI-1` (`PHI` at most the number of records), in order, from
 the worker's state, as the pool's worker does (`checkJobList`); returns `ACCEPT`. -/
@@ -145,6 +162,7 @@ the worker's state, as the pool's worker does (`checkJobList`); returns `ACCEPT`
     copy!(CTL.u64, 0, CTLF.u64, 0, n);
     INIT := 1
   };
+  z := call seed_reread();
   z := call flush_caches();
   if L.Front.DECL.u64[0] < PHI { abort };
   if PHI < PLO { abort };
@@ -160,7 +178,10 @@ the worker's state, as the pool's worker does (`checkJobList`); returns `ACCEPT`
   if MODE == 2 { r := call check_b(); return r };
   if MODE == 4 { r := call check_c1(); return r };
   if MODE == 5 { r := call check_c2(); return r };
-  if MODE == 6 { r := call check_c3(); return r };
+  if MODE == 6 { r := call check_c3(0); return r };
+  if MODE == 7 { r := call check_c3(1); return r };
+  if MODE == 8 { r := call check_bs(); return r };
+  if MODE == 9 { r := call check_bc(); return r };
   abort
 }
 
@@ -222,7 +243,8 @@ def abortStub (n : Nat) : FunDecl := { nparams := n, nlocals := n, body := .abor
 
 /-- **The bindings `checkerProg` takes from here** (before any other module's). -/
 def entryProg : Prog :=
-  [("check", checkL), ("check_a", checkAL), ("check_b", checkBL), ("par_compact", parCompactL),
+  [("check", checkL), ("check_a", checkAL), ("check_b", checkBL), ("seed_reread", seedRereadL),
+   ("par_compact", parCompactL),
    -- the frozen buffer's image functions (`Arena/Freeze.lean`), one per frozen entry
    ("fz_0", fzF 0), ("fz_1", fzF 1), ("fz_2", fzF 2), ("fz_3", fzF 3), ("fz_4", fzF 4),
    ("fz_5", fzF 5), ("fz_6", fzF 6), ("fz_7", fzF 7), ("fz_8", fzF 8), ("fz_9", fzF 9),
@@ -237,6 +259,8 @@ def entryProg : Prog :=
    ("fz_50", fzF 50), ("fz_51", fzF 51), ("fz_52", fzF 52), ("fz_53", fzF 53), ("fz_54", fzF 54),
    ("fz_55", fzF 55), ("fz_56", fzF 56), ("fz_57", fzF 57), ("fz_58", fzF 58),
    ("fz_59", fzF 59), ("fz_60", fzF 60), ("fz_61", fzF 61), ("fz_62", fzF 62), ("fz_63", fzF 63),
+   ("fz_64", fzF 64), ("fz_65", fzF 65), ("fz_66", fzF 66), ("fz_67", fzF 67), ("fz_68", fzF 68),
+   ("fz_69", fzF 69), ("fz_70", fzF 70), ("fz_71", fzF 71),
    ("cap_check", capCheckL),
    -- the parse's large cons tables sized from the input length (`Checker/Presize.lean`)
    ("presize_tables", presizeTablesL), ("pow2_at_least", pow2AtLeastL),

@@ -27,30 +27,46 @@ theorem loCtl_flush : LoCtl flushCtl := fun x h => .inr ⟨by have := flushCtl_g
 
 theorem loArr_nil : LoArr [] := fun _ h => absurd h (by simp)
 
+/-- The twin's facts of the index build after the stages (`StagesOut`). -/
+theorem StagesOut.built {sE : AState} {ds : Array IDeclaration} {ipins : List INatOpPinSet}
+    {pins : List ConLeche.NatOpPinSet} {I : IStreamIndex} {sF : AState}
+    (ho : StagesOut sE ds ipins pins) (hidx : buildIndex ds sE = .ok (.ok I, sF)) :
+    Ext sE.store sF.store ∧ sF.pins = sE.pins := by
+  obtain ⟨_, hden⟩ := ho.den
+  obtain ⟨-, hx, hp, -⟩ := ConRon.Bridge.buildIndex_run ConRon.Bridge.constsSpec
+    ConRon.Bridge.tablesSpec ho.drv ho.pp ho.off ho.pd hden hidx
+  exact ⟨hx, hp⟩
+
 /-- The twin's facts of the stages, and the index build's, at a phase A. -/
 theorem PhaseA.twin {b : ByteArray} (PA : PhaseA b) :
-    Ext PA.sE.store PA.sF.store ∧ PA.sF.pins = PA.sE.pins := by
-  obtain ⟨hA, hB, hC, hD, hE⟩ := PA.pfx
-  obtain ⟨hoff, hdrv, hpp, -, -, hpd, _rc, _preC, -, hden⟩ :=
-    ConRon.Bridge.stages_frame (chunks := [b]) hA hB hC hD hE
-  obtain ⟨-, hx, hp, -⟩ := ConRon.Bridge.buildIndex_run ConRon.Bridge.constsSpec
-    ConRon.Bridge.tablesSpec hdrv hpp hoff hpd hden PA.idx
-  exact ⟨hx, hp⟩
+    Ext PA.sE.store PA.sF.store ∧ PA.sF.pins = PA.sE.pins :=
+  PA.out.built PA.idx
 
 /-- **The solution's flag after the index build** is the loaded memory's `0`: neither the stages
 before the loop (`preLoopC`) nor the index build (`biC`) write `CTL[224]`. -/
-theorem FoldAt.c224 {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
-    (h : FoldAt b pb sz PA m₇ m) : rdW (m.arr64 CTL) 224 = 0 := by
+theorem FoldOn.c224 {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Array IDeclaration}
+    {ipins : List INatOpPinSet} {sE : AState} {I : IStreamIndex} {sF : AState} {m₇ m : Mem}
+    (h : FoldOn b pb sz ds ipins sE I sF m₇ m) : rdW (m.arr64 CTL) 224 = 0 := by
   rw [h.frame.ctl _ (not_mem_biC (by decide)), h.r7.since.frame.ctl _ (by decide)]
   exact loadMem_rd b pb sz CTL 224
+
+/-- **The compare flag after the index build** is the loaded memory's `0` (`cmp_ext` runs only in
+the compared run's modes `6`/`7`). -/
+theorem FoldOn.c229 {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Array IDeclaration}
+    {ipins : List INatOpPinSet} {sE : AState} {I : IStreamIndex} {sF : AState} {m₇ m : Mem}
+    (h : FoldOn b pb sz ds ipins sE I sF m₇ m) : rdW (m.arr64 CTL) (UInt64.ofNat cmpCW) = 0 := by
+  rw [h.frame.ctl _ (not_mem_biC (by decide)), h.r7.since.frame.ctl _ (by decide)]
+  exact loadMem_rd b pb sz CTL _
 
 /-- **The jobs' start**: after the index build and the cache flush, `JobR` at the index state
 with its caches emptied (the twin's worker state, `AState.worker`: the scratch tier and memos as
 every job's `enterScratch` leaves them, `Arena/JobStart.lean`). -/
 @[refines ConRon.Arena.AState.worker]
-theorem FoldAt.jobR {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
-    (h : FoldAt b pb sz PA m₇ m) (hfok : FlushOK m) :
-    JobR PA.ipins (dnOf PA.sE.store) PA.ds none PA.I (flushMem m) { PA.sF with caches := Caches.empty } := by
+theorem FoldOn.jobRJ {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Array IDeclaration}
+    {ipins : List INatOpPinSet} {sE : AState} {I : IStreamIndex} {sF : AState} {m₇ m : Mem}
+    (h : FoldOn b pb sz ds ipins sE I sF m₇ m) (hx : Ext sE.store sF.store) {J : Option ISolution}
+    (hsol : JSol J m) (hfok : FlushOK m) :
+    JobR ipins (dnOf sE.store) ds J I (flushMem m) { sF with caches := Caches.empty } := by
   have hB := h.build
   have hS := hB.stage
   have hF := flushMem_frame m
@@ -60,7 +76,6 @@ theorem FoldAt.jobR {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b
   have hcaps := h7.since.caps
   have hsz : ∀ t, ((flushMem m).arr64 t).size = ((ConAgua.Final.loadMem b pb sz).arr64 t).size :=
     fun t => by rw [hF.size, h.frame.size, h7.since.frame.size]
-  have hx := PA.twin.1
   have hD := hS.check.arena.caches_irrel Caches.empty
   refine ⟨⟨⟨ArenaR.frame_ext [] _ (by simp) flushCtl_ge _ _ hF _ hD.base,
       DerR.frameM [] _ _ _ hF (by simp) _ hD.der⟩, hS.check.core.flush hfok,
@@ -69,7 +84,7 @@ theorem FoldAt.jobR {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b
     by rw [stampW_frameLo hC0 hF]; exact hS.check.env.stamp, declsF_frameLo hA0 hF hB.decls,
     iwOK_frameLo hA0 hC0 hF hS.iw, ?_, pinSetsR_frameLo hA0 hC0 hF ?_, ?_, ?_,
     hB.memos.frameLo hA0 hC0 hF, h.fsize, h.frozen.frameLo hC0 hF,
-    JSol.none (by rw [hC0.ctl hF (by decide)]; exact h.c224)⟩, ⟨hB.drv.state.wf⟩, hB.off, rfl⟩
+    hsol.frameLo hA0 hC0 hF⟩, ⟨hB.drv.state.wf⟩, hB.off, rfl⟩
   · rw [hC0.ctl hF (by decide), h.grow.ctl130]; exact h7.c130
   · exact PinSetsR.grow h7.pinSets h.grow.grow (h.frame.ctl _ (not_mem_biC (by decide)))
       (h.frame.ctl _ (not_mem_biC (by decide)))
@@ -85,8 +100,10 @@ theorem FoldAt.jobR {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b
   · rw [pinW_frame hF (by simp), pinW_frame h.frame (by simp [biA])]; exact h7.pin0
 
 /-- **The jobs' memory half after the index build**, before the flush, at the index state. -/
-theorem FoldAt.jobM {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
-    (h : FoldAt b pb sz PA m₇ m) : JobM PA.ipins (dnOf PA.sE.store) PA.ds none PA.I m PA.sF := by
+theorem FoldOn.jobMJ {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Array IDeclaration}
+    {ipins : List INatOpPinSet} {sE : AState} {I : IStreamIndex} {sF : AState} {m₇ m : Mem}
+    (h : FoldOn b pb sz ds ipins sE I sF m₇ m) (hx : Ext sE.store sF.store) {J : Option ISolution}
+    (hsol : JSol J m) : JobM ipins (dnOf sE.store) ds J I m sF := by
   have hB := h.build
   have hS := hB.stage
   have hF : MemFrame [] [] m m := MemFrame.refl _ _ _
@@ -96,11 +113,10 @@ theorem FoldAt.jobM {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b
   have hcaps := h7.since.caps
   have hsz : ∀ t, (m.arr64 t).size = ((ConAgua.Final.loadMem b pb sz).arr64 t).size :=
     fun t => by rw [h.frame.size, h7.since.frame.size]
-  have hx := PA.twin.1
   refine ⟨hS.check.arena, hS.check.core, hS.check.pins, hS.check.mode,
     hB.idx, hS.check.env.ownBelow, hS.check.env.stamp, hB.decls, hS.iw, ?_,
     PinSetsR.grow h7.pinSets h.grow.grow (h.frame.ctl _ (not_mem_biC (by decide)))
-      (h.frame.ctl _ (not_mem_biC (by decide))), ?_, ?_, hB.memos, h.fsize, h.frozen, JSol.none h.c224⟩
+      (h.frame.ctl _ (not_mem_biC (by decide))), ?_, ?_, hB.memos, h.fsize, h.frozen, hsol⟩
   · rw [h.grow.ctl130]; exact h7.c130
   · refine ⟨?_, ?_, ?_, h.grow.memos ?_, fun k x hk => ?_⟩
     · rw [hsz]; have := hcaps.2.2.2.2.2.2.1; omega
@@ -112,6 +128,37 @@ theorem FoldAt.jobM {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b
       · exact ConRon.Bridge.denoteN_ext hk hx
       · cases hk
   · rw [pinW_frame h.frame (by simp [biA])]; exact h7.pin0
+
+/-- `FoldOn.jobRJ` at the flat run's solution `none`. -/
+theorem FoldOn.jobR {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Array IDeclaration}
+    {ipins : List INatOpPinSet} {sE : AState} {I : IStreamIndex} {sF : AState} {m₇ m : Mem}
+    (h : FoldOn b pb sz ds ipins sE I sF m₇ m) (hx : Ext sE.store sF.store) (hfok : FlushOK m) :
+    JobR ipins (dnOf sE.store) ds none I (flushMem m) { sF with caches := Caches.empty } :=
+  h.jobRJ hx (JSol.none h.c224) hfok
+
+/-- `FoldOn.jobMJ` at the flat run's solution `none`. -/
+theorem FoldOn.jobM {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Array IDeclaration}
+    {ipins : List INatOpPinSet} {sE : AState} {I : IStreamIndex} {sF : AState} {m₇ m : Mem}
+    (h : FoldOn b pb sz ds ipins sE I sF m₇ m) (hx : Ext sE.store sF.store) :
+    JobM ipins (dnOf sE.store) ds none I m sF :=
+  h.jobMJ hx (JSol.none h.c224)
+
+theorem FoldAt.c229 {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
+    (h : FoldAt b pb sz PA m₇ m) : rdW (m.arr64 CTL) (UInt64.ofNat cmpCW) = 0 := h.on.c229
+
+theorem FoldAt.c224 {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
+    (h : FoldAt b pb sz PA m₇ m) : rdW (m.arr64 CTL) 224 = 0 := h.on.c224
+
+/-- **The jobs' start** at a phase A (`FoldOn.jobR`). -/
+theorem FoldAt.jobR {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
+    (h : FoldAt b pb sz PA m₇ m) (hfok : FlushOK m) :
+    JobR PA.ipins (dnOf PA.sE.store) PA.ds none PA.I (flushMem m) { PA.sF with caches := Caches.empty } :=
+  h.on.jobR PA.twin.1 hfok
+
+/-- **The jobs' memory half** at a phase A (`FoldOn.jobM`). -/
+theorem FoldAt.jobM {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
+    (h : FoldAt b pb sz PA m₇ m) : JobM PA.ipins (dnOf PA.sE.store) PA.ds none PA.I m PA.sF :=
+  h.on.jobM PA.twin.1
 
 /-- **`JobR` across a memory with the same word arrays** (the globals, the byte arrays). -/
 theorem _root_.L.Arena.JobR.frame0 {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}

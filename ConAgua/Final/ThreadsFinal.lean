@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Final.BufChain
+public import ConAgua.Compiler.AbiCmp
 import ConAgua.Final.DrvFinal
 public import ConAgua.Checker.ParThreadTwin
 import ConAgua.Final.BufAbi
@@ -33,7 +34,7 @@ fold invariant at a job's view comes from the model of the accepted prefix.
 facts are `ThreadsAcc`, which the threaded verdict reuses for the jobs below a failing one; beyond
 them, what `Final/Statement.lean` lists: Kraken's semantics, the assembler, linker and loader):
 
-* **Entry 1's call**: `ca_start_a` is called as `AbiCall` says (the input and pin buffers, a zero
+* **Entry 1's call**: `ca_start_a` (with a solution: `ca_start_ac`) is called as `AbiCall` says (the input and pin buffers, a zero
   region, the 32 bytes of machine stack around `rsp`; `mmap` gives the stated memory facts).
 * **First return** (`FirstReturn`): the harness regains control, at each call's return address,
   in a state that has every property the machine is guaranteed to reach at that address
@@ -88,7 +89,7 @@ theorem entry1_buf (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK
   have hBm : B = bufOf m := by rw [hB, bufOf, hm₁, (parCompactMem_hdr hok).2.1]
   have hs := bufOf_size hok hlt
   have hoffs := buf_offs hok hlt
-  have hFl : frozen.length = 63 := frozen_length
+  have hFl := frozen_length
   have hL : frozenIdsL.length = frozen.length + 1 := by rw [frozenIdsL_eq]; simp
   refine ⟨by rw [hlen, hF.size, hs.2]; exact hoffs.2, by rw [hlen, hs.2]; omega,
     fun i hi => hBm ▸ buf_entries_inside hok hlt hi, fun i hi i' hi' hii => ?_⟩
@@ -104,6 +105,38 @@ theorem entry1_buf (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK
     rw [fzSum_succ, ← fzExt_eq] at this
     simp only; omega
 
+/-- **Entry 1's buffer counts its jobs**: `OUT`'s word `2` (the header's record count) is
+`k = rax - 2^63`, entry 1's result less `2^63`. -/
+theorem entry1_word2 (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
+    (N : Nat) (hN : N < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
+    (h₁ : L.run checkerProg N "check" [] (loadMemM b pb sz 1) = .ok (rs₁, m₁))
+    (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat) :
+    (m₁.arr64 OUT).getD 2 0 = rs₁.headD 0 - 9223372036854775808 := by
+  have hr : rs₁.headD 0 ≠ 1 := fun e => by rw [e] at hge; simp at hge
+  obtain ⟨PA, m₇, m, hF, hok, hm₁, hrs⟩ := checkA_run b pb sz hin 1 (Or.inl rfl) N hN rs₁ m₁ h₁ hr
+  have hflag : modeFlag 1 = 1 := rfl
+  rw [hflag] at hok hm₁
+  rw [hm₁, (parCompactMem_hdr hok).2.2.1, hrs, show ∀ a b : Word, a + b - a = b from fun a b => by
+    rw [UInt64.add_comm, UInt64.add_sub_cancel]]
+  have hc := hF.build.decls.count
+  simp only [rd64, Array.getD_eq_getD_getElem?, show (0 : Word).toNat = 0 from rfl]
+  rw [← hc, UInt64.ofNat_toNat]
+
+/-- The buffer's word `2` is entry 1's job count (`entry1_word2`, on `OUT`'s prefix). -/
+theorem entry1_k (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
+    (N : Nat) (hN : N < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
+    (h₁ : L.run checkerProg N "check" [] (loadMemM b pb sz 1) = .ok (rs₁, m₁))
+    (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
+    (B : Array Word) (hBeq : B = (m₁.arr64 OUT).extract 0 ((m₁.arr64 OUT).getD 1 0).toNat)
+    (h2 : 2 < B.size) : rs₁.headD 0 - 9223372036854775808 ≤ B.getD 2 0 := by
+  rw [← entry1_word2 b pb sz hin N hN rs₁ m₁ h₁ hge, hBeq]
+  simp only [Array.getD_eq_getD_getElem?, Array.getElem?_extract]
+  rw [hBeq] at h2
+  simp only [Array.size_extract] at h2
+  simp only [Array.getD_eq_getD_getElem?] at h2 ⊢
+  rw [ite_eq_left h2, Nat.zero_add]
+  exact UInt64.le_refl _
+
 /-! ## The harness's facts -/
 
 /-- **First return** (trusted): the harness regains control from the call made at `dm` (code
@@ -111,6 +144,18 @@ theorem entry1_buf (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK
 return address `ra`. -/
 def FirstReturn [Host] (dm : MachineData) (pc : Int64) (ra : Word) (st : MachineState) : Prop :=
   ∀ P : MachineState → Prop, Ev P dm pc → (∀ s, P s → s.pc = Int64.ofBitVec ra.toBitVec) → P st
+
+/-- **Entry 1's label**: `ca_start_a` (the flat threaded run), `ca_start_ac` with a solution (the
+compared threaded run). -/
+def abiEntryAL : Option ByteArray → Label
+  | none => abiStartAL
+  | some _ => abiStartACL
+
+/-- **The sequential driver's label**: `ca_start`, `ca_start_c` with a solution (the sequential
+compared run). -/
+def abiSeqL : Option ByteArray → Label
+  | none => abiStartL
+  | some _ => abiStartCL
 
 /-- **How a thread calls `ca_check_b`** (the harness's part of `BufCall`; the buffer's header
 facts come from entry 1): the region mapped, large enough and in the address space, the buffer
@@ -169,10 +214,11 @@ structure ThreadsAcc [Host] (dm₀ : MachineData) (st₀ : MachineState) (B : Ar
 /-- **What the threaded harness does** (trusted; the module doc lists it): entry 1 at `dm₀`
 returning at `st₀`, the buffer `B`, and the threads `ths`, whose calls all accept
 (`ThreadsAcc`) and claim every job index below `k`. -/
-structure ThreadsRun [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState)
-    (B : Array Word) (ths : List ThreadM) : Prop extends ThreadsAcc dm₀ st₀ B ths where
-  call₀ : AbiCall b pb dm₀ ra₀
-  ret₀ : FirstReturn dm₀ (label abiStartAL) ra₀ st₀
+structure ThreadsRun [Host] (b : ByteArray) (sol : Option ByteArray) (pb : ByteArray) (dm₀ : MachineData)
+    (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM) : Prop
+    extends ThreadsAcc dm₀ st₀ B ths where
+  call₀ : AbiCall b sol pb dm₀ ra₀
+  ret₀ : FirstReturn dm₀ (label (abiEntryAL sol)) ra₀ st₀
   rdx₀ : st₀.data.regs.rdx = 0
   rax₀ : 9223372036854775808 ≤ st₀.data.regs.rax.toNat
   /-- the buffer: `OUT`'s first `len` words, `len` its word `1` -/
@@ -242,6 +288,10 @@ theorem threadRuns_range (B : Array Word) (t : ThreadM) (rm : Nat → Mem)
     obtain ⟨h1, h2⟩ := h s (by omega)
     exact ⟨by simp [abiFuel], h1, h2, threadRuns_range B t rm h c (s + 1) (by omega)⟩
 
+theorem cp_lt_of_lt_le {a b c : Word} (h1 : a < b) (h2 : b ≤ c) : a < c := by
+  have := UInt64.lt_iff_toNat_lt.mp h1; have := UInt64.le_iff_toNat_le.mp h2
+  exact UInt64.lt_iff_toNat_lt.mpr (by omega)
+
 set_option linter.constructorNameAsVariable false in
 /-- **Each thread's calls, at the L level** (`thread_chain`): for a buffer with entry 1's header
 facts, a thread of `ThreadsAcc` ran a chain of L calls from the zero region (`ThreadRuns`), one
@@ -253,7 +303,8 @@ theorem threadsAcc_runs [Host] (k0 : Nat) (hcode : Code checkerFile k0) (dm₀ :
     (hent' : ∀ i < frozenIdsL.length, (bufEntry B i).1 + (bufEntry B i).2 ≤ B.size)
     (hdisj : ∀ i < frozenIdsL.length, ∀ i' < frozenIdsL.length, i ≠ i' →
       (bufEntry B i).1 + (bufEntry B i).2 ≤ (bufEntry B i').1 ∨
-      (bufEntry B i').1 + (bufEntry B i').2 ≤ (bufEntry B i).1 ∨ (bufEntry B i).2 = 0 ∨ (bufEntry B i').2 = 0) :
+      (bufEntry B i').1 + (bufEntry B i').2 ≤ (bufEntry B i).1 ∨ (bufEntry B i).2 = 0 ∨ (bufEntry B i').2 = 0)
+    (hk2 : st₀.data.regs.rax - 9223372036854775808 ≤ B.getD 2 0) :
     ∀ t, ∃ cs : List (Word × Nat × Mem), t ∈ ths → ThreadRuns B (zeroMem checkerTab) cs ∧
       (∀ c ∈ cs, c.1 < st₀.data.regs.rax - 9223372036854775808) ∧
       (∀ i < t.n, ∃ c ∈ cs, c.1 = (t.dm i).regs.rdx) ∧
@@ -278,9 +329,10 @@ theorem threadsAcc_runs [Host] (k0 : Nat) (hcode : Code checkerFile k0) (dm₀ :
           ⟨⟨hH.need, hH.fits, hH.bend, hhdr, hent', hdisj, hH.apart⟩, hH.hB, hH.hmap, hH.hra, hH.hcs,
             hH.hcs24, hH.hcs8⟩
         have hEv := abiB_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok checkerProgI_wf MODE PLO PHI OUT HDRF
-          CTLF 138 frozenIdsL parOwnedL (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+          CTLF hdrHw frozenIdsL parOwnedL (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
           (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) B r (t.dm i) (t.ra i) hbc
-          (by rw [hcx]; exact hr) checker_bufMinOk
+          (by rw [hcx]; exact hr) checker_bufMinOk (by have := hhdr 0 (by decide); omega)
+          (.inl (cp_lt_of_lt_le (hA.claimed t ht i hi) hk2))
         rw [hdi, hcx] at hEv
         exact hA.ret t ht i hi _ hEv (fun s h => h.1))
       (hA.acc t ht) (hA.next t ht)
@@ -311,14 +363,14 @@ the trusted threaded harness runs as `ThreadsRun` says. And every call, entry 1 
 theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
-    (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] ∧
+    (hR : ThreadsRun b none pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] ∧
       RegsRestored dm₀.regs st₀.data.regs ∧
       ∀ t ∈ ths, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs := by
   have hc := code_of_checkerFile_par hcode
   have hnres : 1 ≤ checkerTab.nres := by decide
   -- entry 1
-  have hE := abiA_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok checkerTab_abiIO checkerProgI_wf MODE PLO PHI OUT HDRF CTLF 138
-    frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hR.call₀
+  have hE := abiA_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok checkerTab_abiIO checkerProgI_wf MODE PLO PHI OUT HDRF CTLF hdrHw
+    frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hR.call₀.toAbiArgs
   obtain ⟨⟨-, hRR₀, -, hout₀⟩, hsz⟩ := hR.ret₀ _ hE (fun s h => h.1.1)
   have hne : st₀.data.regs.rdx ≠ 1 := by rw [hR.rdx₀]; decide
   obtain ⟨hb, hpb⟩ := hsz.resolve_left hne
@@ -350,7 +402,7 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
     simp only [abiLayout_tab] at this
     rw [abiLayout_b64 _ _ _ _ _ _ hOUTp, abiOff_slot (by rw [checkerTab.wAt_pos64 hOUT]; decide)] at this
     simpa only [outAddr, abiSlot64] using this
-  have hH : hdrW = 136 := by decide
+  have hH := hdrW_eq
   have hBsz : B.size = ((m₁.arr64 OUT).getD 1 0).toNat := by
     obtain ⟨w, hw, hwB⟩ := hR.buflen
     have h1 := hget 1 (by omega)
@@ -370,8 +422,8 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
   have hhdr : ∀ i < frozenIdsL.length, 9 + 2 * i < B.size := by
     intro i hi
     have : frozenIdsL.length = frozen.length + 1 := by rw [frozenIdsL_eq]; simp
-    have : frozen.length = 63 := frozen_length
-    have := h126; have : hdrW = 136 := by decide
+    have  := frozen_length
+    have := h126; have  := hdrW_eq
     omega
   have hdisj : ∀ i < frozenIdsL.length, ∀ i' < frozenIdsL.length, i ≠ i' →
       (bufEntry B i).1 + (bufEntry B i).2 ≤ (bufEntry B i').1 ∨
@@ -381,7 +433,10 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
     · exact Or.inl (hinc' i hi i' hi' h)
     · exact Or.inr (Or.inl (hinc' i' hi' i hi h))
   -- each thread: its chain of L runs
-  have hthr := threadsAcc_runs k0 hcode dm₀ st₀ B ths hR.toThreadsAcc hhdr hent' hdisj
+  have hk2 : st₀.data.regs.rax - 9223372036854775808 ≤ B.getD 2 0 := by
+    rw [hrax₁]
+    exact entry1_k b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq (by have := hhdr 0 (by decide); omega)
+  have hthr := threadsAcc_runs k0 hcode dm₀ st₀ B ths hR.toThreadsAcc hhdr hent' hdisj hk2
   obtain ⟨f, hf⟩ := Classical.axiomOfChoice hthr
   refine ⟨?_, hRR₀, fun t ht i hi => (hf t ht).2.2.2.1 i hi⟩
   refine threads_twinAcceptsPooled checkerCd_proved b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq
@@ -409,7 +464,7 @@ without the registers). -/
 theorem threadsRun_twinAcceptsPooled [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
-    (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] :=
+    (hR : ThreadsRun b none pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] :=
   (threadsRun_twinAcceptsPooled_regs k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR).1
 
 end ConAgua.Final

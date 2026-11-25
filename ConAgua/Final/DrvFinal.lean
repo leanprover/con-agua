@@ -26,7 +26,7 @@ import ConAgua.L.WordOff
 # The final theorem for the sequential driver of the committed file (lane parmode)
 
 `checkerFile_drv_accepts_regs`: the harness calls the driver `ca_start` of `checker.s` as
-`AbiCall` says. The machine returns to the caller with the
+`AbiCall` says (without a solution). The machine returns to the caller with the
 callee-saved registers restored, and if it reports `rdx = 0` with `rax = ACCEPT`, the twin's
 pipeline accepts `[b]`. From the machine-level driver (`drv_outcome`: entry 1's run, then entry 2's
 run in place) and the L-level composition (`drv_twinAccepts`).
@@ -41,7 +41,7 @@ universe w
 /-- The file's code as the driver sees it: the parallel mode's entries, the stub, the compiler's
 output. -/
 theorem code_of_checkerFile_par [Host] {k0 : Nat} (hcode : Code checkerFile k0) :
-    Code (parStub checkerTab MODE PLO PHI OUT HDRF CTLF 138 frozenIdsL parOwnedL ++
+    Code (parStub checkerTab MODE PLO PHI OUT HDRF CTLF hdrHw frozenIdsL parOwnedL ++
       (abiStub checkerTab ++ compileProgX checkerX checkerTab checkerProgI "check")) k0 := by
   rw [checkerFile_eq, checkerStub_eq, List.append_assoc, ← List.append_assoc (abiStub checkerTab),
     ← List.append_assoc] at hcode
@@ -50,19 +50,19 @@ theorem code_of_checkerFile_par [Host] {k0 : Nat} (hcode : Code checkerFile k0) 
 /-- The file's code as the compared run's driver sees it: as `code_of_checkerFile_par`, then the
 compared run's entries and driver (`cmpStub`, the file's tail). -/
 theorem code_of_checkerFile_cmp [Host] {k0 : Nat} (hcode : Code checkerFile k0) :
-    Code (parStub checkerTab MODE PLO PHI OUT HDRF CTLF 138 frozenIdsL parOwnedL ++
+    Code (parStub checkerTab MODE PLO PHI OUT HDRF CTLF hdrHw frozenIdsL parOwnedL ++
       (abiStub checkerTab ++ (compileProgX checkerX checkerTab checkerProgI "check" ++
-        cmpStub checkerTab MODE OUT parOwnedL))) k0 := by
+        cmpStub checkerTab MODE))) k0 := by
   rw [checkerFile_eq, checkerStub_eq, checkerTail_eq, List.append_assoc] at hcode
   exact hcode
 
-theorem checker_seqParamsOk : seqParamsOk checkerTab OUT HDRF CTLF 138 = true := by decide +kernel
+theorem checker_seqParamsOk : seqParamsOk checkerTab OUT HDRF CTLF hdrHw = true := by decide +kernel
 
 /-- `seqMem`'s word arrays (the globals' writes keep them). -/
 theorem seqMem_arr64 (m : Mem) (lo hi : Word) (s : TieredArray) :
-    (seqMem m MODE PLO PHI OUT HDRF CTLF 138 lo hi).arr64 s =
-      if s = ↑OUT ∨ s = ↑CTLF then #[] else if s = ↑HDRF then (m.arr64 OUT).extract 0 138 else m.arr64 s :=
-  seqMem0_arr64 m OUT HDRF CTLF 138 s
+    (seqMem m MODE PLO PHI OUT HDRF CTLF hdrHw lo hi).arr64 s =
+      if s = ↑OUT ∨ s = ↑CTLF then #[] else if s = ↑HDRF then (m.arr64 OUT).extract 0 hdrHw else m.arr64 s :=
+  seqMem0_arr64 m OUT HDRF CTLF hdrHw s
 
 /-- **`check_decl`'s program facts at every run of entry 1's stages** (`CheckerCd`, at every
 `PhaseA`: the stages and the stream index): the definition arm's
@@ -77,7 +77,7 @@ theorem checkerCd_proved : L.Checker.CheckerCd := fun _ pb PA hpb hpre =>
 `TwinAccepts [b]`. -/
 theorem drvAccepts_twin (b pb : ByteArray)
     (h64 : System.Platform.numBits = 64)
-    (h : DrvAccepts checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF 138 b pb) :
+    (h : DrvAccepts checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF hdrHw b pb) :
     TwinAccepts [b] := by
   obtain ⟨hb, hpb, h⟩ := h
   have hin : InputsOK b pb (abiSz checkerTab) := ⟨h64, hb, hpb, fun s => by
@@ -102,7 +102,7 @@ theorem drvAccepts_twin (b pb : ByteArray)
     omega
   · rw [L.getD_zero] at hge h₂ hacc₂
     refine drv_twinAccepts checkerCd_proved b pb _ hin abiFuel hN rs₁ m₁ h₁ hge abiFuel (by simp [abiFuel])
-      (seqMem m₁ MODE PLO PHI OUT HDRF CTLF 138 0 (rs₁.headD 0 - 9223372036854775808)) rs₂ m₂
+      (seqMem m₁ MODE PLO PHI OUT HDRF CTLF hdrHw 0 (rs₁.headD 0 - 9223372036854775808)) rs₂ m₂
       ?_ rfl rfl rfl ?_ h₂ hacc₂
     · intro a ha
       rw [seqMem_arr64]
@@ -116,14 +116,14 @@ theorem drvAccepts_twin (b pb : ByteArray)
 theorem checkerFile_drv_accepts_regs [Host]
     (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (dm : MachineData) (ra : Word)
-    (hc : AbiCall b pb dm ra) :
+    (hc : AbiCall b none pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
       dm (label abiStartL) :=
   eventually_weaken _ _ _ _ (fun _ ⟨hpc, hr, h, _⟩ => ⟨hpc, hr, fun h0 h1 => drvAccepts_twin b pb h64 (h h0 h1)⟩)
     (drv_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok checkerTab_abiIO checkerProgI_wf (by decide) MODE PLO PHI OUT
-      HDRF CTLF 138 frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
-      (code_of_checkerFile_par hcode) L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm ra hc)
+      HDRF CTLF hdrHw frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
+      (code_of_checkerFile_par hcode) L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm ra hc.toAbiArgs)
 
 /-- info: 'ConAgua.Final.checkerFile_drv_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms checkerFile_drv_accepts_regs
