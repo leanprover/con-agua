@@ -42,13 +42,13 @@ theorem cqMvs_glob (l : List CqMv) (m : Mem) : (cqMvs l m).glob = m.glob := by
   | nil => rfl
   | cons x l ih => simp only [cqMvs, List.foldl_cons] at ih ⊢; rw [ih]; rfl
 
-theorem cqRowStep_bytes (c d s : ArrId) (ca k : Word) (m : Mem) :
-    (cqRowStep c d s ca k m).bytes = m.bytes := by
-  simp only [cqRowStep, cqRowsM, cq_set64_bytes, Mem.copy64_bytes]
+theorem cqRowStep_bytes (d s : ArrId) (ca k : Word) (m : Mem) :
+    (cqRowStep d s ca k m).bytes = m.bytes := by
+  simp only [cqRowStep, cqRowsM, cq_set64_bytes, xchgM_bytes]
 
-theorem cqRowStep_glob (c d s : ArrId) (ca k : Word) (m : Mem) :
-    (cqRowStep c d s ca k m).glob = m.glob := by
-  simp only [cqRowStep, cqRowsM, cq_set64_glob, Mem.copy64_glob]
+theorem cqRowStep_glob (d s : ArrId) (ca k : Word) (m : Mem) :
+    (cqRowStep d s ca k m).glob = m.glob := by
+  simp only [cqRowStep, cqRowsM, cq_set64_glob, xchgM_glob]
 
 theorem cqBankSM_bytes (m : Mem) : (cqBankSM m).bytes = m.bytes := by
   simp only [cqBankSM, cqTailS, cq_set64_bytes, Mem.copy64_bytes, cqRowsS, cqRowStep_bytes]
@@ -57,10 +57,10 @@ theorem cqBankSM_glob (m : Mem) : (cqBankSM m).glob = m.glob := by
   simp only [cqBankSM, cqTailS, cq_set64_glob, Mem.copy64_glob, cqRowsS, cqRowStep_glob]
 
 theorem cqBankCM_bytes (m : Mem) : (cqBankCM m).bytes = m.bytes := by
-  simp only [cqBankCM, Mem.copy64_bytes]
+  simp only [cqBankCM, cqRowsC, Mem.copy64_bytes, xchgM_bytes]
 
 theorem cqBankCM_glob (m : Mem) : (cqBankCM m).glob = m.glob := by
-  simp only [cqBankCM, Mem.copy64_glob]
+  simp only [cqBankCM, cqRowsC, Mem.copy64_glob, xchgM_glob]
 
 theorem cqSM_bytes (m : Mem) : (cqSM m).bytes = m.bytes := by
   simp only [cqSM, flushMem_bytes, cqCtlSM, cq_set64_bytes, cqMvs_bytes, cqBankSM_bytes]

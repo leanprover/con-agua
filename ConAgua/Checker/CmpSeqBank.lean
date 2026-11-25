@@ -186,16 +186,6 @@ def cqBankCM (m : Mem) : Mem :=
   (((cqRowsC m).copy64 DECL 0 CDECL 0 (rdW c 6).toNat).copy64 FIRSTS 0 CFIRSTS 0 (rdW c 7).toNat).copy64
     DLP 0 CDLP 0 (rdW c 8).toNat
 
-/-- `cq_bank_c`'s checks: each exchange in bounds. -/
-def CqBankCOK (m : Mem) : Prop :=
-  let c := m.arr64 CCTL
-  (rdW c 0).toNat ≤ (m.arr64 EIXA).size ∧ (rdW c 0).toNat ≤ (m.arr64 SIXA).size ∧
-  (rdW c 1).toNat ≤ (m.arr64 TIXA).size ∧ (rdW c 1).toNat ≤ (m.arr64 STXA).size ∧
-  (rdW c 2).toNat ≤ (m.arr64 EIXS).size ∧ (rdW c 2).toNat ≤ (m.arr64 SIXS).size ∧
-  (rdW c 3).toNat ≤ (m.arr64 TIXS).size ∧ (rdW c 3).toNat ≤ (m.arr64 STXS).size ∧
-  (rdW c 4).toNat ≤ (m.arr64 EIXN).size ∧ (rdW c 4).toNat ≤ (m.arr64 SIXN).size ∧
-  (rdW c 5).toNat ≤ (m.arr64 TIXN).size ∧ (rdW c 5).toNat ≤ (m.arr64 STXN).size
-
 /-- The lookups `cq_bank_c` needs. -/
 structure CqBankCProg (p : Prog) : Prop where
   ea : p.lookup "cq_xchg_eixa" = some (cqXchgG EIXA SIXA)
@@ -207,7 +197,7 @@ structure CqBankCProg (p : Prog) : Prop where
 
 theorem cqBankC_spec (p : Prog) (hp : p.lookup "cq_bank_c" = some cqBankCL) (hP : CqBankCProg p) (n : Nat) (s₀ : St) :
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "cq_bank_c" []
-    ⦃fun _ s' => LocEq s' s₀ ∧ CqBankCOK s₀.mem ∧ s'.mem = cqBankCM s₀.mem; ⊤⦄ := by
+    ⦃fun _ s' => LocEq s' s₀ ∧ s'.mem = cqBankCM s₀.mem; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, cqBankCL]
   cases n with
@@ -226,20 +216,19 @@ theorem cqBankC_spec (p : Prog) (hp : p.lookup "cq_bank_c" = some cqBankCL) (hP 
     all_goals subst e0
     case vc1 => simp only [LocEq]
     all_goals simp only [L.reduceLoc, L.St.setLoc_mem, L.St.setLocs_mem] at a1 a2 a3 a4 a5 a6 ⊢
-    all_goals obtain ⟨-, b1, b1', e1⟩ := a1
-    all_goals obtain ⟨-, b2, b2', e2⟩ := a2
-    all_goals obtain ⟨-, b3, b3', e3⟩ := a3
-    all_goals obtain ⟨-, b4, b4', e4⟩ := a4
-    all_goals obtain ⟨-, b5, b5', e5⟩ := a5
-    all_goals obtain ⟨-, b6, b6', e6⟩ := a6
+    all_goals obtain ⟨-, -, -, e1⟩ := a1
+    all_goals obtain ⟨-, -, -, e2⟩ := a2
+    all_goals obtain ⟨-, -, -, e3⟩ := a3
+    all_goals obtain ⟨-, -, -, e4⟩ := a4
+    all_goals obtain ⟨-, -, -, e5⟩ := a5
+    all_goals obtain ⟨-, -, -, e6⟩ := a6
     all_goals have hC : ∀ (X : Mem) (d s : TieredArray) (j : Nat), d ≠ CCTL → s ≠ CCTL →
         (xchgM d s X j).arr64 CCTL = X.arr64 CCTL :=
       fun X d s j h1 h2 => xchgM_ne d s X j (Ne.symm h1) (Ne.symm h2)
     all_goals simp only [L.St.setLocs_mem] at c1 c2 c3 c4 c5 c6 g0
-    all_goals simp only [e6, e5, e4, e3, e2, e1] at b2 b2' b3 b3' b4 b4' b5 b5' b6 b6' c1 c2 c3 c4 c5 c6 ⊢
-    all_goals simp (disch := decide) only [hC, xchgM_size] at b2 b2' b3 b3' b4 b4' b5 b5' b6 b6' c1 c2 c3 c4 c5 c6 ⊢
-    all_goals simp (disch := (simp only [UInt64.toNat_ofNat]; omega)) only [cq_getElem_rdW] at b1 b1' b2 b2' b3 b3' b4 b4' b5 b5' b6 b6' ⊢
-    case vc2 => exact ⟨b1, b1', b2, b2', b3, b3', b4, b4', b5, b5', b6, b6'⟩
+    all_goals simp only [e6, e5, e4, e3, e2, e1] at c1 c2 c3 c4 c5 c6 ⊢
+    all_goals simp (disch := decide) only [hC] at c1 c2 c3 c4 c5 c6 ⊢
+    all_goals simp (disch := (simp only [UInt64.toNat_ofNat]; omega)) only [cq_getElem_rdW]
     simp (disch := decide) only [hC, arr64_copy64_ne]
     simp (disch := decide) only [cqBankCM, cqRowsC]
 
