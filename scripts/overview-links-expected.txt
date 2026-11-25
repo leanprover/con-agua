@@ -109,8 +109,8 @@
     32    | .error .outOfFuel, _ => False
     33    | .error e, s => s.regs.rdx = 2 ∧ s.regs.rax = e.code
 
-== docs/deviations.md#L49
-    49  | D17 | Stage B `validate` / `scan_string` (DESIGN.md, lane `stageb`) | `feed_chunk` asks `newline_from`; con-leche decodes a whole string, then checks UTF-8 | does not ask (same error, same line); checks each raw run between escapes (proved equivalent) | none | – | by design: proved equivalent |
+== docs/deviations.md#L48
+    48  | D16 | the abort sites (`fail R`, `ConAgua/Arena/Reasons.lean`) | each `fail` has its kind (`invalid`, `notImplemented`, `internal`, `native`) and message | an abort carries a class (reject, decline, other) and a reason: the twin's reject/decline sites are labelled with the twin's message; class 0 (exit 3) at every capacity or defensive check (an unresolved constant decides its kind as the twin does, `unresolved_consts_error`: a string literal before `String` or a use of `sorryAx` declines, anything else rejects; its two walks, `has_str_lit_go` and `ue_mentions_go`, drop the twin's memo so the error path writes nothing: the same answer, but exponential time on a heavily shared term, error path only) | completeness of the verdict only: L says `error` where the twin rejects or declines | – | by design: the classes are proved (a reject or decline is the twin's, the final theorems); the messages are not part of the theorem |
 
 == ConAgua/Final/Statement.lean#L99-L101
     99  /-- The verdict word `check` returns first for accept. Not `0`, `1` or `2`, so that a status word
