@@ -27,3 +27,15 @@ back into `label abiCmpDoneL` in a goal whose machine state is large: the rewrit
 whole goal). Replaced by `Eq.mp (congrArg (Ev _ _) (Code.label …))` inside the `ev_congr`, no
 rewrite. `CmpC` already elaborates under the default limit (1.7 s tactics, 2.0 s kernel: the
 `hC.get (i := N) rfl` lookups into the stub list); its raised limit was a leftover.
+
+## 5. Tooling (17:19–17:25)
+
+* (a) `scripts/checker_prog.py` ends with step 5: it builds `ConAgua.Checker.Prog` and runs the
+  closure generators `core_fns.py`, `loop_fns.py`, `leaf_fns.py`, `phaseb_fns.py`,
+  `preloop_ws.py` in that order, each after building the modules its Lean script imports
+  (`CoreErec`, `LoopFns`, `LeafFns`: `leaf_fns.lean` reads `loopFns`). `--no-build` or the new
+  `--no-closures` skip it. On master (nothing stale) the whole script takes 1 m 40 s, the closure
+  step about 50 s of it. The merge queue's `checkerProg` regeneration calls the script without
+  flags, so a merge that regenerates the program also regenerates the lists (it stages `ConAgua`).
+* (b) `e2e.write_conron_pins` (used by `diff-e2e.py --refs` and `e2e.py`) builds `ConRon.Dump.Pins`
+  before its `lake env lean` (checked in this worktree with the olean deleted).
