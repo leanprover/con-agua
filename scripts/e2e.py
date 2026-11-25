@@ -410,7 +410,9 @@ def write_checker(path):
 
 def write_conron_pins(path, n):
     """`natOpPinSets.take n` in con-ron's `con-ron-pins/1` format (`ConRon.Dump.dumpPins`), for
-    `con-ron --pins FILE`: the three references run at one pin list."""
+    `con-ron --pins FILE`: the three references run at one pin list. Builds `ConRon.Dump.Pins`
+    first (the `lake env lean` below needs its olean; a fresh worktree restores it from the cache)."""
+    lake("build", "ConRon.Dump.Pins")
     src = os.path.join(ROOT, "ConAgua", "E2E", "PinsRun.lean")
     with open(src, "w") as fh:
         fh.write("import ConRon.Dump.Pins\n"

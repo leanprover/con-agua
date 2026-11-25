@@ -21,8 +21,12 @@ DESIGN.md, "The checker as one program (lane `integrate`)". Steps:
 4. Write `ConAgua/Checker/Asm.lean` and `AsmPart<k>.lean`: the compiled checker as a kernel-checked
    literal (`asm_lit`, DESIGN.md "Kernel-checked compiler output"). Then regenerate the committed
    file `checker.s` with `scripts/asm_file.py` (it needs `Checker/ProgI.lean` built).
+5. Build `ConAgua.Checker.Prog` and regenerate the call-closure lists the proofs about
+   `checkerProg` check (`CLOSURES`: `core_fns.py`, `loop_fns.py`, `leaf_fns.py`, `phaseb_fns.py`,
+   `preloop_ws.py`, in that order, each after building the modules its Lean script imports).
+   Skipped with `--no-build` or `--no-closures`.
 
-Usage: scripts/checker_prog.py [--no-build] [--check]   (`--check`: fail if the file would change)
+Usage: scripts/checker_prog.py [--no-build] [--no-closures] [--check]   (`--check`: fail if the file would change)
 """
 import argparse
 import collections
@@ -503,9 +507,32 @@ def lean_str(s):
     return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
+# The closure-list generators, in dependency order (`leaf_fns.lean` reads `loopFns`), with the
+# modules each one's Lean script imports besides the program (built before it runs).
+CLOSURES = [("core_fns.py", ["ConAgua.Arena.CoreErec"]), ("loop_fns.py", ["ConAgua.Arena.LoopFns"]),
+            ("leaf_fns.py", ["ConAgua.Arena.LeafFns"]), ("phaseb_fns.py", []), ("preloop_ws.py", [])]
+
+
+def closures():
+    """Step 5: the program's olean, then each closure list regenerated from it."""
+    e2e.log("building ConAgua.Checker.Prog for the closure lists")
+    e2e.lake("build", "ConAgua.Checker.Prog")
+    for script, mods in CLOSURES:
+        if mods:
+            e2e.lake("build", *mods)
+        e2e.log(f"regenerating with {script}")
+        r = subprocess.run([sys.executable, os.path.join(ROOT, "scripts", script)], cwd=ROOT,
+                           capture_output=True, text=True)
+        if r.returncode != 0:
+            sys.exit(f"scripts/{script} failed:\n{(r.stdout + r.stderr)[-3000:]}")
+        e2e.log(f"  {r.stdout.strip().splitlines()[-1] if r.stdout.strip() else 'ok'}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-build", action="store_true")
+    ap.add_argument("--no-closures", action="store_true",
+                    help="do not build the program and regenerate the closure lists (step 5)")
     ap.add_argument("--check", action="store_true")
     a = ap.parse_args()
     if not a.no_build:
@@ -624,6 +651,8 @@ def main():
     if a.check:
         return
     e2e.log(f"wrote {OUT}: {len(entries)} functions ({len(stubs)} stubs), {len(imports)} imports")
+    if not (a.no_build or a.no_closures):
+        closures()
     e2e.log("checker.s is now stale: build, then run scripts/asm_file.py and commit the file")
 
 
