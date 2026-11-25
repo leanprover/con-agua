@@ -17,7 +17,7 @@ A bug in any of these trusted components threatens the validity of that checker'
 
 ## Usage
 
-Run [`make`](./Makefile) and call `./checker FILE.ndjson`. Pass `--jobs=n` if you want parallel checking. See [`OVERVIEW.md`](./OVERVIEW.md) for more details.
+Run [`make`](./Makefile) and call `./checker FILE.ndjson`. Pass `--jobs=n` if you want parallel checking. Use `./checker --compare CHALLENGE.ndjson SOLUTION.ndjson` for comparator mode. Unlike `con-leche` and `con-ron`, reading of `.olean` files is not supported. See [`OVERVIEW.md`](./OVERVIEW.md) for more details.
 
 ## Architecture
 
