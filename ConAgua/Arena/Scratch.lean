@@ -175,8 +175,8 @@ def scrTail : Stmt := lblk (f, b, t) {
   return 0
 }
 
-/-- con-ron: ConRon/Arena/Store.lean:1431-1434 ConRon.Arena.EStore.enableScratch
-con-ron: ConRon/Arena/Store.lean:1436-1440 ConRon.Arena.EStore.dropScratch -/
+/-- con-ron: ConRon/Arena/Store.lean:1430-1433 ConRon.Arena.EStore.enableScratch
+con-ron: ConRon/Arena/Store.lean:1435-1439 ConRon.Arena.EStore.dropScratch -/
 @[no_expose, l_impl ConRon.Arena.EStore.enableScratch ConRon.Arena.EStore.dropScratch]
 def scratchReset : FunDecl := { nparams := 1, nlocals := 16, body := lblk (f, b, t) {
   ⟪scrHead⟫;

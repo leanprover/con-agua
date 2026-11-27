@@ -338,7 +338,7 @@ ConLeche/Frontend/Olean/Lazy	mkN	70
 ConLeche/Frontend/Olean/Lazy	pushKid	9
 ConLeche/Frontend/Olean/Lazy	refLoc	3
 ConLeche/Frontend/Olean/Lazy	refModule	3
-ConLeche/Frontend/Olean/Lazy	usesGo	65
+ConLeche/Frontend/Olean/Lazy	usesGo	97
 ConLeche/Frontend/Olean/Lazy	usesNames	14
 ConLeche/Frontend/Olean/Lazy	usesOf	17
 ConLeche/Frontend/Olean/Lazy	usesRead	21
@@ -350,6 +350,7 @@ ConLeche/Frontend/Olean/Levels	LvState	3
 ConLeche/Frontend/Olean/Levels	LvWork	6
 ConLeche/Frontend/Olean/Levels	LvWork.ofImports	9
 ConLeche/Frontend/Olean/Levels	ModSet.add	8
+ConLeche/Frontend/Olean/Levels	ModSet.card	3
 ConLeche/Frontend/Olean/Levels	ModSet.empty	10
 ConLeche/Frontend/Olean/Levels	ModSet.has	8
 ConLeche/Frontend/Olean/Levels	ModSet.union	11
@@ -709,7 +710,7 @@ ConLeche/Kernel/Env	ReducibilityHint.lt	15
 ConLeche/Kernel/Env	ReducibilityHint.sameRegular	11
 ConLeche/Kernel/Error	CheckError	9
 ConLeche/Kernel/Error	_	8
-ConLeche/Kernel/Expr	Expr	131
+ConLeche/Kernel/Expr	Expr	119
 ConLeche/Kernel/Expr	Expr.beq	3
 ConLeche/Kernel/Expr	Expr.beqDec	11
 ConLeche/Kernel/Expr	Expr.beqGoX	115
@@ -733,6 +734,7 @@ ConLeche/Kernel/Expr	levelHash	3
 ConLeche/Kernel/Expr	levelsHash	10
 ConLeche/Kernel/Expr	levelsHaveParam	10
 ConLeche/Kernel/Expr	lpOfData	3
+ConLeche/Kernel/Expr	mix32	3
 ConLeche/Kernel/Expr	packData	7
 ConLeche/Kernel/Expr	satPred	9
 ConLeche/Kernel/Expr	satRange	3
@@ -820,6 +822,7 @@ ConLeche/Kernel/Level	subst.go	9
 ConLeche/Kernel/Level	substPW	3
 ConLeche/Kernel/Level	zeroWhereZero	11
 ConLeche/Kernel/Level	zeronessOf	13
+ConLeche/Kernel/MixHash	mixHash32	8
 ConLeche/Kernel/Name	Display.Acc	3
 ConLeche/Kernel/Name	Display.Acc.chars	3
 ConLeche/Kernel/Name	Display.Acc.component	11
@@ -1887,7 +1890,7 @@ ConRon/Arena/Store	BindNode	3
 ConRon/Arena/Store	ConstNode	3
 ConRon/Arena/Store	EStore	10
 ConRon/Arena/Store	EStore.derOfBindAtI	3
-ConRon/Arena/Store	EStore.derOfView	110
+ConRon/Arena/Store	EStore.derOfView	101
 ConRon/Arena/Store	EStore.derived	9
 ConRon/Arena/Store	EStore.empty	8
 ConRon/Arena/Store	EStore.find?	12
