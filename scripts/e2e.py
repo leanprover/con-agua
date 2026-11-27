@@ -467,6 +467,10 @@ def compile_entry(prog, entry):
         if r.returncode != 0:
             return None, (r.stdout + r.stderr).strip()
         msg = r.stdout.strip()
+        # `main.c` also calls the compared run's entries (`--compare`), which only the shipped
+        # checker has (`cmpStub`); e2e runs no compared run, so here they just trap
+        with open(s, "a") as fh:
+            fh.write(".text\n.globl ca_start_c\n.globl ca_start_ac\nca_start_c:\nca_start_ac:\nud2\n")
     c = subprocess.run(["cc", "-std=gnu23", "-O2", "-pthread", "-o", exe, os.path.join(ROOT, "main.c"), s],
                        capture_output=True, text=True)
     if c.returncode != 0:
@@ -861,7 +865,7 @@ def main():
     if not args.no_build:
         log("building")
         # only what e2e needs (not the whole proof tree)
-        lake("build", "ConAgua.E2E.Check", "ConAgua.Checker.Prog", "ConAgua.Compiler.Abi", "ConRon.Dump.Pins",
+        lake("build", "ConAgua.E2E.Check", "ConAgua.Checker.Prog", "ConAgua.Checker.AsmEmit", "ConAgua.Compiler.Abi", "ConRon.Dump.Pins",
              "e2e-l", "con-ron-lean-twin", *([] if args.no_diff else ["e2e-diff"]))
     prog = os.path.join(WORK, "checker.prog")
     if args.text_dump:
