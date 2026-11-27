@@ -5,7 +5,8 @@
 pile up behind cache misses. Instead this instruments the assembler text `e2e-l asm` writes: at
 every basic-block start (a label, the instruction after a jump or call) it inserts
 `incq ca_bb+8i(%rip)` (the compiled code never has live flags across a label or after a jump, so
-the `inc` clobbers nothing), links with `main.c` and a destructor that writes the counters,
+the `inc` clobbers nothing; where hand-written assembler has flags other than CF live there, the
+counter is wrapped in `pushfq`/`popfq`), links with `main.c` and a destructor that writes the counters,
 runs a fixture, and attributes every executed instruction (count of its block) to its function and
 to a category of the code generator's patterns (local loads/stores, bounds checks, fuel, prologue,
 result registers, …).
@@ -40,6 +41,26 @@ __attribute__((destructor)) static void ca_bb_dump(void) {
 """
 
 JUMP = re.compile(r"^(j[a-z]+|call|ret)\b")
+
+
+# Flags: instructions that leave them alone, and readers of CF only (which `incq` keeps).
+NOFLAGS = re.compile(r"^(mov|lea|push|pop|cmov|set|bswap|xchg|not|nop|incq ca_bb)")
+READS = re.compile(r"^(j(?!mp)[a-z]+|set[a-z]+|cmov[a-z]+|adc[a-z]*|sbb[a-z]*|rc[lr][a-z]*|pushf[a-z]*)\s")
+CF_ONLY = re.compile(r"^(jn?[bc]|jnae|jae|jnb|adc[a-z]*|sbb[a-z]*|rc[lr][a-z]*|cmovn?[bc]|cmovae|cmovnb|setn?[bc]|setae|setnb)\s")
+
+
+def flags_live(res, k):
+    """Whether an arithmetic flag other than CF is read at res[k] (through labels and
+    instructions that write no flags) before any instruction writes them."""
+    for ln in res[k:]:
+        t = ln.strip()
+        if not t or t.startswith(".") or t.endswith(":"):
+            continue
+        if READS.match(t + " "):
+            return not CF_ONLY.match(t + " ")
+        if not NOFLAGS.match(t):
+            return False
+    return False
 
 
 def build(s_path, out):
@@ -85,6 +106,13 @@ def build(s_path, out):
         cur["ins"].append(t)
         if JUMP.match(t):
             start = True
+    # `incq` keeps CF but writes the other arithmetic flags. Hand-written assembler can have
+    # them live at a block start (`ca_f_nat_cmp`: `jb …` then `ja …` on one `cmp`); there the
+    # counter saves the flags around itself (the compiled code has no red zone: nothing is
+    # stored below %rsp, so the push is harmless).
+    for k, r in enumerate(res):
+        if r.startswith("incq ca_bb+") and flags_live(res, k + 1):
+            res[k] = f"pushfq\n{r}\npopfq"
     n = len(blocks)
     res.append(f".section .bss\n.globl ca_bb\n.p2align 3\nca_bb: .zero {8 * n}\n"
                f".section .rodata\n.globl ca_bb_n\nca_bb_n: .quad {n}\n")
@@ -263,6 +291,9 @@ def main():
         env = dict(os.environ, CA_BBOUT=os.path.abspath(a[3]))
         r = subprocess.run([os.path.abspath(a[1]), a[2]], env=env, capture_output=True, text=True)
         print(r.stdout.strip())
+        print(r.stderr.strip(), file=sys.stderr)
+        print(f"exit {r.returncode}")
+        sys.exit(r.returncode)
     elif a and a[0] == "report":
         top, fn = 40, None
         rest = []
