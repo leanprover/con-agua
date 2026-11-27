@@ -30,7 +30,7 @@ through `ETag.lam == ETag.lam`); otherwise the two theorems are the same shape.
 `internLam_refines`: `intern_lam(ty, body)` refines `internE (.lam (decE ty) (decE body))` under
 `LamR`.
 
-Not represented: the derived column (`derOfBindAt`, through `mixHash`) and every other table.
+Not represented: the derived column (`derOfBindAt`, through `mix32`) and every other table.
 -/
 
 open ConRon.Arena
@@ -83,7 +83,7 @@ at the tier the append goes to, then calls `EStore.internLam`, which **re-probes
 on the re-probe than `app`'s, and `ETables.pushBind`'s own `if tag == ETag.lam` (always taken). -/
 theorem internE_lam_run (ty b : EIdx) (a : AState) :
     (internE (.lam ty b)).run a =
-      protoRun lamLens (laKey ty b) ETag.lam false (pfLa a ty b) (a.store.derOfBindAt 19 ty b)
+      protoRun lamLens (laKey ty b) ETag.lam false (pfLa a ty b) (a.store.derOfBindAt 29 ty b)
         (.native "arena: expression constructor array full") a := by
   simp only [internE, internLamE, EStore.findBind, EStore.internLam, EStore.internBind,
     ETables.findBind, ETables.bindSizeOf, ETables.pushBind, Tbl.find?, StateT.run_bind,

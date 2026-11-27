@@ -53106,7 +53106,7 @@ jne .Lca_check_quot_record_21E
 movq $86, %rbx
 cmpq $4, 8(%rsp)
 je ca_abort
-movq $82, %rax
+movq $81, %rax
 movq %rax, %rbx
 jmp ca_abort
 jmp .Lca_check_quot_record_21X
@@ -53118,7 +53118,7 @@ subq $1, %r14
 jb ca_exhausted
 call ca_f_quot_preds_ok
 movq %rax, 24(%rsp)
-movq $646, %rbx
+movq $645, %rbx
 cmpq $0, 24(%rsp)
 je ca_abort
 movq 8(%rsp), %rdi

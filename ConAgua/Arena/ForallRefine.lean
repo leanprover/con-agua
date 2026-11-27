@@ -28,7 +28,7 @@ EStore.internBind ETag.forallE`, which re-probes and pushes via `ETables.pushBin
 `internForall_refines`: `intern_forall(ty, body)` refines `internE (.forallE (decE ty) (decE
 body))` under `ForallR`.
 
-Not represented: the derived column (`derOfBindAt`, through `mixHash`) and every other table.
+Not represented: the derived column (`derOfBindAt`, through `mix32`) and every other table.
 -/
 
 open ConRon.Arena
@@ -82,7 +82,7 @@ theorem persFindBindMaybe_forall (a : AState) (ty body : EIdx) :
 `lam`'s `internE_lam_run` (`LamRefine.lean`) reasoning, at `ETag.forallE` and `foralls`. -/
 theorem internE_forall_run (ty b : EIdx) (a : AState) :
     (internE (.forallE ty b)).run a =
-      protoRun forallLens (faKey ty b) ETag.forallE false (pfFa a ty b) (a.store.derOfBindAt 23 ty b)
+      protoRun forallLens (faKey ty b) ETag.forallE false (pfFa a ty b) (a.store.derOfBindAt 31 ty b)
         (.native "arena: expression constructor array full") a := by
   simp only [internE, internForallEE, EStore.findBind, EStore.internForallE, EStore.internBind,
     ETables.findBind, ETables.bindSizeOf, ETables.pushBind, Tbl.find?, StateT.run_bind,
