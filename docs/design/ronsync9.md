@@ -47,7 +47,9 @@ a change of class of two messages, so the L code stays the same. Ladder estimate
   `--refresh-patches` moved the offsets in con-leche/0001 and con-ron/0001.
 * 14:56 con-ron 62cd8aba built in `_tmp/ref/con-ron-62cd` (a worktree of the integrate
   clone, `nix develop -c cargo build --release`).
-* 14:57–15:05 `diff-e2e --refs --tests`, `e2e.py --latest ''`. 15:06–15:20 perf.
+* 14:57–15:05 `diff-e2e --refs --tests`, `e2e.py --latest ''`. 15:06–15:25 perf.
+  15:25–15:40 gates (links: the expectation of `vendor/UPSTREAM` and of one twin citation),
+  census attempt, submit.
 
 ## 3. Proofs and statements
 
@@ -79,7 +81,10 @@ edit, and `R_QUOTIENT_SOUNDNESS_AXIOM` (`decline`) still matches `.notImplemente
   tool issue from before this sync, and the `check` runs are unaffected.
 * `provenance.py check --strict`: all exact at con-ron 62cd8aba, con-leche 4d398342, 0 markers
   (1 at the bump). `bump-con-ron.sh --check` ok. `reasons.py --check` ok. `asm_file.py --check`:
-  `checker.s` up to date, `pins.bin` unchanged.
+  `checker.s` up to date, `pins.bin` unchanged. `gates.sh`: all 16 OK.
+* Census: not measured. `census.py` (with and without `--no-build`) is killed at its 6 GB memory
+  limit (PLAN says it peaks at about 2.8 GB). No `sorry` was added: the build is green, the
+  `warnings` gate passes, and the axiom guards are unchanged.
 
 ## 5. Performance
 
