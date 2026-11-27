@@ -25,10 +25,10 @@ index 30b7273c1bf4c5da18da7075d8c76773fb1e9ad0..db8ba784ea12fade07d8794c25689086
            simp only [Bool.and_eq_true, beq_iff_eq, Array.getElem?_eq_getElem hb, sameB_iff ConLeche.withPtrEq_eq] at hx
            obtain ⟨⟨hok, hcc⟩, hbb⟩ := hx
 diff --git a/vendor/con-leche/ConLeche/Kernel/Expr.lean b/vendor/con-leche/ConLeche/Kernel/Expr.lean
-index 758160738f63a77a2306df7d6cafb477aee462c5..1177c85e25a2c4fadfea8fb73634e38c71ad3dab 100644
+index 92565bc59d043f4c85053d3e62f155e80a9d4d22..33c4e3e38b5648c98b12a50ea994967d7c587481 100644
 --- a/vendor/con-leche/ConLeche/Kernel/Expr.lean
 +++ b/vendor/con-leche/ConLeche/Kernel/Expr.lean
-@@ -82,7 +82,7 @@ before the structural step, at every node — `level.cpp:125` is `kind` →
+@@ -83,7 +83,7 @@ before the structural step, at every node — `level.cpp:125` is `kind` →
  `hash` → `is_eqp` → structural.  The children start over with the
  pointer, the parameter with `Name.decEqPtr`. -/
  def Level.decEqPtr (a b : Level) : Decidable (a = b) :=
@@ -37,7 +37,7 @@ index 758160738f63a77a2306df7d6cafb477aee462c5..1177c85e25a2c4fadfea8fb73634e38c
      if hh : a.hashData = b.hashData then
        match a, b with
        | .zero, .zero => isTrue rfl
-@@ -157,10 +157,10 @@ the literal's hash (`Expr.beqMemo`, `enterBeq`).  A memo hit on a
+@@ -158,10 +158,10 @@ the literal's hash (`Expr.beqMemo`, `enterBeq`).  A memo hit on a
  literal that was found again in a new node is then one pointer test,
  not a walk over the number's words. -/
  @[inline] def Literal.decEqPtr (a b : Literal) : Decidable (a = b) :=
@@ -50,7 +50,7 @@ index 758160738f63a77a2306df7d6cafb477aee462c5..1177c85e25a2c4fadfea8fb73634e38c
        | isTrue h => isTrue (by rw [h])
        | isFalse h => isFalse (fun e => h (Literal.natVal.inj e))
      | .strVal s, .strVal t =>
-@@ -975,7 +975,7 @@ on equal addresses only, where the runtime pointer test answers
+@@ -991,7 +991,7 @@ on equal addresses only, where the runtime pointer test answers
  to the structural `decEq`, which `decEqPtr` does not exist yet to
  replace.  Code outside the equality uses `ptrDec`. -/
  @[inline] def ptrDecStruct (a b : Expr) : Decidable (a = b) :=
@@ -59,7 +59,7 @@ index 758160738f63a77a2306df7d6cafb477aee462c5..1177c85e25a2c4fadfea8fb73634e38c
  
  /-- Does the entry at `key` identify the pair `(a, b)`?  The stored
  addresses are the filter; the stored objects, tested by identity, are
-@@ -1273,7 +1273,7 @@ def beqDec (a b : Expr) : Decidable (a = b) :=
+@@ -1289,7 +1289,7 @@ def beqDec (a b : Expr) : Decidable (a = b) :=
  memoised descent.  What both `==` (`beq_eq_beqMemo`) and every
  `DecidableEq` use (`decEqPtr`, `decEq_eq_decEqPtr`) run. -/
  @[inline] def beqMemo (a b : Expr) : Bool :=
@@ -68,7 +68,7 @@ index 758160738f63a77a2306df7d6cafb477aee462c5..1177c85e25a2c4fadfea8fb73634e38c
      (fun h => by subst h; simp)
  
  /-- The executed equality decides `a = b`: `withPtrEq a b k h` is
-@@ -1305,7 +1305,7 @@ pure model.  The memo tables' hit validation (`Cached/ExprOpsC.lean`);
+@@ -1321,7 +1321,7 @@ pure model.  The memo tables' hit validation (`Cached/ExprOpsC.lean`);
  a fallback that compiled code would run is `decEqPtr`, never the
  structural walk. -/
  @[inline] def ptrDec (a b : Expr) : Decidable (a = b) :=
