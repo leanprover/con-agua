@@ -330,7 +330,13 @@ def lake():
     return [w] if os.path.exists(w) else ["lake"]
 
 
-MEM_LIMIT_GB = 6  # the census exe peaks at about 2.8 GB (DESIGN.md, "Census memory")
+# The guard counts anonymous memory (heap), not VmRSS: the link pass walks the proof terms of the
+# whole project, so it touches nearly all of the imported oleans, which Lean maps from disk. Those
+# pages are page cache (shared with every other process that maps the same oleans, and
+# reclaimable), and their share of VmRSS grows with the project (5.6 GB of 5.8 GB on 2026-11-27).
+# The heap stays small (about 0.4 GB); what took the machine down before was heap growth
+# (DESIGN.md, "Census memory"; docs/design/toolfix.md).
+MEM_LIMIT_GB = 6
 
 
 def tree_pids(pid):
@@ -347,32 +353,35 @@ def tree_pids(pid):
     return out
 
 
-def tree_rss(pid):
-    """Resident memory (bytes) of `pid` and all its descendants, from /proc."""
+def tree_rss(pid, key="RssAnon:"):
+    """Resident memory (bytes) of `pid` and all its descendants, from /proc: by default the
+    anonymous part (`RssAnon`), with `key="VmRSS:"` all of it (file-backed pages included)."""
     total = 0
     for p in tree_pids(pid):
         try:
             with open(f"/proc/{p}/status") as fh:
-                total += next((int(l.split()[1]) * 1024 for l in fh if l.startswith("VmRSS:")), 0)
+                total += next((int(l.split()[1]) * 1024 for l in fh if l.startswith(key)), 0)
         except (OSError, ValueError):
             pass
     return total
 
 
 def run_guarded(cmd, limit_gb=MEM_LIMIT_GB, timeout=int(os.environ.get("CENSUS_TIMEOUT", "600"))):
-    """Run `cmd` with its output in temporary files; poll the resident memory of its process
-    tree every 0.2 s and kill that tree (by pid) above `limit_gb` GB or after `timeout` s, so a
-    runaway census can never exhaust the session's memory (it took the machine down twice)."""
+    """Run `cmd` with its output in temporary files; poll the anonymous resident memory of its
+    process tree every 0.2 s and kill that tree (by pid) above `limit_gb` GB or after `timeout` s,
+    so a runaway census can never exhaust the session's memory (it took the machine down twice).
+    Returns the peaks of the anonymous and of the whole resident memory."""
     import tempfile
     import time
     with tempfile.TemporaryFile("w+") as out, tempfile.TemporaryFile("w+") as err:
         p = subprocess.Popen(cmd, cwd=ROOT, stdout=out, stderr=err, text=True, start_new_session=True)
-        t0, peak, why = time.time(), 0, None
+        t0, peak, peak_all, why = time.time(), 0, 0, None
         while p.poll() is None:
             m = tree_rss(p.pid)
             peak = max(peak, m)
+            peak_all = max(peak_all, tree_rss(p.pid, "VmRSS:"))
             if m > limit_gb * 2**30:
-                why = f"used {m / 2**30:.1f} GB, over the census memory limit of {limit_gb} GB"
+                why = f"used {m / 2**30:.1f} GB of heap, over the census memory limit of {limit_gb} GB"
             elif time.time() - t0 > timeout:
                 why = f"ran over {timeout} s"
             if why:
@@ -386,7 +395,7 @@ def run_guarded(cmd, limit_gb=MEM_LIMIT_GB, timeout=int(os.environ.get("CENSUS_T
             time.sleep(0.2)
         out.seek(0)
         err.seek(0)
-        return p.returncode, out.read(), err.read(), peak
+        return p.returncode, out.read(), err.read(), (peak, peak_all)
 
 
 def stage_done(name, t0):
@@ -413,7 +422,8 @@ def run_census(build):
         if not l.startswith("census: module clash"):
             sys.stderr.write(l + "\n")
     if os.environ.get("CENSUS_PEAK"):
-        sys.stderr.write(f"census exe peak memory: {peak / 2**30:.2f} GB\n")
+        sys.stderr.write(f"census exe peak memory: {peak[0] / 2**30:.2f} GB anonymous, "
+                         f"{peak[1] / 2**30:.2f} GB resident (with the mapped oleans)\n")
     return out
 
 

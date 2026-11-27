@@ -25,3 +25,42 @@ instrumented: 18.2 s). The profile counts 202 632.7 M instructions, against 202 
 `perf stat -e instructions:u` for the plain binary (ronsync9 section 5; the rest is `main.c` and
 libc). `diff-e2e.py --bin` with the instrumented binary: 766/766 agree (447 accepted, 319 not),
 the same as the plain binary.
+
+## 2. `scripts/e2e.py`: the `check_np` link failed
+
+**Cause.** `main.c` calls the compared run's entries `ca_start_c` and `ca_start_ac`
+(`--compare`, lanes compare and compare2). Only the shipped checker defines them (`cmpStub` in
+`ConAgua/Checker/AsmEmit.lean`). `e2e-l asm` compiles `check_np` without them, so `cc main.c
+check_np.s` had two undefined references. A second problem showed up in a fresh worktree: the
+`check` entry runs `ConAgua/Checker/AsmEmit.lean` with `lake env lean --run`, but e2e's build
+list did not contain that module, so its imports (`ConAgua.Checker.ProgTab`, …) could be
+missing.
+
+**Fix.** `compile_entry` appends `ca_start_c`/`ca_start_ac` to every non-shipped entry's
+assembler text, as one `ud2` (e2e runs no compared run, so they are never called). The build
+list gets `ConAgua.Checker.AsmEmit`.
+
+**Check.** `e2e.py --latest '' --assemble-only --no-diff`: both entries compile and link.
+Full run: see below.
+
+## 3. `scripts/census.py`: killed at its 6 GB memory limit
+
+**What grew.** Measured per process (`/proc/PID/status`, every 0.2 s), master `c2c1c72ce`: the
+link child that imports 573 modules peaks at 5.83 GB VmRSS, but only 0.24 GB of that is
+anonymous (`RssAnon`); the other children (imports that fail on a module clash) at 3.5 GB with
+0.38 GB anonymous. The tree (python, lake, driver, child) peaks at 6.06 GB VmRSS and 0.43 GB
+anonymous. Almost all of it is file-backed: the oleans Lean maps from disk. The link pass walks
+the proof terms of every linked theorem and of the end-to-end theorem's cone (`axiomsOf`,
+`sorrySources`), so it touches nearly all of the imported data, and the project's oleans are now
+0.62 GB `.olean` plus 4.23 GB `.olean.private` (the proofs), plus 0.32 GB of the toolchain.
+When the guard was written (lane censusmem, 2026-10-22, `ac91b80e6`), the project had 238
+`.lean` files under `ConAgua/`; now it has 1604. So the growth is legitimate: it is the
+project's size, and it is page cache (on xfs, hard-linked into the shared Lake cache, shared
+with every process that maps the same oleans, reclaimable), not heap. No bisect was needed:
+the heap is small, so no single landing caused a leak.
+
+**Fix.** The guard counts anonymous memory (`RssAnon` of the process tree) instead of `VmRSS`,
+with the same limit of 6 GB. The heap is what took the machine down before (repeated imports
+read into the heap, DESIGN.md, "Census memory"). `CENSUS_PEAK=1` prints both peaks. PLAN's figure
+now says about 0.4 GB of heap and about 6 GB resident. `census.py --no-build`: 70.7 s, exit 0,
+peak 0.43 GB anonymous, 6.06 GB resident.

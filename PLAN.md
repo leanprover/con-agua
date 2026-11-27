@@ -91,8 +91,9 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
   `COMPLETE_BY_PARTS` in `scripts/census.py`. Tag in the same commit that lands the code.
 - **Census.** `scripts/census.py` builds what it needs (`--no-build` to skip) and prints, per roadmap phase,
   how many targets are proven / proven with `sorry` / have L code / have nothing, by count and weighted by
-  Lean and Rust lines (~30 s). `--list [REGEX]` lists targets with their status and links. The exe runs under a memory guard
-  (killed above 6 GB; it peaks at about 2.8 GB). Targets: the
+  Lean and Rust lines (~70 s). `--list [REGEX]` lists targets with their status and links. The exe runs under a memory guard
+  on anonymous memory (killed above 6 GB of heap; it peaks at about 0.4 GB of heap, about 6 GB resident with the
+  mapped oleans, which grows with the project: page cache, not heap; `docs/design/toolfix.md`). Targets: the
   `ConRon`/`ConLeche` definitions `ConAgua.Final.TwinAccepts` reaches (no instances, auxiliaries, types,
   predicates, ROM data). Proven means every `@[refines T]` theorem uses only `propext`, `Classical.choice`,
   `Quot.sound`; a target reached only through proven targets counts as proven (only sorry-free ones
