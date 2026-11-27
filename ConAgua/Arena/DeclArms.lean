@@ -446,9 +446,9 @@ def installBasisDeclL : FunDecl := lfn (vis, p) locals (n, f, r, w) {
 
 /-- `check_quot_record(vis, k, q)`: `checkQuotRecord fe k cv` (`k` the slot, `QuotKind.slot`: `0`
 type, `1` ctor, `2` lift, `3` ind, `4` sound; `q` the constant value): compared with the slot's
-pin, the slots it needs stored, installed at its own names (`quot_at`). -/
+pin, the slots it needs stored, installed at its own names (`quot_at`). A `quot` record off its
+pin, or before the slots it needs, is a reject; a `Quot.sound` off its pin is a decline. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:899-913 ConRon.Arena.checkQuotRecord
--- con-ron: CHANGED since 8021ddac — `ConRon.Arena.checkQuotRecord` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkQuotRecord]
 def checkQuotRecordL : FunDecl := lfn (vis, k, q) locals (e, r, w) {
   e := call quot_pin_hit(k, q);

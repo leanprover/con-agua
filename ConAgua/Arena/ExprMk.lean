@@ -28,7 +28,7 @@ con-ron's store keeps a **derived word** per node (`Tbl.der`, `EStore.derived`, 
 a 32-bit hash, the loose-bvar range, the fvar range and a level-param flag, packed
 (`packData`). The expression walks read its range field before anything else
 (`liftLooseBVarsGo`, `instantiate1Go`, … cut off at `bvarOfData (derived h) ≤ c`), so L must know
-it exactly. L keeps **the range fields and the level-parameter bit** (the hash is `mixHash`,
+it exactly. L keeps **the range fields and the level-parameter bit** (the hash, `mix32` of the children's hashes, is
 opaque: no verdict reads the hash bits, only a parent's hash does); for the five compound tables in one tiered array per table,
 as packed 32-bit elements (two per word, `Arena/P32.lean`: `A⟨t⟩.u32[i]`, read as `pcol m A t i`),
 element `i` of tier `t` the derived word of node `i`, packed by `packBFL` (bvar range bits 0‥14, fvar range 15‥29, `lp` bit 30;

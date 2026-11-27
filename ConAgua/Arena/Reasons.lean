@@ -52,8 +52,8 @@ abbrev R_PROJECTION_ON_AN : L.Word := 70
 abbrev R_PROJECTION_WITHOUT_A : L.Word := 74
 /-- decline: quotient basis requires the pinned Eq basis -/
 abbrev R_QUOTIENT_BASIS_REQUIRES : L.Word := 78
-/-- decline: quotient declaration mismatch -/
-abbrev R_QUOTIENT_DECLARATION_MISMATCH : L.Word := 82
+/-- reject: quotient declaration mismatch -/
+abbrev R_QUOTIENT_DECLARATION_MISMATCH : L.Word := 81
 /-- decline: quotient soundness axiom mismatch -/
 abbrev R_QUOTIENT_SOUNDNESS_AXIOM : L.Word := 86
 /-- decline: resource limit: fuel exhausted: … -/
@@ -334,8 +334,8 @@ abbrev R_USE_OF_THE_SORRYAX_IN_THE : L.Word := 634
 abbrev R_A_DECLARATION_AT : L.Word := 638
 /-- decline: a declaration at a literal's name with another shape () -/
 abbrev R_A_DECLARATION_AT_A : L.Word := 642
-/-- decline: quotient declaration before what it needs -/
-abbrev R_QUOTIENT_DECLARATION_BEFORE : L.Word := 646
+/-- reject: quotient declaration before what it needs -/
+abbrev R_QUOTIENT_DECLARATION_BEFORE : L.Word := 645
 /-- decline: this family stored at a definition -/
 abbrev R_THIS_FAMILY_STORED : L.Word := 650
 /-- reject: a certified Nat operation's name, not a definition: … -/

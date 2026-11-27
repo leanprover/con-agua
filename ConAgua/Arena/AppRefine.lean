@@ -18,7 +18,7 @@ the two halves); the lens `appLens`; the scratch skip (`skA`, `askipW_eq`). `App
 library's `ConsR` for the two `app` tables. `internApp_refines`: `intern_app(f, a)` refines
 `internE (.app (decE f) (decE a))` under `AppR`.
 
-Not represented: the derived column (`derOfApp`, through `mixHash`) and every other table.
+Not represented: the derived column (`derOfApp`, through `mix32`) and every other table.
 -/
 
 open ConRon.Arena

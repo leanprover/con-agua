@@ -20,7 +20,7 @@ the lens `letLens`; the scratch skip (`skLe`, `leskipW_eq`), `app`'s pattern at 
 `internLet_refines`: `intern_letE(ty, val, body)` refines
 `internE (.letE (decE ty) (decE val) (decE body))` under `LetR`.
 
-Not represented: the derived column (`derOfLetAt`, through `mixHash`) and every other table.
+Not represented: the derived column (`derOfLetAt`, through `mix32`) and every other table.
 -/
 
 open ConRon.Arena

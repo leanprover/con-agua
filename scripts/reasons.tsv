@@ -19,7 +19,7 @@ R_NONSTANDARD_STRUCTURAL_NAT_OPERATION	decline	nonstandard structural Nat operat
 R_PROJECTION_ON_AN	decline	projection on an indexed structure-like type
 R_PROJECTION_WITHOUT_A	decline	projection without a native entry
 R_QUOTIENT_BASIS_REQUIRES	decline	quotient basis requires the pinned Eq basis
-R_QUOTIENT_DECLARATION_MISMATCH	decline	quotient declaration mismatch
+R_QUOTIENT_DECLARATION_MISMATCH	reject	quotient declaration mismatch
 R_QUOTIENT_SOUNDNESS_AXIOM	decline	quotient soundness axiom mismatch
 R_RESOURCE_LIMIT_FUEL	decline	resource limit: fuel exhausted: …
 R_STANDARD_AXIOM_SHAPE	decline	standard axiom shape mismatch
@@ -162,7 +162,7 @@ R_USE_OF_THE_SORRYAX_IN_GENERATED	decline	use of the sorryAx axiom in generated 
 R_USE_OF_THE_SORRYAX_IN_THE	decline	use of the sorryAx axiom in the domains of a generated rule of
 R_A_DECLARATION_AT	decline	a declaration at a literal's name with another shape
 R_A_DECLARATION_AT_A	decline	a declaration at a literal's name with another shape ()
-R_QUOTIENT_DECLARATION_BEFORE	decline	quotient declaration before what it needs
+R_QUOTIENT_DECLARATION_BEFORE	reject	quotient declaration before what it needs
 R_THIS_FAMILY_STORED	decline	this family stored at a definition
 R_A_CERTIFIED_NAT	reject	a certified Nat operation's name, not a definition: …
 R_A_FAMILY_S	reject	a family's key is no stored family
