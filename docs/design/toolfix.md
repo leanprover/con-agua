@@ -41,7 +41,11 @@ assembler text, as one `ud2` (e2e runs no compared run, so they are never called
 list gets `ConAgua.Checker.AsmEmit`.
 
 **Check.** `e2e.py --latest '' --assemble-only --no-diff`: both entries compile and link.
-Full run: see below.
+`e2e.py --latest '' --no-perf --no-diff` (827 fixtures): `check_np`
+against `con-ron-lean-twin --no-prelude` has no disagreement: 463 agree-accept, 62
+agree-decline, 288 agree-reject (7 of them as L aborts, 29 at another stage), 2 time out in both,
+and 12 time out only in `check_np`. `check` matches ronsync9's run: 825 of 827 agree with
+`con-ron` and `con-ron-lean-twin` (482 accept), and the other 2 time out in all three.
 
 ## 3. `scripts/census.py`: killed at its 6 GB memory limit
 
