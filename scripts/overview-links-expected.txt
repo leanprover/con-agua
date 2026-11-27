@@ -8,8 +8,8 @@
 >>> OVERVIEW.md
 
 == vendor/UPSTREAM#L3-L4
-     3  con-ron	8021ddac6f26edab6c5d61c2cc1133f159fa8c4f	https://github.com/leanprover/con-ron.git
-     4  con-leche	bc6676101c488e21ce71a317b33905534d497e14	https://github.com/leanprover/con-leche.git
+     3  con-ron	62cd8abab002178fdf17b4fcc71a9886ed8cd99d	https://github.com/leanprover/con-ron.git
+     4  con-leche	4d3983423b57b7aa127118e1677517e5b40b959e	https://github.com/leanprover/con-leche.git
 
 == main.c#L1-L44
      1  /* The harness for the compiled checker: the trusted C side of the end-to-end theorem.
@@ -905,7 +905,7 @@
    141  }
 
 == vendor/con-ron/ConRon/Arena/Monad.lean#L494-L500
-   494  /-- con-leche: ConLeche/Kernel/Expr.lean:369-488 Expr — decode a
+   494  /-- con-leche: ConLeche/Kernel/Expr.lean:376-504 Expr — decode a
    495  universe-argument list handle (the `const` node's second field, line 404). -/
    496  @[inline] def viewLs (h : LsIdx) : AM LsNodeView := do
    497    let s ← get
