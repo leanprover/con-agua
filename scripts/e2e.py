@@ -9,9 +9,9 @@ Steps (all in _tmp/e2e/<checkout name>/):
    (`Prog` lists and `p.lookup "f" = some d` hypotheses). The bindings are merged; the program is
    everything reachable from `check` and `check_np` (`ConAgua/E2E/Check.lean`). A called function
    with no L code (no binding, or only `abort` stubs) gets an e2e stub with its own code.
-2. **Compile.** `check`: the shipped code, printed by `checker.s`'s generator
-   (`ConAgua/Checker/AsmEmit.lean`; the report says whether the committed file is up to date);
-   `check_np`: `e2e-l asm` (checks `Prog.wf`). Each linked with `cc main.c` (the entry stub
+2. **Compile.** `check`: the shipped code, printed by `x86/checker.s`'s generator
+   (`x86/ConAguaX86/Checker/AsmEmit.lean`; the report says whether the committed file is up to date);
+   `check_np`: `e2e-l asm` (checks `Prog.wf`). Each linked with `cc commons/main.c` (the entry stub
    lays out a fixed partition of one region, lane `abi`: no capacity retries).
 3. **Run** every fixture (con-leche's e2e fixtures and the arena tests) through the compiled
    `check` and `check_np`, the reference `con-ron-lean-twin` (the twin at the program's pin list; with and
@@ -56,6 +56,7 @@ import conleche_tests  # noqa: E402
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORK = os.path.join(ROOT, "_tmp", "e2e", os.path.basename(ROOT))
 BIN = os.path.join(ROOT, ".lake", "build", "bin")
+X86_BIN = os.path.join(ROOT, "x86", ".lake", "build", "bin")
 
 PER_RUN_GB = 6
 TOTAL_GB = 20
@@ -82,12 +83,12 @@ T_CONRON = 120      # seconds per con-ron run
 T_PERF = 120        # seconds per `perf stat` run
 
 ENTRIES = ["check", "check_np"]
-PIN_VARIANTS = 4  # the variants in `pins.bin` (`romgen pins.bin 4`: all of `natOpPinSets`)
+PIN_VARIANTS = 4  # the variants in `commons/pins.bin` (`romgen commons/pins.bin 4`: all of `natOpPinSets`)
 # further roots of the assembled program (test entries and the functions `e2e-diff` runs)
 ROOTS = ENTRIES + ["e2e_front", "whnf", "whnf_core", "infer"]
 E2E_SOURCE = "L.E2E.e2eProg"
 # modules never imported by the dump: executables (a `main`), the spike, the census exe
-SKIP_MODS = re.compile(r"^ConAgua\.(Census\.Main$|E2E\.(Main|Ref|Explore.*)$)")
+SKIP_MODS = re.compile(r"^ConAgua\.(Census\.Main$|(?:X86\.)?E2E\.(Main|AsmOpt|Ref|Explore.*)$)")
 
 
 def log(*a):
@@ -442,16 +443,16 @@ def asm_of_prog(path):
 # ---------------------------------------------------------------- 2. compile
 
 def checker_asm(s):
-    """Write the shipped checker's assembler text to `s`, with the generator of `checker.s`
-    (`ConAgua/Checker/AsmEmit.lean`, as `scripts/asm_file.py` runs it). Returns (ok, message); the
-    message says whether the committed `checker.s` is up to date with it."""
-    r = lake("env", "lean", "--run", "ConAgua/Checker/AsmEmit.lean", s, check=False)
+    """Write the shipped checker's assembler text to `s`, with the generator of `x86/checker.s`
+    (`x86/ConAguaX86/Checker/AsmEmit.lean`, as `scripts/asm_file.py` runs it). Returns (ok, message); the
+    message says whether the committed `x86/checker.s` is up to date with it."""
+    r = lake("-d", "x86", "env", "lean", "--run", "x86/ConAguaX86/Checker/AsmEmit.lean", s, check=False)
     if r.returncode != 0:
         return False, (r.stdout + r.stderr).strip()[-2000:]
-    with open(s, "rb") as a, open(os.path.join(ROOT, "checker.s"), "rb") as b:
+    with open(s, "rb") as a, open(os.path.join(ROOT, "x86", "checker.s"), "rb") as b:
         same = a.read() == b.read()
-    return True, r.stdout.strip() + ("; checker.s is up to date" if same else
-                                     "; **checker.s is STALE** (run scripts/asm_file.py)")
+    return True, r.stdout.strip() + ("; x86/checker.s is up to date" if same else
+                                     "; **x86/checker.s is STALE** (run scripts/asm_file.py)")
 
 
 def compile_entry(prog, entry):
@@ -463,15 +464,17 @@ def compile_entry(prog, entry):
         if not ok:
             return None, msg
     else:
-        r = subprocess.run([os.path.join(BIN, "e2e-l"), "asm", prog, entry, s], capture_output=True, text=True)
+        r = subprocess.run([os.path.join(X86_BIN, "e2e-l"), "asm", prog, entry, s], capture_output=True, text=True)
         if r.returncode != 0:
             return None, (r.stdout + r.stderr).strip()
         msg = r.stdout.strip()
-        # `main.c` also calls the compared run's entries (`--compare`), which only the shipped
+        # `commons/main.c` also calls the compared run's entries (`--compare`), which only the shipped
         # checker has (`cmpStub`); e2e runs no compared run, so here they just trap
         with open(s, "a") as fh:
             fh.write(".text\n.globl ca_start_c\n.globl ca_start_ac\nca_start_c:\nca_start_ac:\nud2\n")
-    c = subprocess.run(["cc", "-std=gnu23", "-O2", "-pthread", "-o", exe, os.path.join(ROOT, "main.c"), s],
+    commons = os.path.join(ROOT, "commons")
+    c = subprocess.run(["cc", "-std=gnu23", "-O2", "-pthread", f"-I{commons}", f"--embed-dir={commons}",
+                        "-o", exe, os.path.join(commons, "main.c"), s],
                        capture_output=True, text=True)
     if c.returncode != 0:
         return None, c.stderr[-2000:]
@@ -598,7 +601,7 @@ def classify(lo, ref, where=""):
             return "DISAGREE-reject"
         return "agree-reject" if where == "line" else "agree-reject, stage differs"
     if lo in ("reject-abort", "decline-abort"):
-        # the checker's abort class (main.c): where the reference reports the kind, it must match
+        # the checker's abort class (commons/main.c): where the reference reports the kind, it must match
         kind = "reject" if lo == "reject-abort" else "decline"
         if racc:
             return "DISAGREE-reject" if kind == "reject" else "l-decline"
@@ -796,7 +799,7 @@ def conron_report(res):
         return []
     lines = ["## `check` against both references: `con-ron-lean-twin` (the twin, compiled by Lean) and `con-ron` (the Rust binary)", "",
              "`con-ron --jobs=1 --pins P FILE` at the vendored revision (exit codes: 0 accept, 1 reject, 2 decline, "
-             f"3 error; `P`: the same pin list as the others, `natOpPinSets.take {PIN_VARIANTS}` (all of it, as `pins.bin`) in its `con-ron-pins/1` format), `con-ron-lean-twin FILE --pins={PIN_VARIANTS}`, and the compiled `check`. Accept is the "
+             f"3 error; `P`: the same pin list as the others, `natOpPinSets.take {PIN_VARIANTS}` (all of it, as `commons/pins.bin`) in its `con-ron-pins/1` format), `con-ron-lean-twin FILE --pins={PIN_VARIANTS}`, and the compiled `check`. Accept is the "
              "verdict compared.", "",
              "| con-ron | con-ron-lean-twin | L `check` | fixtures |", "|---|---|---|---:|"]
     def acc(v):
@@ -865,8 +868,9 @@ def main():
     if not args.no_build:
         log("building")
         # only what e2e needs (not the whole proof tree)
-        lake("build", "ConAgua.E2E.Check", "ConAgua.Checker.Prog", "ConAgua.Checker.AsmEmit", "ConAgua.Compiler.Abi", "ConRon.Dump.Pins",
-             "e2e-l", "con-ron-lean-twin", *([] if args.no_diff else ["e2e-diff"]))
+        lake("build", "ConAgua.E2E.Check", "ConAgua.Checker.Prog", "ConRon.Dump.Pins",
+             "con-ron-lean-twin", *([] if args.no_diff else ["e2e-diff"]))
+        lake("-d", "x86", "build", "ConAguaX86.Checker.AsmEmit", "ConAguaX86.Compiler.Abi", "e2e-l")
     prog = os.path.join(WORK, "checker.prog")
     if args.text_dump:
         # the old path: every binding of the lanes' modules, through text (no `checkerProg` needed)
@@ -885,10 +889,10 @@ def main():
     if args.assemble_only:
         return
     stubs_by_code = {code: g for g, (code, _, _) in asm["stubs"].items()}
-    # the pin data (byte array 1, DESIGN.md lane `romload`): the committed `pins.bin`, which main.c
+    # the pin data (byte array 1, DESIGN.md lane `romload`): the committed `commons/pins.bin`, which commons/main.c
     # embeds in the compiled binaries (all of con-leche's pin variants, scripts/asm_file.py); the
     # references run at the same pin list
-    env = dict(os.environ, CA_PINS=os.path.join(ROOT, "pins.bin"))   # for `e2e-l run`/`trace`, `e2e-diff`
+    env = dict(os.environ, CA_PINS=os.path.join(ROOT, "commons", "pins.bin"))   # for `e2e-l run`/`trace`, `e2e-diff`
     npins = PIN_VARIANTS
     fx = fixtures()
     if args.only:
@@ -958,7 +962,7 @@ def main():
                 if tk in tcache:
                     ls = tcache[tk]
                 else:
-                    st, out = guard.run([os.path.join(BIN, "e2e-l"), "trace", prog, entry, path, str(TRACE_WORDS)], T_INTERP, env=env)
+                    st, out = guard.run([os.path.join(X86_BIN, "e2e-l"), "trace", prog, entry, path, str(TRACE_WORDS)], T_INTERP, env=env)
                     ls = out.splitlines()[:2] if st == "ok" else [st]
                     tcache[tk] = ls
                 if len(ls) >= 2:
@@ -967,7 +971,7 @@ def main():
                 else:
                     d["trace"] = f"untraced ({ls[0] if ls else 'no output'})"
             if not args.no_interp and entry == "check_np" and fid in interp_set:
-                st, out = guard.run([os.path.join(BIN, "e2e-l"), "run", prog, entry, path, str(INTERP_WORDS)], T_INTERP, env=env)
+                st, out = guard.run([os.path.join(X86_BIN, "e2e-l"), "run", prog, entry, path, str(INTERP_WORDS)], T_INTERP, env=env)
                 d["interp"] = interp_outcome(out, st)
             r[entry] = d
         if conron_key:

@@ -34,13 +34,14 @@ if [[ ! -e "$abs_wt/_tmp" ]]; then
 fi
 
 # Share the Kraken package checkout (source + its own small build dir): it's
-# pinned by rev in lakefile.toml, identical across worktrees, and a fresh
+# pinned by rev in x86/lakefile.toml, identical across worktrees, and a fresh
 # worktree would otherwise re-clone it from GitHub. Never run `lake update`
 # against a worktree's symlinked copy -- do that in the main tree.
-mkdir -p "$abs_wt/.lake"
-if [[ ! -e "$abs_wt/.lake/packages" ]]; then
-  ln -s "$root/.lake/packages" "$abs_wt/.lake/packages"
+mkdir -p "$abs_wt/x86/.lake"
+if [[ ! -e "$abs_wt/x86/.lake/packages" && -d "$root/x86/.lake/packages/Kraken" ]]; then
+  mkdir -p "$abs_wt/x86/.lake/packages"
+  ln -s "$root/x86/.lake/packages/Kraken" "$abs_wt/x86/.lake/packages/Kraken"
 fi
 
 echo "Worktree ready at $abs_wt (rev $rev)."
-echo "Build with: (cd $abs_wt && scripts/lake build)"
+echo "Build with: (cd $abs_wt && scripts/lake build && scripts/lake -d x86 build)"

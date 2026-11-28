@@ -176,7 +176,7 @@ def phase_of(name, module, line):
 
 def src_path(module):
     rel = module.replace(".", "/") + ".lean"
-    for base in ("vendor/con-ron", "vendor/con-leche", "."):
+    for base in ("vendor/con-ron", "vendor/con-leche", ".", "x86"):
         p = os.path.join(ROOT, base, rel)
         if os.path.exists(p):
             return p
@@ -310,19 +310,31 @@ def rust_weights(targets):
 # ---------------------------------------------------------------- the census
 
 
+def scan_groups():
+    groups = []
+    for sub, lib_name, default_roots in ((".", "ConAgua", ["ConAgua"]), ("x86", "ConAguaX86", ["ConAguaX86"])):
+        lf = os.path.join(ROOT, sub, "lakefile.toml")
+        if not os.path.exists(lf):
+            groups.append([])
+            continue
+        cfg = tomllib.load(open(lf, "rb"))
+        mods = []
+        for lib in cfg.get("lean_lib", []):
+            if lib["name"] == lib_name:
+                mods += lib.get("roots", default_roots) + lib.get("globs", [])
+        seen = set()
+        out = []
+        for m in mods:
+            if m not in seen and not m.endswith("+"):
+                seen.add(m)
+                out.append(m)
+        groups.append(out)
+    return groups[0], groups[1]
+
+
 def modules_to_scan():
-    cfg = tomllib.load(open(os.path.join(ROOT, "lakefile.toml"), "rb"))
-    mods = []
-    for lib in cfg.get("lean_lib", []):
-        if lib["name"] == "ConAgua":
-            mods += lib.get("roots", ["ConAgua"]) + lib.get("globs", [])
-    seen = set()
-    out = []
-    for m in mods:
-        if m not in seen and not m.endswith("+"):
-            seen.add(m)
-            out.append(m)
-    return out
+    core_mods, x86_mods = scan_groups()
+    return core_mods + x86_mods
 
 
 def lake():
@@ -407,13 +419,19 @@ def stage_done(name, t0):
 
 def run_census(build):
     import time
+    core_mods, x86_mods = scan_groups()
     if build:
         t0 = time.time()
-        subprocess.run(lake() + ["build", "census"] + modules_to_scan(), cwd=ROOT, check=True,
+        subprocess.run(lake() + ["build", "census"] + core_mods, cwd=ROOT, check=True,
                        stdout=subprocess.DEVNULL)
+        if x86_mods:
+            subprocess.run(lake() + ["-d", "x86", "build"] + x86_mods, cwd=ROOT, check=True,
+                           stdout=subprocess.DEVNULL)
         stage_done("lake build (census exe and all scanned modules)", t0)
     t0 = time.time()
-    rc, out, err, peak = run_guarded(lake() + ["exe", "census", "ConAgua.Final.Twin"] + modules_to_scan())
+    census_bin = os.path.join(ROOT, ".lake", "build", "bin", "census")
+    env_prefix = ["-d", "x86", "env"] if x86_mods else ["env"]
+    rc, out, err, peak = run_guarded(lake() + env_prefix + [census_bin, "ConAgua.Final.Twin"] + core_mods + x86_mods)
     stage_done("census exe (targets + links, total)", t0)
     if rc != 0:
         sys.stderr.write(err)

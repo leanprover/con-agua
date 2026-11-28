@@ -7,7 +7,6 @@ public import ConAgua.Final.CompareTwinVerdict
 import ConAgua.Checker.CrsProgPB
 import ConAgua.Checker.RomProgInit
 import ConAgua.Checker.JobsProg
-import ConAgua.Checker.AsmFinal
 import ConAgua.Verdict.CmpVSJobs
 import ConAgua.Verdict.CmpVModes
 import ConAgua.Checker.CmpVerdictNv
@@ -51,8 +50,28 @@ open ConRon.Arena ConRon.Bridge
 
 local notation "VM" => ConLeche.CheckMode.verified
 
+private theorem checkerTab_mins_lt :
+    checkerTab.mins.all (fun x => decide (x.2 < 2 ^ 64)) = true := by decide +kernel
+
 theorem cmp_absz : ∀ s, abiSz checkerTab s < 2 ^ 64 := fun s => by
-  have := abiSz_le checkerTab_abiOk s; simp only [abiWords] at this; omega
+  unfold abiSz
+  cases checkerTab.tbl64 s with
+  | none => simp [abiWords]
+  | some _ => exact Tab.min64_lt (by decide) checkerTab_mins_lt s
+
+/-- **The front returning `2^63` or more (parametric in `sz`)**. -/
+theorem cmpFrontSz_run (sz : TieredArray → Nat) (hsz : ∀ s, sz s < 2 ^ 64)
+    (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64) {rs5 : List Word}
+    {m5 : Mem} (hf : CmpFront45Sz sz checkerProg MODE bC bS pb rs5 m5) :
+    ∃ (PS : PhaseS bC bS) (m₇ m : Mem), FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m ∧
+      Stash m PS.pre PS.rC ∧ Keep6 m PS.pre ∧ m5 = m ∧
+      rs5.headD 0 = 9223372036854775808 + UInt64.ofNat PS.dsS.size := by
+  obtain ⟨hbC, hpb, hbS, rs4, m4, h4, hge4, h5, hge5⟩ := hf
+  have hN : abiFuel < 2 ^ 62 := by simp [abiFuel]
+  have hr4 : rs4.headD 0 ≠ 1 := fun e => by rw [L.getD_zero, e] at hge4; simp at hge4
+  have hr5 : rs5.headD 0 ≠ 1 := fun e => by rw [L.getD_zero, e] at hge5; simp at hge5
+  obtain ⟨-, hA4⟩ := checkC1_run bC bS pb _ ⟨h64, hbC, hpb, hsz⟩ abiFuel hN rs4 m4 h4 hr4
+  exact checkC2_run bC bS pb _ ⟨h64, hbS, hpb, hsz⟩ abiFuel hN m4 hA4 rs5 m5 h5 hr5
 
 /-- **The front returning `2^63` or more** is the solution's index build after the challenge's
 first parse (`checkC1_run`, `checkC2_run`; mode `5` leaves its memory `m` as it is). -/
@@ -60,34 +79,35 @@ theorem cmpFront_run (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
     {m5 : Mem} (hf : CmpFront45 checkerTab checkerProg MODE bC bS pb rs5 m5) :
     ∃ (PS : PhaseS bC bS) (m₇ m : Mem), FoldOn bS pb (abiSz checkerTab) PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m ∧
       Stash m PS.pre PS.rC ∧ Keep6 m PS.pre ∧ m5 = m ∧
-      rs5.headD 0 = 9223372036854775808 + UInt64.ofNat PS.dsS.size := by
-  obtain ⟨hbC, hpb, hbS, rs4, m4, h4, hge4, h5, hge5⟩ := hf
-  have hN : abiFuel < 2 ^ 62 := by simp [abiFuel]
-  have hr4 : rs4.headD 0 ≠ 1 := fun e => by rw [L.getD_zero, e] at hge4; simp at hge4
-  have hr5 : rs5.headD 0 ≠ 1 := fun e => by rw [L.getD_zero, e] at hge5; simp at hge5
-  obtain ⟨-, hA4⟩ := checkC1_run bC bS pb _ ⟨h64, hbC, hpb, cmp_absz⟩ abiFuel hN rs4 m4 h4 hr4
-  exact checkC2_run bC bS pb _ ⟨h64, hbS, hpb, cmp_absz⟩ abiFuel hN m4 hA4 rs5 m5 h5 hr5
+      rs5.headD 0 = 9223372036854775808 + UInt64.ofNat PS.dsS.size :=
+  cmpFrontSz_run (abiSz checkerTab) cmp_absz bC bS pb h64 hf
 
-/-- **The front never accepts**: mode `4` returns `2^63` and mode `5` `2^63 + |dsS|`. -/
-theorem cmpFrontAcc45_false (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    (h : CmpFrontAcc45 checkerTab checkerProg MODE bC bS pb) : False := by
+/-- **The front never accepts (parametric in `sz`)**. -/
+theorem cmpFrontAcc45Sz_false (sz : TieredArray → Nat) (hsz : ∀ s, sz s < 2 ^ 64)
+    (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
+    (h : CmpFrontAcc45Sz sz checkerProg MODE bC bS pb) : False := by
   obtain ⟨hbC, hpb, rs4, m4, h4, hor⟩ := h
   have hN : abiFuel < 2 ^ 62 := by simp [abiFuel]
   rcases hor with hA4 | ⟨hge4, hbS, rs5, m5, h5, hA5⟩
   · rw [L.getD_zero] at hA4
     have hr : rs4.headD 0 ≠ 1 := by rw [hA4]; decide
-    have := (checkC1_run bC bS pb _ ⟨h64, hbC, hpb, cmp_absz⟩ abiFuel hN rs4 m4 h4 hr).1
+    have := (checkC1_run bC bS pb _ ⟨h64, hbC, hpb, hsz⟩ abiFuel hN rs4 m4 h4 hr).1
     rw [hA4] at this; exact absurd this (by decide)
   · rw [L.getD_zero] at hA5
     have hr4 : rs4.headD 0 ≠ 1 := fun e => by rw [L.getD_zero, e] at hge4; simp at hge4
-    obtain ⟨-, hA4⟩ := checkC1_run bC bS pb _ ⟨h64, hbC, hpb, cmp_absz⟩ abiFuel hN rs4 m4 h4 hr4
+    obtain ⟨-, hA4⟩ := checkC1_run bC bS pb _ ⟨h64, hbC, hpb, hsz⟩ abiFuel hN rs4 m4 h4 hr4
     have hr : rs5.headD 0 ≠ 1 := by rw [hA5]; decide
     obtain ⟨PS, m₇, m, hF, -, -, -, hres⟩ :=
-      checkC2_run bC bS pb _ ⟨h64, hbS, hpb, cmp_absz⟩ abiFuel hN m4 hA4 rs5 m5 h5 hr
+      checkC2_run bC bS pb _ ⟨h64, hbS, hpb, hsz⟩ abiFuel hN m4 hA4 rs5 m5 h5 hr
     have hn : PS.dsS.size < 2 ^ 63 := by
       have := hF.build.decls.room; have := hF.build.decls.dsize; omega
     exact high_ne_accept (by rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]; exact hn)
       (hres.symm.trans hA5)
+
+/-- **The front never accepts**: mode `4` returns `2^63` and mode `5` `2^63 + |dsS|`. -/
+theorem cmpFrontAcc45_false (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
+    (h : CmpFrontAcc45 checkerTab checkerProg MODE bC bS pb) : False :=
+  cmpFrontAcc45Sz_false (abiSz checkerTab) cmp_absz bC bS pb h64 h
 
 /-- `callE` at the ROM's program is `callE` at the program on a memory holding the ROM. -/
 theorem cq_callE_subPB {bs : List UInt8} {n : Nat} {f : FnName} {vs : List Word} {m : Mem}
@@ -106,21 +126,18 @@ theorem cq_callE_bytes {n : Nat} {f : FnName} {vs : List Word} {m m' : Mem} {r :
   rw [← hs']
   exact hk.2.1.1
 
-/-- **Mode `6` after the front** (`checkC3_run` on mode `5`'s memory): the frozen memory `m9`
-(`F6`), mode `6`'s memory `parCompactMem m9 0`, `2^63 + c`. -/
-theorem cmpMode6_run {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS bC bS) {m₇ m : Mem}
-    (hF : FoldOn bS pb (abiSz checkerTab) PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m)
+/-- **Mode `6` after the front (parametric in `sz`)**. -/
+theorem cmpMode6Sz_run {sz : TieredArray → Nat} (hsz : ∀ s, sz s < 2 ^ 64)
+    (hsz6 : ∀ g ≤ 2, sz (sixArr g) = sz (eixArr g) ∧ sz (stxArr g) = sz (tixArr g))
+    {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS bC bS) {m₇ m : Mem}
+    (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m)
     (hst : Stash m PS.pre PS.rC) (hk6 : Keep6 m PS.pre) {rs6 : List Word} {m6 : Mem}
     (h6 : cmpRun checkerProg (m.setG MODE 6) = .ok (rs6, m6)) :
     ∃ c m9, F6 PS m c m9 ∧ m6 = parCompactMem m9 0 ∧ m9.bytes = m.bytes ∧
       rs6.headD 0 = (9223372036854775808 : Word) + c ∧ c.toNat < 2 ^ 63 := by
   have hN : abiFuel < 2 ^ 62 := by simp [abiFuel]
-  have hsz6 : ∀ g ≤ 2, abiSz checkerTab (sixArr g) = abiSz checkerTab (eixArr g) ∧
-      abiSz checkerTab (stxArr g) = abiSz checkerTab (tixArr g) := by
-    intro g hg
-    rcases (show g = 0 ∨ g = 1 ∨ g = 2 by omega) with rfl | rfl | rfl <;> exact ⟨by decide, by decide⟩
   have hO : OutEq m (m.setG MODE 6) := (⟨fun _ _ => rfl, fun _ => rfl, rfl⟩ : OutEq m m).setG MODE 6
-  obtain ⟨c, hpost, hres6⟩ := checkC3_run PS hF hst hk6 cmp_absz hpb hsz6 hO 6 0
+  obtain ⟨c, hpost, hres6⟩ := checkC3_run PS hF hst hk6 hsz hpb hsz6 hO 6 0
     (Or.inl ⟨rfl, rfl⟩) (by simp [Mem.setG]) abiFuel hN rs6 m6 h6
   obtain ⟨m9, hF6, -, rfl⟩ := hpost.1 rfl
   have hc63 : c.toNat < 2 ^ 63 := by
@@ -132,6 +149,18 @@ theorem cmpMode6_run {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : Phase
   refine ⟨c, m9, hF6, rfl, ?_, hres6, hc63⟩
   rw [← (parCompactMem_out m9 0).bytes, run_check_bytes h6]
   rfl
+
+/-- **Mode `6` after the front** (`checkC3_run` on mode `5`'s memory): the frozen memory `m9`
+(`F6`), mode `6`'s memory `parCompactMem m9 0`, `2^63 + c`. -/
+theorem cmpMode6_run {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS bC bS) {m₇ m : Mem}
+    (hF : FoldOn bS pb (abiSz checkerTab) PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m)
+    (hst : Stash m PS.pre PS.rC) (hk6 : Keep6 m PS.pre) {rs6 : List Word} {m6 : Mem}
+    (h6 : cmpRun checkerProg (m.setG MODE 6) = .ok (rs6, m6)) :
+    ∃ c m9, F6 PS m c m9 ∧ m6 = parCompactMem m9 0 ∧ m9.bytes = m.bytes ∧
+      rs6.headD 0 = (9223372036854775808 : Word) + c ∧ c.toNat < 2 ^ 63 :=
+  cmpMode6Sz_run cmp_absz (fun g hg => by
+    rcases (show g = 0 ∨ g = 1 ∨ g = 2 by omega) with rfl | rfl | rfl <;> exact ⟨by decide, by decide⟩)
+    hpb PS hF hst hk6 h6
 
 /-- The job program facts at the ROM's program, for any records. -/
 theorem cq_jobProg {pb : ByteArray} (hpb : pb.size < 2 ^ 63)
@@ -151,15 +180,12 @@ theorem cq_seqNext_glob (M : Mem) (w lo hi : Word) :
       (seqNext M MODE PLO PHI w lo hi).glob PHI = hi := by
   simp [seqNext, Mem.setG]
 
-/-- **The sequential compared run's phases, refined**: after the front and mode `6` (returning
-`2^63 + c`), the stages up to the challenge's index state `sI` are the twin's, and mode `8` in
-place (the solution's jobs, from the switched memory in the job relation, `JobM.cqViewS`) fails
-only where the twin's solution jobs from `sI.worker` do; returning, they accept (ending in `sJ`),
-and mode `9` in place (the challenge's view restored, `cq_phaseC`) accepts or fails as the twin's
-challenge jobs continuing from `sJ` do. -/
-theorem cq_seq (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
+/-- **The sequential compared run's phases, refined (parametric in `sz`)**. -/
+theorem cq_seqSz (sz : TieredArray → Nat) (hsz : ∀ s, sz s < 2 ^ 64)
+    (hsz6 : ∀ g ≤ 2, sz (sixArr g) = sz (eixArr g) ∧ sz (stxArr g) = sz (tixArr g))
+    (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (hQ : CqSeqProg checkerProg) {rs5 : List Word} {m5 : Mem}
-    (hf : CmpFront45 checkerTab checkerProg MODE bC bS pb rs5 m5) {rs6 : List Word} {m6 : Mem}
+    (hf : CmpFront45Sz sz checkerProg MODE bC bS pb rs5 m5) {rs6 : List Word} {m6 : Mem}
     (h6 : cmpRun checkerProg (m5.setG MODE 6) = .ok (rs6, m6)) :
     ∃ (pins : List ConLeche.NatOpPinSet) (ipins : List INatOpPinSet) (dsS : Array IDeclaration)
       (recsC : List IDeclaration) (IS IC : IStreamIndex) (sI : AState),
@@ -179,8 +205,8 @@ theorem cq_seq (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
             TwinFailsV (checkJobList VM ipins (some (solutionOf IS recsC)) IC recsC.toArray
               (List.range recsC.toArray.size)) sJ e.cls := by
   have hpb : pb.size < 2 ^ 63 := hf.2.1
-  obtain ⟨PS, m₇, m, hF, hst, hk6, rfl, hres5⟩ := cmpFront_run bC bS pb h64 hf
-  obtain ⟨c, m9, hF6, rfl, hb9, hres6, hc63⟩ := cmpMode6_run hpb PS hF hst hk6 h6
+  obtain ⟨PS, m₇, m, hF, hst, hk6, rfl, hres5⟩ := cmpFrontSz_run sz hsz bC bS pb h64 hf
+  obtain ⟨c, m9, hF6, rfl, hb9, hres6, hc63⟩ := cmpMode6Sz_run hsz hsz6 hpb PS hF hst hk6 h6
   have hN62 : abiFuel ≤ 2 ^ 62 := by simp [abiFuel]
   -- the counts
   have hn : PS.dsS.size < 2 ^ 63 := by
@@ -325,19 +351,56 @@ theorem cq_seq (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
       (cq_jobsErr hJPC ho.front hLDC hdn hppJ hdenJ hPDJ hspec hcrs ⟨hJG _, crsG_checker _⟩ hcnt hk2
         ⟨hJRC hCC hFl2, hP1.2.1, hP1.2.2⟩ (fold_sameEnter hse1 (seq_foldJ HJ hwJ)) hcall2 hk0)
 
-/-- **The sequential compared run's accept is the twin's** (`TwinComparesAccepts`, `cq_seq`). -/
-theorem cmpAccS_twin (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
+/-- **The sequential compared run's phases, refined** (specialized at `abiSz checkerTab`). -/
+theorem cq_seq (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
+    (hQ : CqSeqProg checkerProg) {rs5 : List Word} {m5 : Mem}
+    (hf : CmpFront45 checkerTab checkerProg MODE bC bS pb rs5 m5) {rs6 : List Word} {m6 : Mem}
+    (h6 : cmpRun checkerProg (m5.setG MODE 6) = .ok (rs6, m6)) :
+    ∃ (pins : List ConLeche.NatOpPinSet) (ipins : List INatOpPinSet) (dsS : Array IDeclaration)
+      (recsC : List IDeclaration) (IS IC : IStreamIndex) (sI : AState),
+      CmpStages bC bS pins ipins dsS recsC IS IC sI ∧ rs6.getD 0 0 ≠ ACCEPT ∧
+      (∀ e, cmpRun checkerProg (seqMemW m6 MODE PLO PHI OUT HDRF CTLF hdrHw 8 0
+          (rs5.getD 0 0 - 9223372036854775808)) = .error e → e.cls ≠ 0 →
+        TwinFailsV (checkJobList VM ipins none IS dsS (List.range dsS.size)) sI.worker e.cls) ∧
+      ∀ rs8 m8, cmpRun checkerProg (seqMemW m6 MODE PLO PHI OUT HDRF CTLF hdrHw 8 0
+          (rs5.getD 0 0 - 9223372036854775808)) = .ok (rs8, m8) →
+        ∃ sJ, checkJobList VM ipins none IS dsS (List.range dsS.size) sI.worker = .ok (.ok (), sJ) ∧
+          (∀ rs9 m9', cmpRun checkerProg (seqNext m8 MODE PLO PHI 9 0 (rs6.getD 0 0 - 9223372036854775808)) =
+              .ok (rs9, m9') →
+            ∃ sK, checkJobList VM ipins (some (solutionOf IS recsC)) IC recsC.toArray
+              (List.range recsC.toArray.size) sJ = .ok (.ok (), sK)) ∧
+          ∀ e, cmpRun checkerProg (seqNext m8 MODE PLO PHI 9 0 (rs6.getD 0 0 - 9223372036854775808)) =
+              .error e → e.cls ≠ 0 →
+            TwinFailsV (checkJobList VM ipins (some (solutionOf IS recsC)) IC recsC.toArray
+              (List.range recsC.toArray.size)) sJ e.cls :=
+  cq_seqSz (abiSz checkerTab) cmp_absz (fun g hg => by
+    rcases (show g = 0 ∨ g = 1 ∨ g = 2 by omega) with rfl | rfl | rfl <;> exact ⟨by decide, by decide⟩)
+    bC bS pb h64 hQ hf h6
+
+/-- **The sequential compared run's accept is the twin's (parametric in `sz`)**. -/
+theorem cmpAccSSz_twin (sz : TieredArray → Nat) (hsz : ∀ s, sz s < 2 ^ 64)
+    (hsz6 : ∀ g ≤ 2, sz (sixArr g) = sz (eixArr g) ∧ sz (stxArr g) = sz (tixArr g))
+    (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (hQ : CqSeqProg checkerProg)
-    (h : CmpAccS checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF hdrHw bC bS pb) :
+    (h : CmpAccSSz sz checkerProg MODE PLO PHI OUT HDRF CTLF hdrHw bC bS pb) :
     TwinComparesAccepts bC bS := by
   rcases h with hA | ⟨rs5, m5, hf, rs6, m6, h6, hor⟩
-  · exact (cmpFrontAcc45_false bC bS pb h64 hA).elim
-  obtain ⟨pins, ipins, dsS, recsC, IS, IC, sI, hSt, hA6, -, hS⟩ := cq_seq bC bS pb h64 hQ hf h6
+  · exact (cmpFrontAcc45Sz_false sz hsz bC bS pb h64 hA).elim
+  obtain ⟨pins, ipins, dsS, recsC, IS, IC, sI, hSt, hA6, -, hS⟩ := cq_seqSz sz hsz hsz6 bC bS pb h64 hQ hf h6
   rcases hor with hA6' | ⟨-, rs8, m8, h8, -, rs9, m9', h9, -⟩
   · exact (hA6 hA6').elim
   obtain ⟨sJ, hSacc, hC, -⟩ := hS rs8 m8 h8
   obtain ⟨sK, hCacc⟩ := hC rs9 m9' h9
   exact ⟨pins, ipins, dsS, recsC, IS, IC, sI, sJ, sK, hSt, hSacc, hCacc⟩
+
+/-- **The sequential compared run's accept is the twin's** (`TwinComparesAccepts`, `cq_seq`). -/
+theorem cmpAccS_twin (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
+    (hQ : CqSeqProg checkerProg)
+    (h : CmpAccS checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF hdrHw bC bS pb) :
+    TwinComparesAccepts bC bS :=
+  cmpAccSSz_twin (abiSz checkerTab) cmp_absz (fun g hg => by
+    rcases (show g = 0 ∨ g = 1 ∨ g = 2 by omega) with rfl | rfl | rfl <;> exact ⟨by decide, by decide⟩)
+    bC bS pb h64 hQ h
 
 /-- **A failing sequential compared run with a class other than `0` is the twin's**
 (`TwinCompareVerdict`): the front's stages (`cmpV_a4`, `cmpV_a5`), mode `6` (class `0` only),

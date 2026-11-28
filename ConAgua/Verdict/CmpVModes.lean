@@ -5,7 +5,6 @@ public import ConAgua.Final.CompareTwinVerdict
 public import ConAgua.Final.CmpAbi
 public import ConAgua.Checker.ProgTab
 import ConAgua.Verdict.FrontSafeE
-import ConAgua.Checker.AsmFinal
 import ConAgua.Checker.CheckARun
 import ConAgua.Checker.NoVerdictClosed
 import ConAgua.Checker.PreludeRef
@@ -183,14 +182,22 @@ theorem check_err_dispatchC {p : Prog} (hp : p.lookup "check" = some checkL) (n 
 
 /-! ## The modes' claims -/
 
+private theorem cmpV_mins_lt :
+    checkerTab.mins.all (fun x => decide (x.2 < 2 ^ 64)) = true := by decide +kernel
+
+private theorem cmpV_absz : ∀ s, abiSz checkerTab s < 2 ^ 64 := fun s => by
+  unfold abiSz
+  cases checkerTab.tbl64 s with
+  | none => simp [abiWords]
+  | some _ => exact Tab.min64_lt (by decide) cmpV_mins_lt s
+
 /-- **Mode `4`'s verdict claim**: a failing run of `check` from mode `4`'s memory with a class
 other than `0` is the twin's compared run failing with that class. -/
 theorem cmpV_a4 (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64) (hbC : bC.size < 2 ^ 63)
     (hpb : pb.size < 2 ^ 63) (e : Err)
     (hrun : cmpRun checkerProg (cmpM4 checkerTab MODE bC pb) = .error e) (hk : e.cls ≠ 0) :
     TwinCompareStagesFail bC bS e.cls := by
-  have hsz : ∀ s, abiSz checkerTab s < 2 ^ 64 := fun s => by
-    have := abiSz_le checkerTab_abiOk s; simp only [abiWords] at this; omega
+  have hsz : ∀ s, abiSz checkerTab s < 2 ^ 64 := cmpV_absz
   generalize hsz' : abiSz checkerTab = sz at hsz
   have hin : InputsOK bC pb sz := ⟨h64, hbC, hpb, hsz⟩
   obtain ⟨-, -, -, s4, -, -, -⟩ := stageSpecs_of_rels checkerRels checker_capStage
@@ -207,7 +214,7 @@ theorem cmpV_a4 (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64) (hbC
     (fun _ => irpStage_ps bC pb sz 4 hin.2.2.1) fun m hm => ⟨(), hm, fun _ _ h => h⟩
   have hc1 : checkerProg.lookup "check_c1" = some checkC1L := by chk_lk
   have hlc : checkerProg.lookup "check" = some checkL := by chk_lk
-  have hmode : (cmpM4 checkerTab MODE bC pb).glob MODE = 4 := by simp [cmpM4, Mem.setG]
+  have hmode : (cmpM4 checkerTab MODE bC pb).glob MODE = 4 := by simp [cmpM4, cmpM4Sz, Mem.setG]
   have hr := run_err hrun
   have hN : abiFuel = (abiFuel - 1) + 1 := by simp [abiFuel]
   rw [hN] at hr
@@ -238,8 +245,7 @@ theorem cmpV_a5 (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64) (hbC
     (hge4 : 2 ^ 63 ≤ (rs4.getD 0 0).toNat) (e : Err)
     (hrun : cmpRun checkerProg (cmpM5 MODE m4 bS) = .error e) (hk : e.cls ≠ 0) :
     TwinCompareStagesFail bC bS e.cls := by
-  have hsz : ∀ s, abiSz checkerTab s < 2 ^ 64 := fun s => by
-    have := abiSz_le checkerTab_abiOk s; simp only [abiWords] at this; omega
+  have hsz : ∀ s, abiSz checkerTab s < 2 ^ 64 := cmpV_absz
   have hN : abiFuel < 2 ^ 62 := by simp [abiFuel]
   have hr4 : rs4.headD 0 ≠ 1 := fun e => by rw [L.getD_zero, e] at hge4; simp at hge4
   obtain ⟨-, hA4⟩ := checkC1_run bC bS pb _ ⟨h64, hbC, hpb, hsz⟩ abiFuel hN rs4 m4 h4 hr4

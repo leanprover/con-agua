@@ -172,7 +172,7 @@ import all ConAgua.Arena.RomCI
 import all ConAgua.Rom.PinReadSpec
 import all ConAgua.Scan.Line
 import all ConAgua.Arena.NatSized
-import ConAgua.Compiler.Main
+import ConAgua.Compiler.MainRef
 
 @[expose] public section
 

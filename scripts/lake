@@ -39,6 +39,7 @@ import shutil
 import subprocess
 import sys
 import time
+import tomllib
 import fcntl
 import secrets
 
@@ -54,18 +55,44 @@ def truthy(v):
     return v.strip().lower() in ("1", "true", "yes", "y", "on")
 
 
+VALUE_OPTS = {"-d", "--dir", "-f", "--file", "-K", "--packages", "--log-level", "--fail-level"}
+
+
 def subcommand(args):
+    skip = False
     for a in args:
+        if skip:
+            skip = False
+            continue
+        if a in VALUE_OPTS:
+            skip = True
+            continue
         if not a.startswith("-"):
             return a
     return None
 
 
+def sub_packages(root):
+    out = []
+    for sub in sorted(os.listdir(root)):
+        if sub.startswith((".", "_")) or sub in ("vendor", "commons", "scripts", "docs", "ConAgua"):
+            continue
+        p = os.path.join(root, sub)
+        lf = os.path.join(p, "lakefile.toml")
+        if os.path.isfile(lf):
+            name = tomllib.load(open(lf, "rb")).get("name", sub)
+            out.append((sub, p, name))
+    return out
+
+
+def packages(root):
+    return [(root, "ConAgua")] + [(p, name) for _, p, name in sub_packages(root)]
+
+
 # Files (or directories of files, by their first path component) that modules read at elaboration
-# time (Lake `input_file`s, `include_asm`), and the source directory of the library that `needs`
-# them: a change to such a file during a build invalidates every module of that library (lane
-# asmfile).
-INPUT_DIRS = {"checker.s": "ConAguaAsm"}
+# time (Lake `input_file`s, `include_asm`), mapped to `(pkg_subdir, src_dir_from_root)`:
+# a change to such a file during a build invalidates every module of that library (lane asmfile).
+INPUT_DIRS = {"x86/checker.s": ("x86", "x86/ConAguaAsm")}
 
 
 def snapshot(root):
@@ -75,14 +102,15 @@ def snapshot(root):
         dn[:] = [d for d in dn if d not in (".lake", "_tmp", ".git")]
         for f in fn:
             p = os.path.join(dp, f)
-            top = os.path.relpath(p, root).split(os.sep)[0]
+            rel = os.path.relpath(p, root)
+            top = rel.split(os.sep)[0]
             if f.endswith(".lean") or f in ("lakefile.toml", "lakefile.lean",
-                                            "lean-toolchain") or top in INPUT_DIRS:
+                                            "lean-toolchain") or rel in INPUT_DIRS or top in INPUT_DIRS:
                 try:
                     st = os.stat(p)
                 except FileNotFoundError:
                     continue
-                snap[os.path.relpath(p, root)] = (st.st_mtime_ns, st.st_size)
+                snap[rel] = (st.st_mtime_ns, st.st_size)
     return snap
 
 
@@ -90,14 +118,21 @@ def invalidate(root, rel):
     """Delete Lake's local state (trace, outputs, .hash files) for the module whose source is `rel`
     (for an input file: for every module of the library that reads it)."""
     top = rel.split(os.sep)[0]
-    if top in INPUT_DIRS:
-        for dp, dn, fn in os.walk(os.path.join(root, INPUT_DIRS[top])):
+    key = rel if rel in INPUT_DIRS else (top if top in INPUT_DIRS else None)
+    if key is not None:
+        _, lib_dir = INPUT_DIRS[key]
+        for dp, dn, fn in os.walk(os.path.join(root, lib_dir)):
             for f in fn:
                 if f.endswith(".lean"):
                     invalidate(root, os.path.relpath(os.path.join(dp, f), root))
         return
     if not rel.endswith(".lean"):
         return
+    for sub, pkg_dir, _ in sub_packages(root):
+        prefix = sub + "/"
+        if rel.startswith(prefix):
+            invalidate_module(pkg_dir, rel[len(prefix):-len(".lean")])
+            return
     invalidate_module(root, rel[:-len(".lean")])
 
 
@@ -111,33 +146,34 @@ def reconcile(root, shared):
     queue and elsewhere, and what this worktree publishes for them helps nobody (DESIGN.md, "Cache
     misses between worktrees"). So: wherever a local trace's input hash has a shared mapping with
     other outputs, delete the local state of that module; Lake then restores the shared outputs."""
-    out = os.path.join(shared, "outputs", "ConAgua")
-    lib = os.path.join(root, ".lake", "build", "lib", "lean")
-    if not os.path.isdir(out) or not os.path.isdir(lib):
-        return 0
     n = 0
-    for dp, dn, fn in os.walk(lib):
-        for f in fn:
-            if not f.endswith(".trace"):
-                continue
-            try:
-                with open(os.path.join(dp, f)) as fh:
-                    t = json.load(fh)
-                with open(os.path.join(out, f"{t['depHash']}.json")) as fh:
-                    shared_outputs = json.load(fh)["data"]
-            except (OSError, ValueError, KeyError, TypeError):
-                continue  # no trace, no mapping (nothing to disagree with), or unreadable
-            if t.get("outputs") is not None and shared_outputs != t["outputs"]:
-                rel = os.path.relpath(os.path.join(dp, f[:-len(".trace")]), lib)
-                invalidate_module(root, rel)
-                n += 1
+    for pkg_dir, pkg_name in packages(root):
+        out = os.path.join(shared, "outputs", pkg_name)
+        lib = os.path.join(pkg_dir, ".lake", "build", "lib", "lean")
+        if not os.path.isdir(out) or not os.path.isdir(lib):
+            continue
+        for dp, dn, fn in os.walk(lib):
+            for f in fn:
+                if not f.endswith(".trace"):
+                    continue
+                try:
+                    with open(os.path.join(dp, f)) as fh:
+                        t = json.load(fh)
+                    with open(os.path.join(out, f"{t['depHash']}.json")) as fh:
+                        shared_outputs = json.load(fh)["data"]
+                except (OSError, ValueError, KeyError, TypeError):
+                    continue  # no trace, no mapping (nothing to disagree with), or unreadable
+                if t.get("outputs") is not None and shared_outputs != t["outputs"]:
+                    rel = os.path.relpath(os.path.join(dp, f[:-len(".trace")]), lib)
+                    invalidate_module(pkg_dir, rel)
+                    n += 1
     return n
 
 
-def invalidate_module(root, base):
+def invalidate_module(pkg_dir, base):
     """Delete Lake's local state of the module whose path (without extension) is `base`."""
     for sub in ("lib/lean", "ir"):
-        d = os.path.join(root, ".lake", "build", sub, os.path.dirname(base))
+        d = os.path.join(pkg_dir, ".lake", "build", sub, os.path.dirname(base))
         stem = os.path.basename(base) + "."
         if not os.path.isdir(d):
             continue
@@ -185,7 +221,8 @@ def publish_logs(root, since):
     sys.path.insert(0, os.path.join(root, "scripts"))
     try:
         import lean_warnings
-        lean_warnings.harvest(root, root, since)
+        for pkg_dir, pkg_name in packages(root):
+            lean_warnings.harvest(pkg_dir, root, since, pkg=pkg_name)
     except Exception as e:  # the logs are an aid; never fail a build over them
         print(f"scripts/lake: note: could not store the build's logs: {e}", file=sys.stderr)
 

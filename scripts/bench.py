@@ -17,11 +17,11 @@ verdict are flagged (`MISMATCH`), so comparing a candidate compiler against the 
 checks it.
 
 Systems:
-  --bin NAME=PATH     a compiled L binary (`cc -std=gnu23 -O2 main.c X.s`: `X FILE`); repeatable;
+  --bin NAME=PATH     a compiled L binary (`cc -std=gnu23 -O2 commons/main.c X.s`: `X FILE`); repeatable;
                       the FIRST L binary is the baseline the ratios refer to. Default: `L=<this
-                      checkout's compiled check>` (printed by `checker.s`'s generator
-                      `ConAgua/Checker/AsmEmit.lean`, as `scripts/e2e.py` does).
-  --asm NAME=PATH.s   as --bin, but assemble the `.s` file first (with main.c).
+                      checkout's compiled check>` (printed by `x86/checker.s`'s generator
+                      `x86/ConAguaX86/Checker/AsmEmit.lean`, as `scripts/e2e.py` does).
+  --asm NAME=PATH.s   as --bin, but assemble the `.s` file first (with commons/main.c).
   --leche PATH        the con-leche binary (default: `LECHE` below, the build at the revision
                       `vendor/UPSTREAM` pins, when present); run as `con-leche --jobs=1 -- FILE`,
                       in its default (verified) mode with its own embedded pins. Its `Nat`
@@ -185,7 +185,9 @@ def compiled_check(work):
 
 def assemble(s):
     exe = s[:-2] + ".bin"
-    c = subprocess.run(["cc", "-std=gnu23", "-O2", "-pthread", "-o", exe, os.path.join(ROOT, "main.c"), s],
+    commons = os.path.join(ROOT, "commons")
+    c = subprocess.run(["cc", "-std=gnu23", "-O2", "-pthread", f"-I{commons}", f"--embed-dir={commons}",
+                        "-o", exe, os.path.join(commons, "main.c"), s],
                        capture_output=True, text=True)
     if c.returncode != 0:
         sys.exit(f"cc failed: {c.stderr[-2000:]}")
@@ -242,8 +244,9 @@ def main():
     os.makedirs(WORK, exist_ok=True)
     os.makedirs(e2e.WORK, exist_ok=True)
     if not args.no_build:
-        e2e.lake("build", "ConAgua.E2E.Check", "ConAgua.Checker.Prog", "ConAgua.Compiler.Abi", "ConRon.Dump.Pins", "e2e-l",
+        e2e.lake("build", "ConAgua.E2E.Check", "ConAgua.Checker.Prog", "ConRon.Dump.Pins",
                  "con-ron-lean-twin")  # fixtures are unpacked there (shared with scripts/e2e.py)
+        e2e.lake("-d", "x86", "build", "ConAguaX86.Compiler.Abi", "e2e-l")
 
     ids = args.fixtures or ([f[0] for f in e2e.fixtures()] if args.set == "all" else SETS[args.set])
     if args.only:
@@ -251,7 +254,7 @@ def main():
     fx = resolve(ids)
 
     # pin data: the compiled checker reads byte array 1 (DESIGN.md lane `romload`)
-    # the L binaries embed `pins.bin` (all of con-leche's pin variants); the references run at the
+    # the L binaries embed `commons/pins.bin` (all of con-leche's pin variants); the references run at the
     # same pin list
     npins = e2e.PIN_VARIANTS
     cpins = os.path.join(WORK, f"pins{npins}.con-ron-pins")

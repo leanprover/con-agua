@@ -10,37 +10,59 @@ import glob, os, re, sys, tomllib
 
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(root)
-t = tomllib.load(open("lakefile.toml", "rb"))
-targets = t.get("lean_lib", []) + t.get("lean_exe", [])
-listed = set()
-for l in targets:
-    listed |= set(l.get("globs", [])) | set(l.get("roots", []))
-    if "root" in l:
-        listed.add(l["root"])
-files = {f[:-5].replace("/", ".") for f in glob.glob("ConAgua/**/*.lean", recursive=True)} | {"ConAgua"}
-IMP = re.compile(r"^(?:public |private )?(?:meta )?import (?:all )?(ConAgua[\w.]*)", re.M)
 
-
-def imports(m):
-    p = "ConAgua.lean" if m == "ConAgua" else m.replace(".", "/") + ".lean"
-    return set(IMP.findall(open(p, encoding="utf-8", errors="replace").read()))
-
-
-# `X.+` globs: every module under `X`
-listed |= {f for g in listed if g.endswith(".+") for f in files if f.startswith(g[:-1])}
-reach, stack = set(), [m for m in listed if m in files]
-while stack:
-    m = stack.pop()
-    if m not in reach:
-        reach.add(m)
-        stack += [x for x in imports(m) if x in files]
 allow = set()
 if os.path.exists("scripts/modules_unbuilt.txt"):
     allow = {ln.split("#")[0].strip() for ln in open("scripts/modules_unbuilt.txt")} - {""}
-missing = sorted(files - reach - allow)
+
+IMP = re.compile(r"^(?:public |private )?(?:meta )?import (?:all )?(ConAgua[\w.]*)", re.M)
+SUBS = ["."] + sorted(
+    sub for sub in os.listdir(".")
+    if not sub.startswith((".", "_")) and sub not in ("vendor", "commons", "scripts", "docs", "ConAgua")
+    and os.path.isfile(os.path.join(sub, "lakefile.toml"))
+)
+
+total_files = 0
+missing = []
+for sub in SUBS:
+    lf = os.path.join(sub, "lakefile.toml")
+    t = tomllib.load(open(lf, "rb"))
+    targets = t.get("lean_lib", []) + t.get("lean_exe", [])
+    listed = set()
+    for l in targets:
+        listed |= set(l.get("globs", [])) | set(l.get("roots", []))
+        if "root" in l:
+            listed.add(l["root"])
+    tops = tuple(sorted({m.split(".")[0] for m in listed if m.startswith("ConAgua")}))
+    files = set()
+    for top in tops:
+        top_file = os.path.join(sub, f"{top}.lean")
+        if os.path.isfile(top_file):
+            files.add(top)
+        top_dir = os.path.join(sub, top)
+        if os.path.isdir(top_dir):
+            for dp, _, fs in os.walk(top_dir):
+                for f in fs:
+                    if f.endswith(".lean"):
+                        files.add(os.path.relpath(os.path.join(dp, f), sub)[:-5].replace(os.sep, "."))
+    total_files += len(files)
+
+    def imports(m):
+        p = os.path.join(sub, m.replace(".", "/") + ".lean")
+        return set(IMP.findall(open(p, encoding="utf-8", errors="replace").read()))
+
+    listed |= {f for g in listed if g.endswith(".+") for f in files if f.startswith(g[:-1])}
+    reach, stack = set(), [m for m in listed if m in files]
+    while stack:
+        m = stack.pop()
+        if m not in reach:
+            reach.add(m)
+            stack += [x for x in imports(m) if x in files]
+    missing.extend(sorted(files - reach - allow))
+
 if missing:
     print("modules_check: these modules are not built by any lakefile target (add them to the "
-          "ConAgua lib's globs in lakefile.toml, or to scripts/modules_unbuilt.txt if deliberate):")
+          "lib's globs in lakefile.toml, or to scripts/modules_unbuilt.txt if deliberate):")
     print("\n".join("  " + m for m in missing))
     sys.exit(1)
-print(f"modules_check: ok ({len(files)} modules, {len(allow)} deliberately unbuilt)")
+print(f"modules_check: ok ({total_files} modules, {len(allow)} deliberately unbuilt)")

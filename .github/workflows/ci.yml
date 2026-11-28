@@ -4,10 +4,10 @@
 # WHAT THE JOBS COVER
 #
 #   checker  The shipped binary, with no Lean anywhere (a few minutes):
-#              make, make check   `main.c` + `checker.s` + `pins.bin` build
-#                                 with a C23 compiler (`#embed`), and the
-#                                 smoke test passes (the prelude is
-#                                 accepted, a malformed line is not).
+#              make, make check   `commons/main.c` + `x86/checker.s` +
+#                                 `commons/pins.bin` build with a C23 compiler
+#                                 (`#embed`), and the smoke test passes (the
+#                                 prelude is accepted, a malformed line is not).
 #              scripts/diff-e2e.py  the end-to-end differential: the built
 #                                 `checker` on every fixture of
 #                                 con-leche's test suite that has a pinned
@@ -43,7 +43,7 @@
 #                                 con-leche and con-ron.  This includes
 #                                 the axiom guards (`#guard_msgs` on the
 #                                 final theorems' `#print axioms`), the
-#                                 kernel's check that `checker.s` is the
+#                                 kernel's check that `x86/checker.s` is the
 #                                 compiler's output (`checkerFile_eq`) and
 #                                 the staleness checks of the generated
 #                                 call closures;
@@ -53,13 +53,13 @@
 #                                 (`lake shake`) finds unused is on
 #                                 `scripts/shake-allowlist.txt`;
 #              the `--check` modes of the generators: asm_file.py
-#                                 (`checker.s` and `pins.bin` are what the
-#                                 generators print now, plus Kraken's own
-#                                 parser reading `checker.s` as the
+#                                 (`x86/checker.s` and `commons/pins.bin` are
+#                                 what the generators print now, plus Kraken's
+#                                 own parser reading `x86/checker.s` as the
 #                                 trusted parser does), core_fns.py,
 #                                 loop_fns.py, leaf_fns.py, preloop_ws.py;
 #              check-asm.sh       `as` + `objdump` encode every
-#                                 instruction of `checker.s` the way
+#                                 instruction of `x86/checker.s` the way
 #                                 Kraken's semantics reads its text (a
 #                                 trusted-base check, about 10 s).
 #
@@ -110,7 +110,7 @@
 #   * `.lake/build` (4.5 GB) and `.lake/packages` (the Kraken checkout and
 #     its own build, 35 MB), 1.3 GB compressed -- keyed by `lean-toolchain`,
 #     `lake-manifest.json` and `lakefile.toml`, plus a hash of every
-#     `*.lean` and of `checker.s` (which `ConAguaAsm` reads at elaboration
+#     `*.lean` and of `x86/checker.s` (which `ConAguaAsm` reads at elaboration
 #     time).  restore-keys fall back to the newest build of the same
 #     environment, then of any (Lake checks out another Kraken revision
 #     itself if the manifest moved).  A build that did not finish is saved
@@ -292,10 +292,11 @@ jobs:
         with:
           path: |
             .lake/build
-            .lake/packages
-          key: lake-build-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.toml') }}-${{ hashFiles('**/*.lean', 'checker.s') }}
+            x86/.lake/build
+            x86/.lake/packages
+          key: lake-build-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.toml', 'x86/lean-toolchain', 'x86/lake-manifest.json', 'x86/lakefile.toml') }}-${{ hashFiles('**/*.lean', 'x86/checker.s') }}
           restore-keys: |
-            lake-build-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.toml') }}-
+            lake-build-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.toml', 'x86/lean-toolchain', 'x86/lake-manifest.json', 'x86/lakefile.toml') }}-
             lake-build-${{ runner.os }}-
 
       # ---- the gates that need no build ---------------------------------
@@ -325,7 +326,7 @@ jobs:
         id: build
         run: |
           mkdir -p _tmp/ci-logs
-          setsid bash -c 'set -o pipefail; scripts/lake build 2>&1 | tee _tmp/ci-logs/build.log' &
+          setsid bash -c 'set -o pipefail; (scripts/lake build && scripts/lake -d x86 build) 2>&1 | tee _tmp/ci-logs/build.log' &
           pid=$!
           stop_build() {
             kill -TERM -- "-$pid" 2>/dev/null || true
@@ -351,10 +352,10 @@ jobs:
       - name: scripts/shake.py (no unused import beyond the allowlist)
         run: python3 scripts/shake.py
 
-      - name: scripts/asm_file.py --check (checker.s, pins.bin)
+      - name: scripts/asm_file.py --check (x86/checker.s, commons/pins.bin)
         run: python3 scripts/asm_file.py --check
 
-      - name: scripts/check-asm.sh (as/objdump agree with Kraken's reading of checker.s)
+      - name: scripts/check-asm.sh (as/objdump agree with Kraken's reading of x86/checker.s)
         run: scripts/check-asm.sh
 
       - name: The generated call closures (--check)
@@ -371,7 +372,8 @@ jobs:
         with:
           path: |
             .lake/build
-            .lake/packages
+            x86/.lake/build
+            x86/.lake/packages
           key: ${{ steps.build.outcome == 'success' && steps.cache.outputs.cache-primary-key || format('{0}-incomplete-{1}-{2}', steps.cache.outputs.cache-primary-key, github.run_id, github.run_attempt) }}
 
       - name: Upload logs

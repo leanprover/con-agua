@@ -168,7 +168,7 @@ import all ConAgua.Arena.IndDeclConsts
 import all ConAgua.Arena.IndStream
 import all ConAgua.Arena.NatSized
 import ConAgua.Compiler.InlineCorrect
-import ConAgua.Compiler.Main
+import ConAgua.Compiler.MainRef
 
 @[expose] public section
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # scripts/check-no-warnings.sh LOG: fail if a `scripts/lake build` log holds a warning from this
-# repository's code (ConAgua, ConAguaAsm). The only warnings allowed are Kraken's own (a Lake git
+# repository's code (ConAgua, ConAguaX86, ConAguaAsm). The only warnings allowed are Kraken's own (a Lake git
 # dependency we do not edit) and those of the vendored upstream files (`vendor/`: con-leche's
 # Challenge.lean has two `sorry`s by design, con-ron has an unused simp argument; the vendor gate
 # keeps them equal to upstream plus our patches). CI runs it on the build step's log.

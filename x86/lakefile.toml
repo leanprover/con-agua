@@ -1,0 +1,143 @@
+name = "ConAguaX86"
+version = "0.1.0"
+defaultTargets = ["ConAguaX86", "ConAguaAsm"]
+
+[leanOptions]
+autoImplicit = false
+relaxedAutoImplicit = false
+
+[[require]]
+name = "ConAgua"
+path = ".."
+
+[[require]]
+name = "Kraken"
+git = "https://github.com/sgraf812/kraken"
+rev = "ba12834902fd19e837c97d0e5ea585d41348ee7e"
+
+[[lean_lib]]
+name = "ConAguaX86"
+allowNonModules = true
+roots = ["ConAguaX86"]
+globs = [
+  "ConAguaX86",
+  "ConAguaX86.Arena.Inst1Emit",
+  "ConAguaX86.Arena.LiftEmit",
+  "ConAguaX86.Arena.WalkEmit",
+  "ConAguaX86.AsmEsc.+",
+  "ConAguaX86.AsmFile.+",
+  "ConAguaX86.Audit.+",
+  "ConAguaX86.Checker.Asm",
+  "ConAguaX86.Checker.AsmEmit",
+  "ConAguaX86.Checker.AsmFileEq",
+  "ConAguaX86.Checker.AsmFinal",
+  "ConAguaX86.Checker.AsmPart0",
+  "ConAguaX86.Checker.AsmPart1",
+  "ConAguaX86.Checker.AsmPart10",
+  "ConAguaX86.Checker.AsmPart11",
+  "ConAguaX86.Checker.AsmPart12",
+  "ConAguaX86.Checker.AsmPart13",
+  "ConAguaX86.Checker.AsmPart14",
+  "ConAguaX86.Checker.AsmPart15",
+  "ConAguaX86.Checker.AsmPart16",
+  "ConAguaX86.Checker.AsmPart17",
+  "ConAguaX86.Checker.AsmPart2",
+  "ConAguaX86.Checker.AsmPart3",
+  "ConAguaX86.Checker.AsmPart4",
+  "ConAguaX86.Checker.AsmPart5",
+  "ConAguaX86.Checker.AsmPart6",
+  "ConAguaX86.Checker.AsmPart7",
+  "ConAguaX86.Checker.AsmPart8",
+  "ConAguaX86.Checker.AsmPart9",
+  "ConAguaX86.Checker.AsmStub",
+  "ConAguaX86.Checker.AsmStubEq",
+  "ConAguaX86.Checker.AsmTail",
+  "ConAguaX86.Checker.AsmTailEq",
+  "ConAguaX86.Checker.AsmX",
+  "ConAguaX86.Checker.AsmXOk",
+  "ConAguaX86.Checker.CmpCall",
+  "ConAguaX86.Checker.ProgSkt",
+  "ConAguaX86.Checker.ProgSktPart0",
+  "ConAguaX86.Checker.ProgSktPart1",
+  "ConAguaX86.Checker.ProgSktPart2",
+  "ConAguaX86.Checker.ProgSktPart3",
+  "ConAguaX86.Checker.ProgSktPart4",
+  "ConAguaX86.Checker.ProgSktPart5",
+  "ConAguaX86.Compiler.Abi",
+  "ConAguaX86.Compiler.AbiCmp",
+  "ConAguaX86.Compiler.AbiSim",
+  "ConAguaX86.Compiler.AsmLitX64",
+  "ConAguaX86.Compiler.BcePost",
+  "ConAguaX86.Compiler.BceSound",
+  "ConAguaX86.Compiler.CompileX64",
+  "ConAguaX86.Compiler.Correct",
+  "ConAguaX86.Compiler.Main",
+  "ConAguaX86.Compiler.MainRefX64",
+  "ConAguaX86.Compiler.Mem",
+  "ConAguaX86.Compiler.Mem32",
+  "ConAguaX86.Compiler.Rel",
+  "ConAguaX86.Compiler.Run",
+  "ConAguaX86.Compiler.RunEq",
+  "ConAguaX86.Compiler.Sim32",
+  "ConAguaX86.Compiler.SimBlock",
+  "ConAguaX86.Compiler.SimCall",
+  "ConAguaX86.Compiler.SimExpr",
+  "ConAguaX86.Compiler.SimFun",
+  "ConAguaX86.Compiler.SimGen",
+  "ConAguaX86.Compiler.SimStmt",
+  "ConAguaX86.Compiler.SimStore",
+  "ConAguaX86.Compiler.SimTail",
+  "ConAguaX86.Compiler.SktLitX64",
+  "ConAguaX86.Compiler.Step",
+  "ConAguaX86.Compiler.StepGen",
+  "ConAguaX86.Compiler.Tests",
+  "ConAguaX86.Compiler.WFAll",
+  "ConAguaX86.Compiler.WFAllBench",
+  "ConAguaX86.Final.Abi",
+  "ConAguaX86.Final.BufAbi",
+  "ConAguaX86.Final.BufChain",
+  "ConAguaX86.Final.BufLayout",
+  "ConAguaX86.Final.C1Threads",
+  "ConAguaX86.Final.C1ThreadsVerdict",
+  "ConAguaX86.Final.CmpA",
+  "ConAguaX86.Final.CmpAbiX64",
+  "ConAguaX86.Final.CmpC",
+  "ConAguaX86.Final.CmpEntry1",
+  "ConAguaX86.Final.CmpMain",
+  "ConAguaX86.Final.CmpOutcome",
+  "ConAguaX86.Final.CmpStub",
+  "ConAguaX86.Final.CmpThreads",
+  "ConAguaX86.Final.CmpThreadsVerdict",
+  "ConAguaX86.Final.Compare",
+  "ConAguaX86.Final.CpThreadFail",
+  "ConAguaX86.Final.CpThreads",
+  "ConAguaX86.Final.DrvAbi",
+  "ConAguaX86.Final.DrvFinal",
+  "ConAguaX86.Final.EndToEnd",
+  "ConAguaX86.Final.ParAbi",
+  "ConAguaX86.Final.SeqAbi",
+  "ConAguaX86.Final.SeqLayout",
+  "ConAguaX86.Final.StatementX64",
+  "ConAguaX86.Final.ThreadsFinal",
+  "ConAguaX86.Final.ThreadsVerdict",
+  "ConAguaX86.Final.VerdictFinal"
+]
+
+[[input_file]]
+name = "checker_s"
+path = "checker.s"
+text = true
+
+[[lean_lib]]
+name = "ConAguaAsm"
+roots = []
+globs = ["ConAguaAsm.+"]
+needs = ["checker_s"]
+
+[[lean_exe]]
+name = "e2e-l"
+root = "ConAguaX86.E2E.Main"
+
+[[lean_exe]]
+name = "compopt-asm"
+root = "ConAguaX86.E2E.AsmOpt"

@@ -48,12 +48,15 @@ ALLOW = os.path.join(ROOT, "scripts", "shake-allowlist.txt")
 KEEP = os.path.join(ROOT, "scripts", "shake-keep.txt")
 # top modules that cannot be loaded with the others (`L.Arena.bv` is declared in both
 # `Arena/LiftBench.lean` and `Arena/NatBits.lean`); the modules only they reach are not checked
-JOINT_SEPARATE = {"ConAgua.Compiler.WFAllBench"}
+JOINT_SEPARATE = {"ConAguaX86.Compiler.WFAllBench"}
 IMP = re.compile(r"^(?:public\s+)?(?:meta\s+)?import\s+(?:all\s+)?([\w.]+)\s*$", re.M)
 
 
 def src(m):
-    return os.path.join(ROOT, "ConAgua.lean" if m == "ConAgua" else m.replace(".", "/") + ".lean")
+    rel = m.replace(".", "/") + ".lean"
+    if m.split(".")[0] in ("ConAguaX86", "ConAguaAsm"):
+        return os.path.join(ROOT, "x86", rel)
+    return os.path.join(ROOT, rel)
 
 
 def header_imports(m):
@@ -72,19 +75,28 @@ def header_imports(m):
 
 
 def default_build():
-    """The ConAgua/ConAguaAsm modules the default targets build."""
-    t = tomllib.load(open(os.path.join(ROOT, "lakefile.toml"), "rb"))
+    """The ConAgua/ConAguaX86/ConAguaAsm modules the default targets build."""
     files = set()
-    for top in ("ConAgua", "ConAguaAsm"):
-        for dp, _, fs in os.walk(os.path.join(ROOT, top)):
-            for f in fs:
-                if f.endswith(".lean"):
-                    files.add(os.path.relpath(os.path.join(dp, f), ROOT)[:-5].replace("/", "."))
-    files.add("ConAgua")
+    for base, tops, root_mods in (
+        (ROOT, ("ConAgua",), ("ConAgua",)),
+        (os.path.join(ROOT, "x86"), ("ConAguaX86", "ConAguaAsm"), ("ConAguaX86",)),
+    ):
+        for top in tops:
+            d = os.path.join(base, top)
+            if os.path.isdir(d):
+                for dp, _, fs in os.walk(d):
+                    for f in fs:
+                        if f.endswith(".lean"):
+                            files.add(os.path.relpath(os.path.join(dp, f), base)[:-5].replace("/", "."))
+        for rm in root_mods:
+            if os.path.isfile(os.path.join(base, rm + ".lean")):
+                files.add(rm)
     listed = set()
-    for lib in t.get("lean_lib", []):
-        if lib["name"] in ("ConAgua", "ConAguaAsm"):
-            listed |= set(lib.get("roots", [lib["name"]])) | set(lib.get("globs", []))
+    for lf in (os.path.join(ROOT, "lakefile.toml"), os.path.join(ROOT, "x86", "lakefile.toml")):
+        t = tomllib.load(open(lf, "rb"))
+        for lib in t.get("lean_lib", []):
+            if lib["name"] in ("ConAgua", "ConAguaX86", "ConAguaAsm"):
+                listed |= set(lib.get("roots", [lib["name"]])) | set(lib.get("globs", []))
     listed |= {f for g in list(listed) if g.endswith(".+") for f in files if f.startswith(g[:-1])}
     reach, stack, imps = set(), [m for m in listed if m in files], {}
     while stack:
@@ -122,12 +134,12 @@ def run_tool():
     keep = set()
     if os.path.exists(KEEP):
         keep = {l.split("#")[0].strip() for l in open(KEEP)} - {""}
-    only = sorted(closure(imps, joint) - keep - {"ConAgua"})
+    only = sorted(closure(imps, joint) - keep - {"ConAgua", "ConAguaX86"})
     args = []
     for m in only:
         args += ["--only", m]
-    env = dict(os.environ, SHAKE_SRC=ROOT)
-    r = subprocess.run([os.path.join(ROOT, "scripts", "lake"), "env", TOOL] + args + joint,
+    env = dict(os.environ, SHAKE_SRC=f"{ROOT}:{os.path.join(ROOT, 'x86')}")
+    r = subprocess.run([os.path.join(ROOT, "scripts", "lake"), "-d", "x86", "env", TOOL] + args + joint,
                        cwd=ROOT, env=env, capture_output=True, text=True)
     out = r.stdout + r.stderr
     if "uncaught exception" in out or re.search(r"^error:", out, re.M):
@@ -145,15 +157,15 @@ ATTR_MODULES = {"ConAgua.Arena.GrindAttr", "ConAgua.L.GrindAttr", "ConAgua.Arena
 
 def checked(item):
     mod = item.split()[-1]
-    return mod.split(".")[0] in ("ConAgua", "ConAguaAsm") and mod not in ATTR_MODULES and " meta " not in f" {item} "
+    return mod.split(".")[0] in ("ConAgua", "ConAguaX86", "ConAguaAsm") and mod not in ATTR_MODULES and " meta " not in f" {item} "
 
 
 def proposals(out):
-    root = ROOT.rstrip("/") + "/"
     cur, props, rem, add = None, set(), {}, {}
     for line in out.split("\n"):
         if re.match(r"^\S.*\.lean:$", line):
-            cur = line[:-1].replace(root, "").lstrip("./")
+            p = line[:-1]
+            cur = os.path.relpath(p, ROOT) if os.path.isabs(p) else p.lstrip("./")
         elif cur and line.strip().startswith(("remove #[", "add #[")):
             kind, body = line.strip().split(" #[", 1)
             for item in body.rstrip("]").split(", "):

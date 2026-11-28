@@ -4,7 +4,6 @@ meta import ConAgua.Verdict.DeclTopE
 meta import ConAgua.Verdict.KnotAllE
 meta import ConAgua.Verdict.CheckBE
 meta import ConAgua.Verdict.FrontStageE
-meta import ConAgua.Final.ThreadsVerdict
 import ConAgua.Checker.LoopProgTac
 import all ConAgua.Arena.Abs1
 import all ConAgua.Arena.AppStore
@@ -174,11 +173,11 @@ public import ConAgua.Checker.Prog
 # The verdict glue's program facts (lane `verdicts-b`, helper `sg`)
 
 `checkerProg_uceLookupsPB`: `unresolved_consts_error`'s lookups at the substituted checker program
-(`UceProg`, the verdict context's `VerdictCtxU`). The verdict claims themselves
-(`seqVerdicts_proved`, `threadVerdicts_proved`) are in `Verdict/IndArmTopE.lean`: entry 1 from its
-stages' error specs (`entry1Verdict_of`), entry 2 and the threads' calls from the jobs' error
-claims (`entry2Verdict_of`, `Verdict/CheckBE.lean`; `threads_twinVerdictPooled`,
-`Verdict/ThreadsE.lean`).
+(`UceProg`, the verdict context's `VerdictCtxU`). The sequential verdict claim itself
+(`seqVerdicts_proved`) is in `Verdict/IndArmTopE.lean`: entry 1 from its stages' error specs
+(`entry1Verdict_of`), entry 2 from the jobs' error claims (`entry2Verdict_of`,
+`Verdict/CheckBE.lean`). `threadVerdicts_proved` (`threads_twinVerdictPooled`,
+`Verdict/ThreadsE.lean`) is in `Final/EndToEnd.lean`.
 -/
 
 set_option experimental.vcgen true

@@ -5,7 +5,7 @@
 # The toolchain ships `shake` as `lake shake` (sources at
 #   $(lean --print-prefix)/src/lean/lake/Lake/CLI/Shake.lean),
 # but `Lake.Shake.run` refuses a closure with a classic (non-`module`) file, and the closure has one
-# (`ConAgua/Audit/Final.lean`; every other ConAgua file is a module). So this script copies that one file into a
+# (`x86/ConAguaX86/Audit/Final.lean`; every other ConAgua file is a module). So this script copies that one file into a
 # scratch Lake project under `_tmp/shake-tool/` (nothing is added to this package's manifest) and
 # applies three patches, each about classic files only:
 #

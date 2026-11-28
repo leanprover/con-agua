@@ -162,7 +162,7 @@ import all ConAgua.Scan.Str
 import all ConAgua.Scan.Utf8
 import all ConAgua.Scan.Values
 import all ConAgua.Arena.NatSized
-import ConAgua.Compiler.Main
+import ConAgua.Compiler.MainRef
 
 @[expose] public section
 

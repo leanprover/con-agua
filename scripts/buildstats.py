@@ -180,8 +180,10 @@ def decl_name(path, line):
 
 
 def module_file(mod):
-    """ConAgua.Arena.X -> ConAgua/Arena/X.lean; vendored modules -> their vendor path."""
+    """ConAgua.Arena.X -> ConAgua/Arena/X.lean; ConAguaX86.* -> x86/...; vendored modules -> their vendor path."""
     rel = mod.replace(".", "/") + ".lean"
+    if mod.startswith(("ConAguaX86", "ConAguaAsm")):
+        return "x86/" + rel
     if mod.startswith("ConAgua"):
         return rel
     if mod.startswith("ConLeche"):
