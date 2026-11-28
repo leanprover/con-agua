@@ -23,8 +23,8 @@ State, all under the main checkout's _tmp/ (shared by every worktree through the
 
 mq-next.sh: takes the oldest waiting entry and up to MQ_BATCH-1 (default 4 in all) later ones of the
 same kind (all needing a build or none) whose changed files are disjoint, merges them onto master in
-wt-mq, resolves mechanical conflicts (appends; the generated files ConAgua/Checker/{Prog,ProgTab,ProgNrt,ProgSkt,ProgWf,Asm,
-AsmPart*}.lean, checker.s and pins.bin by regeneration when both sides changed them; link anchors by
+wt-mq, resolves mechanical conflicts (appends; the generated files ConAgua/Checker/{Prog,ProgTab,ProgNrt,ProgWf}.lean, x86/ConAguaX86/Checker/{ProgSkt,ProgSktPart*,Asm,
+AsmPart*}.lean, x86/checker.s and commons/pins.bin by regeneration when both sides changed them; link anchors by
 scripts/relink.py), runs `scripts/gates.sh --changed <master>` (the path-selected steps of
 scripts/gate_select.py; when the merge result is exactly the tree of a commit that scripts/gates.sh
 stamped green (_tmp/mq/green/<commit>: the entry had merged the current master), only the cheap steps:
@@ -82,10 +82,10 @@ BATCH = int(os.environ.get("MQ_BATCH", "4"))
 STALL = int(os.environ.get("MQ_STALL", "1800"))  # mq-wait: entries waiting, no mq-next for this long
 # Generated files the queue regenerates when both sides of a merge changed them (or they conflict),
 # in order; regenerating a group regenerates every later one too.
-GEN_PROG = re.compile(r"ConAgua/Checker/(Prog|ProgTab|ProgNrt|ProgSkt|ProgWf|Asm|AsmPart\d+)\.lean$")
+GEN_PROG = re.compile(r"(?:ConAgua|x86/ConAguaX86)/Checker/(Prog|ProgTab|ProgNrt|ProgSkt|ProgSktPart\d+|ProgWf|Asm|AsmPart\d+)\.lean$")
 GROUPS = [("checkerProg (scripts/checker_prog.py)", lambda f: bool(GEN_PROG.match(f)), ["python3", "scripts/checker_prog.py"]),
-          ("checker.s/pins.bin (scripts/asm_file.py)", lambda f: f in ("checker.s", "pins.bin"), ["python3", "scripts/asm_file.py"]),
-          ("Reasons.lean/reasons.h (scripts/reasons.py)", lambda f: f in ("ConAgua/Arena/Reasons.lean", "reasons.h"), ["python3", "scripts/reasons.py"])]
+          ("x86/checker.s/commons/pins.bin (scripts/asm_file.py)", lambda f: f in ("x86/checker.s", "commons/pins.bin"), ["python3", "scripts/asm_file.py"]),
+          ("Reasons.lean/reasons.h (scripts/reasons.py)", lambda f: f in ("ConAgua/Arena/Reasons.lean", "commons/reasons.h"), ["python3", "scripts/reasons.py"])]
 EXPECTED = "scripts/overview-links-expected.txt"
 
 
@@ -93,7 +93,7 @@ def gen_group(f):
     return next((i for i, (_, m, _) in enumerate(GROUPS) if m(f)), None)
 
 
-SHAREABLE_FILES = {"checker.s", "pins.bin", EXPECTED, "docs/velocity.csv", "docs/deviations.md"}
+SHAREABLE_FILES = {"x86/checker.s", "commons/pins.bin", EXPECTED, "docs/velocity.csv", "docs/deviations.md"}
 
 sys.path.insert(0, SCRIPTS)
 import gate_select  # noqa: E402
@@ -708,7 +708,7 @@ def process(batch, run, attempt_label=""):
             if run_logged(cmd, rl, 3600):
                 fail = (f"regenerating {what} failed", rl)
                 break
-            git(WT, "add", "-A", "ConAgua", "checker.s", "pins.bin", "reasons.h")
+            git(WT, "add", "-A", "ConAgua", "x86/ConAguaX86", "x86/checker.s", "commons/pins.bin", "commons/reasons.h")
             if git(WT, "status", "--porcelain", "--untracked-files=no"):
                 git(WT, "commit", "-q", "-m", f"mq: regenerate {what.split(' ')[0]} after merging "
                     + ", ".join(e["branch"] for e in merged))

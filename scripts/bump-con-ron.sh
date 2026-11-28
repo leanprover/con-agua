@@ -13,7 +13,7 @@
 # headings between the revisions (read those first: they say whether a change touches the executed
 # checker or only upstream's proofs), the toolchain, the vendored files changed, whether each patch
 # still applies to the new pristine tree, whether con-leche's pins/ and test expectations moved
-# (pins.bin, diff-e2e.py), and `scripts/provenance.py report <rev>`: every twin declaration that
+# (commons/pins.bin, diff-e2e.py), and `scripts/provenance.py report <rev>`: every twin declaration that
 # changed, the L items whose citation it hits (directly or through a changed helper below a cited
 # declaration), their `@[refines]` theorems, and the declarations of ours that mention them.
 #
@@ -197,7 +197,7 @@ report() { # rev
   echo "   con-ron  : $(git -C "$(ref_dir con-ron)" diff --shortstat "$old_cr" "$new_cr" -- proof/ConRon proof/ConRon.lean)"
   git -C "$(ref_dir con-ron)" diff --dirstat=files,5 "$old_cr" "$new_cr" -- proof/ConRon | sed 's/^/     /'
   echo "   con-leche: $(git -C "$(ref_dir con-leche)" diff --shortstat "$old_cl" "$new_cl" -- ConLeche ConLeche.lean pins scripts/natop_prefix.json)"
-  echo "   con-leche pins/ (pins.bin, the ROM's pin records): $(git -C "$(ref_dir con-leche)" diff --shortstat "$old_cl" "$new_cl" -- pins scripts/natop_prefix.json)"
+  echo "   con-leche pins/ (commons/pins.bin, the ROM's pin records): $(git -C "$(ref_dir con-leche)" diff --shortstat "$old_cl" "$new_cl" -- pins scripts/natop_prefix.json)"
   echo "   con-leche test expectations (diff-e2e.py, e2e.py): $(git -C "$(ref_dir con-leche)" diff --shortstat "$old_cl" "$new_cl" -- tests/e2e-expected.txt tests/arena-expected.txt tests/e2e tests/arena)"
   echo "== the patch series against the new pristine trees"
   # A throwaway repository holding the old pristine trees (the patches' preimages, for --3way)
@@ -303,7 +303,7 @@ bump() {
   log="$work/build.log"
   echo "== building (log: $log)"
   local bok=0
-  timeout 5400 scripts/lake build >"$log" 2>&1 || bok=1
+  timeout 5400 bash -c 'scripts/lake build && scripts/lake -d x86 build' >"$log" 2>&1 || bok=1
   if [[ $bok == 1 ]]; then
     echo "   build FAILED; files with errors:"
     grep -o '^error: [^:]*\.lean' "$log" | sort | uniq -c | sed 's/^/   /' || true

@@ -58,7 +58,7 @@ Not measured or planned yet; recorded so they are not lost.
   apps (Init's ratio), the first table to fill is now `lam` at `2^26`, at about 8× Mathlib's lam
   count, i.e. at roughly 5× the app count the old layout allowed (con-ron's own estimate,
   DESIGN #133). con-ron's counts are identical, store by store, on Init and Mathlib.
-* **`2^32` words per array** (the ABI slot of `2^35` bytes, `Compiler/Abi.lean`). Behind the node
+* **`2^32` words per array** (the ABI slot of `2^35` bytes, `X86/Compiler/Abi.lean`). Behind the node
   cap (`EREC` reaches it at ~2300× Init). Raising it needs per-array slot sizes (ABI, compiler
   proof, harness): a uniform larger slot exceeds the x86-64 user address space.
 * Every other capacity (scratch resets since D39, memo regions and stamps, bank generations, the

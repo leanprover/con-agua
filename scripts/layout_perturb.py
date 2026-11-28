@@ -20,7 +20,7 @@ restores the files:
 * `scripts/lake build` (with `LAKE_ARTIFACT_CACHE=false`: the perturbed modules are of no use
   to anyone; unaffected modules still come from the cache) and the modules that fail.
 
-A clean run fails only `ConAgua.Checker.AsmFileEq` (the committed `checker.s` is stale for the
+A clean run fails only `ConAguaX86.Checker.AsmFileEq` (the committed `x86/checker.s` is stale for the
 perturbed layout, as it must be). Any other failing module names a literal to replace by its name.
 Not a gate: one run is a world rebuild (about 35 minutes at `LEAN_NUM_THREADS=2` on a loaded
 machine). The files are restored with `git checkout` even when the build fails or is interrupted.
@@ -105,7 +105,7 @@ def main():
             with open(f, "w", encoding="utf-8") as fh:
                 fh.write(text)
         env = dict(os.environ, LAKE_ARTIFACT_CACHE="false")
-        res = subprocess.run([os.path.join(ROOT, "scripts", "lake"), "build", *a.target], cwd=ROOT,
+        res = subprocess.run([os.path.join(ROOT, "scripts", "lake"), "-d", "x86", "build", *a.target], cwd=ROOT,
                              capture_output=True, text=True, env=env)
         with open(os.path.join(ROOT, ".lake", "layout_perturb.log"), "w", encoding="utf-8") as fh:
             fh.write(res.stdout + res.stderr)
@@ -114,14 +114,14 @@ def main():
         if not a.keep:
             subprocess.run(["git", "checkout", "--", *rel], cwd=ROOT, check=True)
     failed = sorted(set(re.findall(r"✖ \[\d+/\d+\] Building (\S+)", log)))
-    errors = [l for l in log.splitlines() if l.startswith("error: ConAgua/")]
+    errors = [l for l in log.splitlines() if l.startswith(("error: ConAgua/", "error: ConAguaX86/"))]
     print(f"failed modules: {len(failed)}")
     for m in failed:
         print(f"  {m}")
     for e in errors[:40]:
         print(e)
-    unexpected = [m for m in failed if m != "ConAgua.Checker.AsmFileEq"]
-    print("clean: only the stale checker.s" if not unexpected else
+    unexpected = [m for m in failed if m != "ConAguaX86.Checker.AsmFileEq"]
+    print("clean: only the stale x86/checker.s" if not unexpected else
           f"{len(unexpected)} module(s) still depend on an offset's number")
     print("kept the perturbed layout files (git checkout them before committing)" if a.keep else
           "restored the layout files; rebuild (`scripts/lake build`, cache hits) before other work")

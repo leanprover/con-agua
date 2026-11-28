@@ -159,13 +159,16 @@ def targets (env : Environment) (root : Name) (verbose : Bool) : IO Unit := do
     for (n, why) in skipped do
       if isOurTier (modOf env n) then IO.println s!"X\t{n}\t{modOf env n}\t{why}"
 
+def isConAguaMod (m : Name) : Bool :=
+  (`ConAgua).isPrefixOf m || (`ConAguaX86).isPrefixOf m || (`ConAguaAsm).isPrefixOf m
+
 /-- Every module of the `ConAgua` closure of `m` (cached). -/
 partial def closure (memo : IO.Ref (NameMap NameSet)) (m : Name) : IO NameSet := do
   if let some s := (← memo.get).find? m then return s
   let (md, _) ← readModuleData (← findOLean m)
   let mut s : NameSet := NameSet.empty.insert m
   for i in md.imports do
-    if (`ConAgua).isPrefixOf i.module then
+    if isConAguaMod i.module then
       for x in (← closure memo i.module) do s := s.insert x
   memo.modify (·.insert m s)
   return s
@@ -293,7 +296,7 @@ def asmLines (env : Environment) (axMemo : IO.Ref (NameMap (Array Name))) : IO U
   -- (`A cone total clean`); one walk over references, `axiomsOf` is already memoized
   let ours (c : Name) : Bool :=
     let m := modOf env c
-    (`ConAgua).isPrefixOf m || isOurTier m
+    isConAguaMod m || isOurTier m
   let mut seen : NameSet := NameSet.empty.insert asmTheorem
   let mut todo : Array Name := #[asmTheorem]
   let mut total := 0

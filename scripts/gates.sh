@@ -17,7 +17,7 @@
 #   build       scripts/lake build ConAgua           (timeout 90 min)
 #   warnings    scripts/lean_warnings.py --base BASE   no Lean warning in the changed .lean files (vendor/
 #               excluded), also for modules restored from the shared cache (their logs are in the log store)
-#   check-asm   scripts/check-asm.sh                 as/objdump encode checker.s as Kraken reads it
+#   check-asm   scripts/check-asm.sh                 as/objdump encode x86/checker.s as Kraken reads it
 #   shake       scripts/shake.py                     every import `lake shake` finds unused is allowlisted
 #   core-fns, loop-fns, leaf-fns, phaseb-fns, preloop-ws   the generated call closures are current
 #   checker-prog  scripts/checker_prog.py --no-build --check   the generated program files are current
@@ -83,7 +83,7 @@ run vendor     scripts/bump-con-ron.sh --check
 run modules    python3 scripts/modules_check.py
 run provenance python3 scripts/provenance.py check
 run reasons    reasons
-run build      timeout 5400 scripts/lake build ConAgua
+run build      timeout 5400 bash -c 'scripts/lake build && scripts/lake -d x86 build'
 run warnings   timeout 3600 python3 scripts/lean_warnings.py ${base:+--base "$base"}
 run check-asm  timeout 1800 scripts/check-asm.sh
 run shake      timeout 900 python3 scripts/shake.py

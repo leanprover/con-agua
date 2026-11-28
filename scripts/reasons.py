@@ -9,7 +9,7 @@ error in `vendor/con-ron/ConRon/Arena`, interpolations shown as `…`: class 1 f
 others) and, at the end, L's own reasons (class 0: capacities, defensive checks).
 
 Usage:
-  scripts/reasons.py           regenerate ConAgua/Arena/Reasons.lean and reasons.h from the table
+  scripts/reasons.py           regenerate ConAgua/Arena/Reasons.lean and commons/reasons.h from the table
   scripts/reasons.py --check   fail if they are stale, or if a twin message has no row (a gate, no build)
   scripts/reasons.py --add     append a row for every twin message without one (after a twin bump)
 """
@@ -21,7 +21,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TSV = os.path.join(ROOT, "scripts", "reasons.tsv")
 LEAN = os.path.join(ROOT, "ConAgua", "Arena", "Reasons.lean")
-HDR = os.path.join(ROOT, "reasons.h")
+HDR = os.path.join(ROOT, "commons", "reasons.h")
 CLASS = {"other": 0, "reject": 1, "decline": 2}
 
 

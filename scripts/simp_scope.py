@@ -142,20 +142,40 @@ def main() -> int:
         for dp, _, fs in os.walk(p):
             files += [os.path.join(dp, f) for f in fs if f.endswith(".lean")]
     files = sorted(set(files))
-    mod_of = {f: os.path.relpath(f, ROOT)[:-5].replace(os.sep, ".") for f in files}
+    sub_prefixes = tuple(
+        d + "/" for d in os.listdir(ROOT)
+        if not d.startswith((".", "_")) and d not in ("vendor", "commons", "scripts", "docs", "ConAgua")
+        and os.path.isfile(os.path.join(ROOT, d, "lakefile.toml"))
+    )
+    def mod_name(f):
+        rel = os.path.relpath(f, ROOT)
+        for pfx in sub_prefixes:
+            if rel.startswith(pfx):
+                rel = rel[len(pfx):]
+                break
+        return rel[:-5].replace(os.sep, ".")
+    mod_of = {f: mod_name(f) for f in files}
 
     if not (a.reuse and os.path.exists(a.dump)):
         os.makedirs(os.path.dirname(a.dump), exist_ok=True)
         mods = []
+        core_olean = os.path.join(ROOT, ".lake", "build", "lib", "lean")
+        x86_olean = os.path.join(ROOT, "x86", ".lake", "build", "lib", "lean")
         for dp, _, fs in os.walk(os.path.join(ROOT, "ConAgua")):
             mods += [os.path.relpath(os.path.join(dp, f), ROOT)[:-5].replace(os.sep, ".")
                      for f in fs if f.endswith(".lean")]
         mods.append("ConAgua")
-        # the built ones (a module that no target builds, `modules_unbuilt.txt`, has no olean)
-        olean = os.path.join(ROOT, ".lake", "build", "lib", "lean")
-        mods = [x for x in sorted(mods) if os.path.exists(os.path.join(olean, *x.split(".")) + ".olean")]
-        r = subprocess.run([os.path.join(ROOT, "scripts", "lake"), "env", "lean", "--run",
-                            os.path.join(ROOT, "scripts", "simp_scope.lean"), a.dump] + mods, cwd=ROOT)
+        core_built = [x for x in sorted(mods) if os.path.exists(os.path.join(core_olean, *x.split(".")) + ".olean")]
+        x86_mods = []
+        if os.path.isfile(os.path.join(ROOT, "x86", "ConAguaX86.lean")):
+            x86_mods.append("ConAguaX86")
+            for dp, _, fs in os.walk(os.path.join(ROOT, "x86", "ConAguaX86")):
+                x86_mods += [os.path.relpath(os.path.join(dp, f), os.path.join(ROOT, "x86"))[:-5].replace(os.sep, ".")
+                             for f in fs if f.endswith(".lean")]
+        x86_built = [x for x in sorted(x86_mods) if os.path.exists(os.path.join(x86_olean, *x.split(".")) + ".olean")]
+        lake_cmd = [os.path.join(ROOT, "scripts", "lake")] + (["-d", "x86"] if x86_built else [])
+        r = subprocess.run(lake_cmd + ["env", "lean", "--run",
+                            os.path.join(ROOT, "scripts", "simp_scope.lean"), a.dump] + core_built + x86_built, cwd=ROOT)
         if r.returncode != 0:
             sys.exit("simp_scope.lean failed (build first: scripts/lake build)")
 

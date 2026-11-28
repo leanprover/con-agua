@@ -12,8 +12,8 @@
 #      so the lane fixes it in its own worktree (merge master there first) and runs land.sh again.
 set -euo pipefail
 branch="$1"; shift || true
-# always build the whole library (ConAgua) plus whatever extra targets the lane names
-targets=(ConAgua "$@")
+# always build the core and x86 packages (plus whatever extra root targets the lane names)
+targets=(ConAgua ConLeche ConRonArena ConRonBridge "$@")
 root="$(git -C "$(dirname "$0")/.." rev-parse --show-toplevel)"
 # the main checkout is the first worktree
 main="$(git -C "$root" worktree list --porcelain | awk 'NR==1{print $2}')"
@@ -47,16 +47,16 @@ if ! scripts/overview-links.sh; then
   restore
   echo "land.sh: the document link gate failed after merging: lines cited by OVERVIEW.md/README.md moved or changed; master unchanged. In your worktree, merge master, re-read the paragraphs that cite the changed lines (fix the anchors or the prose), run scripts/overview-links.sh --update, commit, and retry" >&2; exit 1
 fi
-# The reason table (no build): reasons.h and ConAgua/Arena/Reasons.lean match scripts/reasons.tsv,
+# The reason table (no build): commons/reasons.h and ConAgua/Arena/Reasons.lean match scripts/reasons.tsv,
 # and every reject/decline message of the twin has a row.
 if ! python3 scripts/reasons.py --check; then
   git reset --hard "$before"
   echo "land.sh: the reason table is stale; master reset to $before. In your worktree run scripts/reasons.py (after a twin bump: --add), commit, and retry" >&2; exit 1
 fi
-# checker.s: a stale file already fails the build above (ConAgua.Checker.AsmFileEq, `checkerFile_eq`,
+# x86/checker.s: a stale file already fails the build above (ConAguaX86.Checker.AsmFileEq, `checkerFile_eq`,
 # names the first differing function); the regeneration check and the Kraken-parser cross-check run
 # off the critical path in the coordinator's census run (_tmp/census-run.sh).
-if ! timeout 3000 scripts/lake build "${targets[@]}" || ! python3 scripts/core_fns.py --check || ! timeout 600 python3 scripts/loop_fns.py --check || ! timeout 600 python3 scripts/leaf_fns.py --check || ! python3 scripts/modules_check.py || ! scripts/bump-con-ron.sh --check || ! timeout 900 python3 scripts/preloop_ws.py --check; then
+if ! timeout 3000 scripts/lake build "${targets[@]}" || ! timeout 3000 scripts/lake -d x86 build || ! python3 scripts/core_fns.py --check || ! timeout 600 python3 scripts/loop_fns.py --check || ! timeout 600 python3 scripts/leaf_fns.py --check || ! python3 scripts/modules_check.py || ! scripts/bump-con-ron.sh --check || ! timeout 900 python3 scripts/preloop_ws.py --check; then
   restore
   echo "land.sh: build or generated-file check (core_fns.py / loop_fns.py / leaf_fns.py / preloop_ws.py --check, modules_check.py, bump-con-ron.sh --check) failed after merging; master unchanged; fix in your worktree and retry" >&2; exit 1
 fi

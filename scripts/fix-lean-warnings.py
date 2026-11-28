@@ -40,9 +40,9 @@ import tempfile
 from collections import defaultdict
 from pathlib import Path
 
-SIMP_RE = re.compile(r"^warning: (ConAgua/[^:]+\.lean):(\d+):(\d+): This simp argument is unused:\s*$")
-VAR_RE = re.compile(r"^warning: (ConAgua/[^:]+\.lean):(\d+):(\d+): Variable name `([^`]+)` is not explicitly referenced\.")
-DEP_RE = re.compile(r"^warning: (ConAgua/[^:]+\.lean):(\d+):(\d+): `([^`]+)` has been deprecated: [Uu]se `([^`]+)` instead")
+SIMP_RE = re.compile(r"^warning: ((?:[\w-]+/)?ConAgua\w*/[^:]+\.lean):(\d+):(\d+): This simp argument is unused:\s*$")
+VAR_RE = re.compile(r"^warning: ((?:[\w-]+/)?ConAgua\w*/[^:]+\.lean):(\d+):(\d+): Variable name `([^`]+)` is not explicitly referenced\.")
+DEP_RE = re.compile(r"^warning: ((?:[\w-]+/)?ConAgua\w*/[^:]+\.lean):(\d+):(\d+): `([^`]+)` has been deprecated: [Uu]se `([^`]+)` instead")
 # Columns shifted by the renames of this run: (path, line) -> [(col, delta)].  The log's simp
 # positions predate them, so fix_simp moves a position right by the renames before it.
 SHIFTS = defaultdict(list)

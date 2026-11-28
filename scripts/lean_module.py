@@ -24,8 +24,12 @@ _IMP = re.compile(r"^\s*(?:public\s+|meta\s+)*import\s+(?:all\s+)?(ConAgua[\w.]*
 
 
 def _src(m):
-    p = os.path.join(ROOT, *m.split(".")) + ".lean"
-    return open(p, encoding="utf-8").read() if os.path.exists(p) else None
+    rel = os.path.join(*m.split(".")) + ".lean"
+    for base in (ROOT, os.path.join(ROOT, "x86")):
+        p = os.path.join(base, rel)
+        if os.path.exists(p):
+            return p
+    return None
 
 
 def body_modules(roots):
@@ -40,6 +44,7 @@ def body_modules(roots):
         t = _src(m)
         if t is None:
             continue
+        t = open(t, encoding="utf-8").read()
         todo += _IMP.findall(t)
         if re.search(r"^@\[no_expose\b", t, re.M):
             out.append(m)

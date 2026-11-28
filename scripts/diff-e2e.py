@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The end-to-end differential of the shipped binary: `./checker FILE.ndjson` on every fixture of
+"""The end-to-end differential of the shipped binary: `./x86/checker FILE.ndjson` on every fixture of
 con-leche's test suite that has a pinned expectation, against that expectation. No Lean needed.
 
     scripts/diff-e2e.py [--bin PATH] [--jobs N] [--parallel P] [--timeout S] [--tests DIR] [--only REGEX]
@@ -14,7 +14,7 @@ revision, extracted from the reference clone `_tmp/ref/con-leche` with `git arch
 `_tmp/ref/con-leche-tests/<rev>/` by `scripts/conleche_tests.py`, fetching if needed; the clone's
 working tree is never used). An override is not checked against the pin.
 
-The checker exits 0 only on accept, 1 on a reject, 2 on a decline, 3 otherwise (`main.c`'s usage
+The checker exits 0 only on accept, 1 on a reject, 2 on a decline, 3 otherwise (`commons/main.c`'s usage
 text). Its reject/decline labels follow con-ron's twin, not con-leche, so a fixture is compared on
 accept versus not-accept, and a reject/decline that differs from con-leche's is only counted
 (`kind differs`):
@@ -37,7 +37,7 @@ fixture's content hash and the hash of the reference binary (and, for con-ron, i
 first run, `--refs` costs about as much as the plain run, until a twin sync changes a binary. Timeouts are
 never cached. A fixture expecting 124 gets T_LOOP seconds on every system.
 (`--no-cache` ignores the cache.) The references: `.lake/build/bin/con-ron-lean-twin`, built (`scripts/lake build
-con-ron-lean-twin`) when it is missing or older than `vendor/UPSTREAM` or `pins.bin`, so a twin bump never meets a
+con-ron-lean-twin`) when it is missing or older than `vendor/UPSTREAM` or `commons/pins.bin`, so a twin bump never meets a
 stale one; con-ron at `$CON_RON` or `_tmp/ref/con-ron-integrate/target/release/con-ron`, refused when its
 checkout is not at `vendor/UPSTREAM`'s con-ron revision or the binary is older than that commit.
 
@@ -196,16 +196,16 @@ def file_hash(path):
 
 def fresh_e2e_ref(ref_bin):
     """Build con-ron-lean-twin when it is missing or older than the twin pins (`vendor/UPSTREAM`, rewritten by
-    every twin bump) or `pins.bin`: a reference built before a bump decides the old twin's way and
+    every twin bump) or `commons/pins.bin`: a reference built before a bump decides the old twin's way and
     shows false REFDIFFs (8 of them after ronsync4, docs/design/recoffs.md §6). The verdict cache is
     keyed by the binary's hash, so a rebuilt reference starts a fresh cache. Lake decides what the
     build does; when it leaves the binary as it was (a checkout touched the pins without changing
     them), the next run asks Lake again (a few seconds)."""
-    pins = [os.path.join(ROOT, "vendor", "UPSTREAM"), os.path.join(ROOT, "pins.bin")]
+    pins = [os.path.join(ROOT, "vendor", "UPSTREAM"), os.path.join(ROOT, "commons", "pins.bin")]
     newest = max(os.path.getmtime(p) for p in pins)
     if os.access(ref_bin, os.X_OK) and os.path.getmtime(ref_bin) >= newest:
         return
-    why = "not built" if not os.path.exists(ref_bin) else "older than vendor/UPSTREAM or pins.bin"
+    why = "not built" if not os.path.exists(ref_bin) else "older than vendor/UPSTREAM or commons/pins.bin"
     print(f"diff-e2e --refs: con-ron-lean-twin is {why}: scripts/lake build con-ron-lean-twin", file=sys.stderr, flush=True)
     r = subprocess.run([os.path.join(ROOT, "scripts", "lake"), "build", "con-ron-lean-twin"], cwd=ROOT,
                        capture_output=True, text=True)
@@ -308,7 +308,7 @@ class Refs:
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--bin", default=os.path.join(ROOT, "checker"))
+    ap.add_argument("--bin", default=os.path.join(ROOT, "x86", "checker"))
     ap.add_argument("--jobs", type=int, default=1, help="the checker's --jobs=N (1: sequential)")
     ap.add_argument("--parallel", type=int, default=4, help="fixtures run at once")
     ap.add_argument("--timeout", type=float, default=300.0, help="seconds per run")

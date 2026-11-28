@@ -7,7 +7,7 @@ public import ConLeche.Frontend.Scan.Fast
 /-! `lake exe valbench FILE`: con-leche's compiled `scanLineFwd` over a whole lean4export file,
 with the driver of the Stage B validator (`L.Scan.Line.validN`): prints `ok 0` if every line
 scans, `ok N` if line `N` is the first that does not — the same output as the compiled validator
-under `ConAgua/Compiler/harness/run.c`. The baseline for DESIGN.md's measurements. -/
+under `x86/harness/run.c`. The baseline for DESIGN.md's measurements. -/
 
 open ConLeche.Frontend
 

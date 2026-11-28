@@ -9,7 +9,7 @@ One command reproduces every number of that section:
 It builds the checker of this checkout (`make checker`) and runs it against con-ron's release
 binary (`$CON_RON`, default `_tmp/ref/con-ron-integrate/target/release/con-ron`, as
 scripts/e2e.py and scripts/bench.py find it; its embedded pins are the same three variants as
-`pins.bin`). Three sections, each interleaved (per round the runs in random order, so drifting
+`commons/pins.bin`). Three sections, each interleaved (per round the runs in random order, so drifting
 load hits both checkers alike), every run with bench.py's timeout:
 
   init     Lean's `Init` export (`$CA_INIT_EXPORT`, default `_tmp/fixtures/init/init435.ndjson`,
@@ -51,7 +51,7 @@ import e2e  # noqa: E402  (the con-ron binary)
 
 OUT = os.path.join(ROOT, "_tmp", "perf-overview")
 OVERVIEW = os.path.join(ROOT, "OVERVIEW.md")
-CHECKER = os.path.join(ROOT, "checker")
+CHECKER = os.path.join(ROOT, "x86", "checker")
 SECTIONS = ["init", "threads", "others"]
 DEFAULT_ROUNDS = {"init": 4, "threads": 3, "others": 3}
 JOBS = [1, 2, 4, 8, 16]

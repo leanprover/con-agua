@@ -1,10 +1,10 @@
 module
 
 public import ConAgua.Verdict.TopE
-import ConAgua.Arena.IndT.CheckIndDecl
+public import ConAgua.Arena.IndT.CheckIndDecl
+public import ConAgua.Checker.VerdictTop
 import ConAgua.Checker.IndArm
 import ConAgua.Checker.IotaArm
-import ConAgua.Checker.ArmsT
 import ConAgua.Checker.ArmsT
 import ConAgua.Checker.LoopProg
 import ConAgua.Verdict.KnotAllE
@@ -12,9 +12,7 @@ import ConAgua.Verdict.DeclTopE
 import ConAgua.Verdict.CheckBE
 import ConAgua.Checker.DefnArmT
 import ConAgua.Checker.BlockRefsProg
-import ConAgua.Final.DrvFinal
 import ConAgua.Verdict.FrontStageE
-public import ConAgua.Final.ThreadsVerdict
 
 @[expose] public section
 
@@ -23,8 +21,8 @@ public import ConAgua.Final.ThreadsVerdict
 
 `check_ind_decl`'s claim (`IndArmSpecE`): the error half of its refinement `cid_ref` (`RefE.run_err`,
 under `CtsG`, built from the program facts), at the programs phase A runs (`IndArmVerdict`, mirroring the ok side's
-`indArmSpec_checker`); hence the driver's verdict obligations `SeqVerdicts checkerProg` and
-`ThreadVerdicts` without hypotheses.
+`indArmSpec_checker`); hence the sequential driver's verdict obligation `SeqVerdicts checkerProg`
+without hypotheses.
 -/
 
 set_option experimental.vcgen true
@@ -95,29 +93,20 @@ theorem jobG_checker (b pb : ByteArray) (PA : PhaseA b) (hpb : pb.size < 2 ^ 63)
       (checkerProg_quotSimsPB _ hr hpre PA.quotDn) PA.dnInj hG)
     (indArmSpecE_checker _ hr hpre (cbRefs_checker _ hr hpre (snoSim_checker _)) _ PA.dnInj) hnv
 
-/-- **A thread's failing call is the pool's failure** (`ThreadEVerdict`): `threads_twinVerdictPooled`
-at `check_decl`'s program facts (`checkerCd_proved`) and the jobs' error claims (`jobG_checker`). -/
-theorem threadEVerdict_proved : ThreadEVerdict :=
-  threads_twinVerdictPooled checkerCd_proved jobG_checker
+private theorem checkerCd_proved : L.Checker.CheckerCd := fun _ pb PA hpb hpre =>
+  have hr : L.Rom.RomOK pb.data.toList := by simpa [L.Rom.RomOK] using hpb
+  ⟨L.Checker.checkerProg_defnLoopPB _ hr hpre,
+    L.Checker.indArmSpec_checker _ hr hpre
+      (L.Checker.cbRefs_checker _ hr hpre (L.Checker.snoSim_checker _)) _ PA.dnInj⟩
 
 /-- **The sequential driver's verdict claims**: entry 1's from its stages' error specs, entry 2's from the jobs' (`entry2Verdict_of`). -/
 theorem seqVerdicts_proved : SeqVerdicts checkerProg where
   entry1 := entry1Verdict_of ⟨checker_preludeStageE, checker_frontStageE⟩
   entry2 := entry2Verdict_of checkerCd_proved jobG_checker
 
-/-- **The threaded harness's verdict claims**, without hypotheses. -/
-theorem threadVerdicts_proved : ThreadVerdicts where
-  entry1 := entry1Verdict_of ⟨checker_preludeStageE, checker_frontStageE⟩
-  thr := threadEVerdict_proved
-
 /--
 info: 'L.Checker.seqVerdicts_proved' depends on axioms: [propext, Classical.choice, Quot.sound]
 -/
 #guard_msgs in #print axioms seqVerdicts_proved
-
-/--
-info: 'L.Checker.threadVerdicts_proved' depends on axioms: [propext, Classical.choice, Quot.sound]
--/
-#guard_msgs in #print axioms threadVerdicts_proved
 
 end L.Checker

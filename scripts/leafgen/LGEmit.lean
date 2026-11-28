@@ -1,12 +1,12 @@
 import ConAgua.Checker.Prog
-import ConAgua.Compiler.Run
-import ConAgua.Compiler.Abi
+import ConAguaX86.Compiler.Run
+import ConAguaX86.Compiler.Abi
 
 /-!
 # Lane `leafgen`: an unproved prototype of a better back end (mostly for leaf functions)
 
-`lake env lean --run scripts/leafgen/LGEmit.lean OUT.s FLAGS` prints the checker's code as
-`ConAgua/Checker/AsmEmit.lean` does, compiled by the prototype below. `FLAGS` is a comma-separated
+`lake -d x86 env lean --run scripts/leafgen/LGEmit.lean OUT.s FLAGS` prints the checker's code as
+`x86/ConAguaX86/Checker/AsmEmit.lean` does, compiled by the prototype below. `FLAGS` is a comma-separated
 subset of
 * `gen`: expressions evaluated straight into a target register, temporaries in a register stack
   (the scratch registers `rax rcx rdx` plus the argument registers that hold no local), operands
@@ -819,7 +819,7 @@ end L.Compiler.LG
 open L.Compiler L.Checker L.Compiler.LG
 
 def main (args : List String) : IO Unit := do
-  let out := args.headD "checker.s"
+  let out := args.headD "x86/checker.s"
   let fs := (args.getD 1 "").splitOn ","
   let fl : Flags := { gen := fs.contains "gen", cmp := fs.contains "cmp", stk := fs.contains "stk",
                       base := fs.contains "base", regs := fs.contains "regs",

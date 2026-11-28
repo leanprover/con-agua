@@ -2,4 +2,4 @@ _tmp
 .lake/
 _scratch/
 __pycache__/
-/checker
+/x86/checker

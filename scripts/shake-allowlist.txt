@@ -9,6 +9,11 @@ ConAgua/Arena/DeclDivModSpec/Cons.lean	public import ConAgua.Rom.PinSets	# `open
 ConAgua/Arena/DeclDivModSpec/SubstConst0List.lean	public import ConAgua.Arena.LdRd	# the build needs it (vcgen [ld64_rd_spec]: a name the tactic reads; the proof term does not keep it)
 ConAgua/Arena/DeclStep.lean	public import ConAgua.Front.IndApply	# the build needs it: the array names moved to ConAgua.Layout, the modules above reach the inductive lines through it
 ConAgua/Arena/DefEq.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
+ConAgua/Compiler/Compile.lean	public import ConAgua.Compiler.Bce	# the build needs it: re-exports Bce to x86/ConAguaX86/Compiler/CompileX64.lean and downstream modules after the X86 split
+ConAgua/Compiler/Compile.lean	public import ConAgua.L.DefAssign	# the build needs it: re-exports DefAssign to x86/ConAguaX86/Compiler/CompileX64.lean and downstream modules after the X86 split
+x86/ConAguaX86/Final/CmpAbiX64.lean	public import ConAgua.Final.CmpAbi	# the build needs it: `CmpHiT` uses `CmpFront45` and `cmpRun` in the public section
+x86/ConAguaX86/Final/CmpAbiX64.lean	public import ConAguaX86.Final.CmpStub	# the build needs it: `CmpHiT` uses `abiLayout`, `MemRel`, `DataMem` in the public section
+x86/ConAguaX86/Final/DrvAbi.lean	public import ConAguaX86.Compiler.MainRefX64	# the build needs it: `err_of_entryOut` and `drv_outcome` use `OutcomeRel`, `AsmOkT`, `Refines` in the public section
 ConAgua/Arena/DefEqBody.lean	public import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`s' `extra`, named only in their generated proofs
 ConAgua/Arena/DefEqLeaves.lean	public import ConAgua.Arena.WhnfCoreProj	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/DefEqLeaves.lean	public import ConAgua.Arena.WhnfIotaRefine	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
@@ -102,7 +107,7 @@ ConAgua/Checker/ArrCheck.lean	public import ConAgua.Arena.ArenaRel	# `#guard`s r
 ConAgua/Checker/ArrCheck.lean	public import ConAgua.Checker.CapCheck	# `#guard`s read it (they leave no constant the tool sees)
 ConAgua/Checker/ArrCheck.lean	public import ConAgua.Checker.ParOwned	# `#guard`s read it (they leave no constant the tool sees)
 ConAgua/Checker/ArrCheck.lean	public import ConAgua.Checker.ProgTab	# `#guard`s read it (they leave no constant the tool sees)
-ConAgua/Checker/AsmStub.lean	public import ConAguaAsm.Checker	# the build needs it: `asm_stub` reads `checkerFile` at elaboration time; the literal it declares names nothing from it
+x86/ConAguaX86/Checker/AsmStub.lean	public import ConAguaAsm.Checker	# the build needs it: `asm_stub` reads `checkerFile` at elaboration time; the literal it declares names nothing from it
 ConAgua/Checker/CmpSeqEntry.lean	import ConAgua.Arena.NAnonStore	# an `example` reads `nanonCS.ca`, `nstrCS.ca`, `nnumCS.ca` (leaves no constant)
 ConAgua/Checker/CmpSeqEntry.lean	import ConAgua.Arena.NNumStore	# an `example` reads `nanonCS.ca`, `nstrCS.ca`, `nnumCS.ca` (leaves no constant)
 ConAgua/Checker/CmpSeqEntry.lean	import ConAgua.Arena.NStrStore	# an `example` reads `nanonCS.ca`, `nstrCS.ca`, `nnumCS.ca` (leaves no constant)

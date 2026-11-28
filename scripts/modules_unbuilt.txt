@@ -1,4 +1,4 @@
-# Modules under ConAgua/ that no lakefile target builds, on purpose (checked by scripts/modules_check.py).
-ConAgua.Arena.EmitStore        # emitter, run by hand
-ConAgua.Compiler.EmitScan      # emitter, run by hand
-ConAgua.Scan.EmitValidator     # emitter, run by hand
+# Modules that no lakefile target builds, on purpose (checked by scripts/modules_check.py).
+ConAguaX86.Arena.EmitStore        # emitter, run by hand
+ConAguaX86.Compiler.EmitScan      # emitter, run by hand
+ConAguaX86.Scan.EmitValidator     # emitter, run by hand

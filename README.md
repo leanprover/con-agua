@@ -11,23 +11,27 @@ The `con-agua` checker joins [`con-ron`](https://github.com/leanprover/con-ron/)
 
 * `con-leche`, written in Lean, in particular requires the Lean compiler and the Lean runtime with its bignum implementation to be correct.
 * `con-ron`, written in Rust, in particular requires the Rust compiler as well as the Aeneas verification tool to be correct.
-* `con-agua`, verified at the assembly level, in particular requires the Kraken x86 semantics to be correct.
+* `con-agua`, verified at the assembly level. We currently target one architecture, `x86`, but more might be added.
+  For `x86-64` we in particular require the Kraken x86 semantics to be correct.
 
 A bug in any of these trusted components threatens the validity of that checker's result. But if you check your proof with all three of them, the likelihood of bugs existing in all three settings that can be exploited together diminishes.
 
 ## Usage
 
-Run [`make`](./Makefile) and call `./checker FILE.ndjson`. Pass `--jobs=n` if you want parallel checking. Use `./checker --compare CHALLENGE.ndjson SOLUTION.ndjson` for comparator mode. Unlike `con-leche` and `con-ron`, reading of `.olean` files is not supported. See [`OVERVIEW.md`](./OVERVIEW.md) for more details.
+Run [`make`](./Makefile) and call `./x86/checker FILE.ndjson`. Pass `--jobs=n` if you want parallel checking. Use `./x86/checker --compare CHALLENGE.ndjson SOLUTION.ndjson` for comparator mode. Unlike `con-leche` and `con-ron`, reading of `.olean` files is not supported. See [`OVERVIEW.md`](./OVERVIEW.md) for more details.
 
 ## Architecture
 
-We use the [Kraken](https://github.com/AeneasVerif/kraken) x86 semantics to prove that if the type checker in the assembly file [`checker.s`](./checker.s) accepts, then `con-leche` and `con-ron` accept too (up to resource limits). See [`EndToEnd.lean`](./ConAgua/Final/EndToEnd.lean) for the main theorems of this development.
+The assembly is produced from code written in our own little ad-hoc low-level language [L](./ConAgua/L/), lowered to assembly by verified compilers. The L code is proven to simulate `con-leche` (via [`con-ron`’s Lean model](./vendor/con-ron/ConRon/Arena/), which already handles hash-consing and caching).
 
-The assembly is produced from code written in our own little ad-hoc low-level language [L](./ConAgua/L/) with a [verified compiler](./ConAgua/Compiler/). The L code is proven to simulate `con-leche` (via [`con-ron`’s Lean model](./vendor/con-ron/ConRon/Arena/), which already handles hash-consing and caching).
-
-The small, trusted [`main.c`](./main.c) file reads the input and invokes the entry point of the assembly function. With `--jobs=n`, after parsing the input (using the verified assembly for that), it spawns threads and invokes the verified assembly once for each declaration group.
+The small, trusted [`main.c`](./commons/main.c) file reads the input and invokes the entry point of the assembly function. With `--jobs=n`, after parsing the input (using the verified assembly for that), it spawns threads and invokes the verified assembly once for each declaration group.
 
 Again, more detail to be found in [`OVERVIEW.md`](./OVERVIEW.md).
+
+### X86
+
+The [compiler](./x86/ConAguaX86/Compiler/) is verified against the [Kraken](https://github.com/AeneasVerif/kraken) x86 semantics, proving that if the type checker in the assembly file [`checker.s`](./x86/checker.s) accepts, then `con-leche` and `con-ron` accept too (up to resource limits). See [`EndToEnd.lean`](./x86/ConAguaX86/Final/EndToEnd.lean) for the main theorems of this development.
+
 
 ## Contributions
 

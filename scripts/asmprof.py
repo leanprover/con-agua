@@ -6,13 +6,13 @@ pile up behind cache misses. Instead this instruments the assembler text `e2e-l 
 every basic-block start (a label, the instruction after a jump or call) it inserts
 `incq ca_bb+8i(%rip)` (the compiled code never has live flags across a label or after a jump, so
 the `inc` clobbers nothing; where hand-written assembler has flags other than CF live there, the
-counter is wrapped in `pushfq`/`popfq`), links with `main.c` and a destructor that writes the counters,
+counter is wrapped in `pushfq`/`popfq`), links with `commons/main.c` and a destructor that writes the counters,
 runs a fixture, and attributes every executed instruction (count of its block) to its function and
 to a category of the code generator's patterns (local loads/stores, bounds checks, fuel, prologue,
 result registers, …).
 
   scripts/asmprof.py build X.s OUT.bin         instrumented binary (+ OUT.bin.map: blocks)
-  scripts/asmprof.py run OUT.bin FIXTURE CNT   run it (main.c: FILE; the pins are built in)
+  scripts/asmprof.py run OUT.bin FIXTURE CNT   run it (commons/main.c: FILE; the pins are built in)
   scripts/asmprof.py report OUT.bin CNT... [--top N] [--fn F]   per function and per category
 """
 import collections
@@ -122,7 +122,9 @@ def build(s_path, out):
     dc = out + ".dump.c"
     with open(dc, "w") as fh:
         fh.write(DUMP_C)
-    subprocess.run(["cc", "-std=gnu23", "-O2", "-pthread", "-o", out, os.path.join(ROOT, "main.c"), dc, si], check=True)
+    commons = os.path.join(ROOT, "commons")
+    subprocess.run(["cc", "-std=gnu23", "-O2", "-pthread", f"-I{commons}", f"--embed-dir={commons}",
+                    "-o", out, os.path.join(commons, "main.c"), dc, si], check=True)
     # table layout, for the categories: from the source text
     src = "\n".join(lines)
     meta = {}

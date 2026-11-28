@@ -153,7 +153,7 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
      between the two revisions (con-leche's `## TASK #N`, con-ron's `### Task #N`; read those
      sections before anything else: they say whether a change touches the executed checker,
      which L must mirror, or only upstream's proofs and tooling); the toolchain; the vendored
-     diffstat; whether con-leche's `pins/` (so `pins.bin` and the ROM's pin records) and its test
+     diffstat; whether con-leche's `pins/` (so `commons/pins.bin` and the ROM's pin records) and its test
      expectations moved; each patch rehearsed against the new pristine tree (`applies`, `3-way
      ok`, or `CONFLICT` with the files); and `scripts/provenance.py report <rev>`: every twin
      declaration that changed, is new or is removed (by qualified name, comment-only changes
@@ -218,8 +218,8 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
   4. **Gates before landing** (besides `scripts/gates.sh`, which runs everything for a bump): `scripts/provenance.py check --strict`
      (no marker left, every citation exact), `scripts/bump-con-ron.sh --check`, zero `sorry` in
      what the sync touched and the axiom guards (`#guard_msgs in #print axioms`) unchanged,
-     `python3 scripts/asm_file.py` then `--check` (`checker.s` and `pins.bin`: a twin bump that
-     moves `pins/` changes `pins.bin`), `scripts/e2e.py --latest ''` (verdicts on every
+     `python3 scripts/asm_file.py` then `--check` (`x86/checker.s` and `commons/pins.bin`: a twin bump that
+     moves `pins/` changes `commons/pins.bin`), `scripts/e2e.py --latest ''` (verdicts on every
      fixture, with con-ron's binary rebuilt at the new revision: `CON_RON`),
      `scripts/diff-e2e.py --tests DIR` against con-leche's expectations at the new revision
      (`DIR`: `git -C _tmp/ref/con-leche archive <rev> tests | tar -x -C _tmp/<lane>/`; the
@@ -282,14 +282,14 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
 - **Emergency fixes: when the coordinator says a fix landed (e.g. a memory hog, like erecfix: IndCore/CoreErec from ~22 GB to ~3 GB), merge master before your next build.** Otherwise merging only before landing is fine. A coordinator watchdog (`_tmp/memwatch.sh`) kills any single `lean` process above 16 GB.
 - **Landing goes through the merge queue** (below, "Landing"). Never run `git merge` in the main checkout by hand, and never edit files there. `docs/velocity.csv` uses git's union merge driver (`.gitattributes`), so appended lines never conflict: just append your line, don't reorder or rewrite the file.
 - **Program well-formedness:** prove every `Prog.wf … = true` with `L.Compiler.Prog.wf_of_wfFast` (Compiler/WFFast.lean), never with `decide +kernel` on `Prog.wf` directly: on a large program the slow check takes tens of GB of memory.
-- **The committed assembler file `checker.s`** (lane asmfile, docs/design/asmfile.md): the final theorems are about this file as the trusted parser reads it (`include_asm`, `ConAguaAsm/Checker.lean`), and `checkerFile_eq` checks it against the compiler's output. After changing L code of the checker (and `scripts/checker_prog.py`), the compiler or the entry stub, in this order: `scripts/checker_prog.py` (writes `Checker/Prog*.lean`), `scripts/lake build` (rebuilds `ProgI`; `asm_file.py` and `core_fns.py` refuse stale oleans), then `python3 scripts/asm_file.py` (4 s once built; it builds the `ProgI` chain itself unless `--no-build`) and commit `checker.s` with the change. A stale file fails the build at `checkerFile_eq` (naming the first differing function), so the `build` gate rejects it; `asm_file.py --check` also reports it without rewriting the file (no gate runs it). The gate `check-asm` (`scripts/check-asm.sh`, about 10 s) checks that `as`/`objdump` encode every instruction of `checker.s` as Kraken's semantics reads it; a new instruction form in the trusted parser needs it green. A merge conflict in `checker.s` is resolved by regenerating it, never by hand (the merge queue does this itself). `asm_file.py` also writes (and `--check` compares) `pins.bin`, the pin data `main.c` embeds (`romgen pins.bin 4`); regenerate it after a change to the startup data or a twin bump. The binary itself is `make` (`Makefile`: `main.c` + `checker.s` + `pins.bin`, plain `cc`, no Lean).
+- **The committed assembler file `x86/checker.s`** (lane asmfile, docs/design/asmfile.md): the final theorems are about this file as the trusted parser reads it (`include_asm`, `x86/ConAguaAsm/Checker.lean`), and `checkerFile_eq` checks it against the compiler's output. After changing L code of the checker (and `scripts/checker_prog.py`), the compiler or the entry stub, in this order: `scripts/checker_prog.py` (writes `Checker/Prog*.lean`), `scripts/lake build` (rebuilds `ProgI`; `asm_file.py` and `core_fns.py` refuse stale oleans), then `python3 scripts/asm_file.py` (4 s once built; it builds the `ProgI` chain itself unless `--no-build`) and commit `x86/checker.s` with the change. A stale file fails the build at `checkerFile_eq` (naming the first differing function), so the `build` gate rejects it; `asm_file.py --check` also reports it without rewriting the file (no gate runs it). The gate `check-asm` (`scripts/check-asm.sh`, about 10 s) checks that `as`/`objdump` encode every instruction of `x86/checker.s` as Kraken's semantics reads it; a new instruction form in the trusted parser needs it green. A merge conflict in `x86/checker.s` is resolved by regenerating it, never by hand (the merge queue does this itself). `asm_file.py` also writes (and `--check` compares) `commons/pins.bin`, the pin data `commons/main.c` embeds (`romgen commons/pins.bin 4`); regenerate it after a change to the startup data or a twin bump. The binary itself is `make` (`Makefile`: `commons/main.c` + `x86/checker.s` + `commons/pins.bin`, plain `cc`, no Lean).
 - **Globals and records (lane lfeat).** New L code uses named globals (not new `CTL` slots) for counters, tops, flags and epochs, and record syntax `R[i].f` for struct-of-arrays fields. Existing code migrates only opportunistically: when a lane touches `StoreLib`/`MemoLib` anyway, let the schema's count/stamp slot be a global as well as a `CTL` index, then move tables/memos one at a time. The cross-cutting slots (`CTL[0]` pool top, `CTL[1]` scratch flag, `CTL[62]` scratch epoch, `CTL[136]` spine top) stay as they are.
 - **Design journal: one file per lane.** Write your decisions, measurements and findings to `docs/design/<lane>.md` (the coordinator creates it before you branch); never edit other lanes' journal files, and do not extend the top-level `DESIGN.md` (frozen history). Shared tables (`docs/deviations.md`, the memory map) are edited only for your own rows.
 - **Verdict checks.** `scripts/diff-e2e.py` is the only verdict check (`scripts/bench.py` is for performance
   work and no longer has a verdict mode). For intermediate checks (after a merge, between steps) run it
-  plain: the shipped `./checker` on 628 fixtures against con-leche's expected verdicts, about a minute
+  plain: the shipped `./x86/checker` on 628 fixtures against con-leche's expected verdicts, about a minute
   (`--parallel 16`). Once, before the final landing of a change to L code, the compiler, the stubs or
-  `main.c`, run the full comparison, `scripts/diff-e2e.py --refs --parallel 16`: the same, plus con-ron
+  `commons/main.c`, run the full comparison, `scripts/diff-e2e.py --refs --parallel 16`: the same, plus con-ron
   and con-ron-lean-twin on every fixture (REFDIFF where their accept/not-accept differs from the checker's). The
   references' verdicts are cached in `_tmp/bench/verdict-cache/` (keyed by fixture hash and reference
   binary hash), so after the first run on a given twin sync it costs about one minute too (measured:
@@ -317,8 +317,8 @@ Lanes do not merge into master: they **submit** a gated branch to the merge queu
 `scripts/gate_select.py` (documented there), for the lane and the queue alike.
 1. **Merge master into your branch once**, then **gate in your worktree**: `scripts/gates.sh` (path-selected:
    the steps your change since master can affect: the cheap checks always, `build` only for Lean
-   sources, the lakefile, the manifest or checker.s, the closure `--check`s only when their inputs changed, `e2e`
-   only for main.c, checker.s or pins.bin; `--list` shows the selection and why, `--all` runs everything).
+   sources, the lakefile, the manifest or x86/checker.s, the closure `--check`s only when their inputs changed, `e2e`
+   only for commons/main.c, x86/checker.s or commons/pins.bin; `--list` shows the selection and why, `--all` runs everything).
    With `build` comes `warnings` (`scripts/lean_warnings.py`): it fails on any Lean warning in the .lean
    files your branch changed (vendor/ excluded), modules restored from the shared cache included, whose
    warnings a build log never shows: it reads each module's log from its trace, from the log store
@@ -342,8 +342,8 @@ Lanes do not merge into master: they **submit** a gated branch to the merge queu
   is submitted as its own small entry with `--wide` (landed alone, every gate) and announced to the
   coordinator, who holds the dependent entries (`python3 scripts/mq.py hold <branch>`) until it has landed.
 - **What the queue fixes itself** (mechanical, otherwise it bounces): lines appended on both sides at
-  the same place, the generated files (`ConAgua/Checker/{Prog,ProgTab,ProgNrt,ProgSkt,ProgWf,Asm,AsmPart*}.lean` by `scripts/checker_prog.py`,
-  `checker.s`/`pins.bin` by `scripts/asm_file.py`: regenerated when both sides changed them),
+  the same place, the generated files (`ConAgua/Checker/{Prog,ProgTab,ProgNrt,ProgWf}.lean` and `x86/ConAguaX86/Checker/{ProgSkt,ProgSktPart*,Asm,AsmPart*}.lean` by `scripts/checker_prog.py`,
+  `x86/checker.s`/`commons/pins.bin` by `scripts/asm_file.py`: regenerated when both sides changed them),
   and link anchors whose cited text only moved (`scripts/relink.py`; never text that changed).
 - **The queue's state**: `scripts/mq-status.sh` (the waiting entries, the entry in progress and its age,
   recent results); per-entry timings (queue wait, merge, gates) and the gate build's compiled module count (`built`, i.e.
@@ -358,7 +358,7 @@ Lanes do not merge into master: they **submit** a gated branch to the merge queu
 - **`OVERVIEW.md` and `README.md` state current facts**: no task numbers, no lane names, no history,
   no "now"/"since". History belongs in DESIGN.md and the lane journals (`docs/design/`). OVERVIEW.md
   does not mention the progress gist or other coordinator infrastructure.
-- **User-facing files** (OVERVIEW.md, README.md, `main.c`'s usage text, the Makefile) **never refer
+- **User-facing files** (OVERVIEW.md, README.md, `commons/main.c`'s usage text, the Makefile) **never refer
   to PLAN.md, DESIGN.md, the lane journals (`docs/design/*`) or lane names**, neither in prose nor in
   links. State the fact itself, link code, tests or committed data instead, and put measurements in
   the document itself (with date, revision and conditions). `docs/deviations.md` may be linked: it

@@ -11,7 +11,7 @@ import ConAgua.Checker.CmpSPhaseT
 public import ConAgua.Checker.CmpSPhase
 import ConAgua.Final.CmpChain
 public import ConAgua.Checker.ProgTab
-public import ConAgua.Compiler.Abi
+public import ConAgua.Final.CmpAbi
 import ConRon.Bridge.Checker.Install
 import ConAgua.Checker.ArmsT
 import ConAgua.Checker.LoopProg
